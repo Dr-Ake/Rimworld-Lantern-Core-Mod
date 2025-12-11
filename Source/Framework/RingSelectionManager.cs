@@ -15,8 +15,11 @@ namespace DrAke.LanternsFramework
 
         public override void GameComponentTick()
         {
+            // Debug: Prove existence
+            if (Find.TickManager.TicksGame % 5000 == 0) Log.Message($"[LanternsDebug] RingSelectionManager is Alive. Tick: {Find.TickManager.TicksGame}");
+
             // Periodic checks
-            if (Find.TickManager.TicksGame % 250 == 0) // Optimization: Don't check every tick, checking every ~4s is fine for intervals
+            if (Find.TickManager.TicksGame % 250 == 0) 
             {
                 CheckPeriodicTriggers();
             }
@@ -28,17 +31,12 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerPeriodic && def.periodicInterval > 0)
                 {
-                    // Check if we are verifying "roughly now" based on the interval.
-                    // Since this loop runs every 250 ticks, we check if the modulo falls within this window 
-                    // to avoid missing it if the interval is large but not a perfect multiple of 250.
-                    // For small intervals (<250), this will trigger roughly every 250 ticks, which is fine.
                     long ticks = Find.TickManager.TicksGame;
+                    // Log.Message($"[LanternsDebug] Checking {def.defName}: Interval {def.periodicInterval}. Modulo: {ticks % def.periodicInterval}");
+                    
                     if (ticks % def.periodicInterval < 250)
                     {
-                         // Basic debounce: To prevent firing multiple times within the 250-tick window if interval is very small,
-                         // we could just trust generic "TryRun" safeguards. 
-                         // But TryRunSelection doesn't have a cooldown logic yet. 
-                         // We should rely on standard storytelling intervals or assume the def interval is large enough.
+                         Log.Message($"[LanternsDebug] Triggering Periodic Selection for {def.defName} at tick {ticks} (Interval {def.periodicInterval})");
                          TryRunSelection(def);
                     }
                 }
@@ -84,13 +82,21 @@ namespace DrAke.LanternsFramework
 
             foreach (Pawn p in map.mapPawns.FreeColonistsSpawned)
             {
+                // Skip if already has this ring
+                if (def.ringDef != null && p.apparel != null && p.apparel.WornApparel.Any(a => a.def == def.ringDef))
+                {
+                    continue;
+                }
+
                 float score = worker.ScorePawn(p, def);
+                // Log.Message($"[LanternsDebug] Scoring {p}: {score}");
                 if (score > bestScore)
                 {
                     bestScore = score;
                     bestCandidate = p;
                 }
             }
+            Log.Message($"[LanternsDebug] Best Candidate for {def.defName}: {bestCandidate} (Score: {bestScore})");
 
             if (bestCandidate != null && bestScore > 0)
             {
@@ -112,27 +118,45 @@ namespace DrAke.LanternsFramework
 
         private void TriggerEvent(Pawn target, RingSelectionDef def)
         {
+            Log.Message($"[LanternsDebug] Triggering Event for {target}. Def: {def.defName}");
             ThingDef orbDef = def.orbDef;
-            if (orbDef == null) orbDef = ThingDef.Named("GL_SectorScanOrb"); // Fallback
-
-            IntVec3 start = target.Map.AllCells.Where(c => c.OnEdge(target.Map)).RandomElement();
-            
-            Thing orbThing = ThingMaker.MakeThing(orbDef);
-            
-            // We need to support the Generic Orb interface or check type using Reflection/Interface?
-            // Since we don't have "SectorScanOrb" in Framework (it's in GL mod currently?), we should move SectorScanOrb to Framework OR use reflection.
-            // BETTER: Move SectorScanOrb to Framework as "LanternRingDeliveryOrb"
-            // For now, I will assume we are moving SectorScanOrb logic to a generic class in Framework.
-            // Let's create "RingDeliveryOrb" in Framework.
-            
-            if (orbThing is RingDeliveryOrb orb)
+            if (orbDef == null) 
             {
-                orb.targetPawn = target;
-                orb.ringToGive = def.ringDef;
-                GenSpawn.Spawn(orb, start, target.Map);
+                orbDef = ThingDef.Named("GL_SectorScanOrb"); // Fallback
+                Log.Message("[LanternsDebug] Using fallback orbDef: GL_SectorScanOrb");
             }
             else
             {
+                Log.Message($"[LanternsDebug] Using orbDef from XML: {orbDef.defName}");
+            }
+
+            if (orbDef == null)
+            {
+                 Log.Error("[LanternsDebug] OrbDef is null!");
+                 return;
+            }
+
+            IntVec3 start = target.Map.AllCells.Where(c => c.OnEdge(target.Map)).RandomElement();
+            Log.Message($"[LanternsDebug] Spawning at edge: {start}");
+            
+            Thing orbThing = ThingMaker.MakeThing(orbDef);
+            if (orbThing == null)
+            {
+                Log.Error($"[LanternsDebug] Failed to make thing for {orbDef.defName}");
+                return;
+            }
+            
+            if (orbThing is RingDeliveryOrb orb)
+            {
+                Log.Message("[LanternsDebug] Thing IS RingDeliveryOrb. configuring...");
+                orb.targetPawn = target;
+                orb.ringToGive = def.ringDef;
+                GenSpawn.Spawn(orb, start, target.Map);
+                Log.Message("[LanternsDebug] Orb Spawned.");
+            }
+            else
+            {
+                Log.Message($"[LanternsDebug] Thing is NOT RingDeliveryOrb (Type: {orbThing.GetType().Name}). Spawning ring directly at {target.Position}");
                 // Simple spawn backup
                 GenSpawn.Spawn(def.ringDef, target.Position, target.Map);
             }
