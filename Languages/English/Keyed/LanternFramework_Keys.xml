@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- Flight Messages -->
+  <Lantern_FlightCost>Flight Cost: {0}</Lantern_FlightCost>
+  <Lantern_FlightFail_Map>Must be on map.</Lantern_FlightFail_Map>
+  <Lantern_FlightFail_Downed>Cannot fly while downed.</Lantern_FlightFail_Downed>
+  <Lantern_FlightFail_Roof>Must be outdoors.</Lantern_FlightFail_Roof>
+  <Lantern_FlightFail_NoCharge>Ring energy is depleted.</Lantern_FlightFail_NoCharge>
+  <Lantern_FlightFail_NotEnoughCharge>Not enough charge. Needed: {0}</Lantern_FlightFail_NotEnoughCharge>
+  <Lantern_FlightFail_Site>Unable to create landing site.</Lantern_FlightFail_Site>
+  <Lantern_FlightFail_Gen>Map generation failed.</Lantern_FlightFail_Gen>
+  <Lantern_Flight_Arrive>Arrived. Select landing spot.</Lantern_Flight_Arrive>
+  <Lantern_FlightFail_InvalidSpot>Invalid landing spot.</Lantern_FlightFail_InvalidSpot>
+
+  <!-- Generic Ability Messages -->
+  <Lantern_NotEnoughWillpower>Not enough energy.</Lantern_NotEnoughWillpower>
+  <Lantern_RingInert>Ring is inert.</Lantern_RingInert>
+  <Lantern_NoRing>No Lantern Ring equipped.</Lantern_NoRing>
+  <Lantern_ShieldOn>Shield Activated</Lantern_ShieldOn>
+  <Lantern_ShieldOff>Shield Deactivated</Lantern_ShieldOff>
+  
+  <!-- Generic Recharge -->
+  <Lantern_Recharge_Fail_NoBattery>No Power Battery accessible.</Lantern_Recharge_Fail_NoBattery>
+  <Lantern_Recharge_Fail_Full>Ring is already fully charged.</Lantern_Recharge_Fail_Full>
+</LanguageData>

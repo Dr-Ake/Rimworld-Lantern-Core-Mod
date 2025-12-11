@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <OutputType>Library</OutputType>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>DrAke.LanternsFramework</RootNamespace>
+    <AssemblyName>LanternsCore</AssemblyName>
+    <OutputPath>..\Assemblies\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
+  </ItemGroup>
+</Project>

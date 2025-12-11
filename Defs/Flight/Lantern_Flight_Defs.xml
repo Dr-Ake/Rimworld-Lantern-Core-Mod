@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- ================== JOBS ================== -->
+  <JobDef>
+    <defName>Lantern_Job_Takeoff</defName>
+    <driverClass>DrAke.LanternsFramework.Flight.JobDriver_LanternFlightTakeoff</driverClass>
+    <reportString>taking off.</reportString>
+  </JobDef>
+
+  <!-- ================== WORLD OBJECTS ================== -->
+  <WorldObjectDef>
+    <defName>Lantern_WorldObject_FlightTravel</defName>
+    <label>in flight</label>
+    <worldObjectClass>DrAke.LanternsFramework.Flight.WorldObject_LanternFlightTravel</worldObjectClass>
+    <useDynamicDrawer>true</useDynamicDrawer>
+    <!-- Generic texture required or placeholder -->
+    <texture>LanternsLight/Effects/In Flight</texture> 
+  </WorldObjectDef>
+  
+  <WorldObjectDef>
+    <defName>Lantern_LandingStub</defName>
+    <label>landing zone</label>
+    <worldObjectClass>MapParent</worldObjectClass>
+    <texture>World/WorldObjects/Sites/GenericSite</texture>
+  </WorldObjectDef>
+
+  <!-- ================== SKYFALLERS ================== -->
+  <ThingDef ParentName="SkyfallerBase">
+    <defName>Lantern_Leaving</defName>
+    <label>taking off</label>
+    <thingClass>DrAke.LanternsFramework.Flight.LanternLeaving</thingClass>
+    <graphicData>
+      <texPath>Things/Skyfaller/SkyfallerShadowDropPod</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <shaderType>Transparent</shaderType>
+      <drawSize>1</drawSize>
+    </graphicData>
+    <skyfaller>
+      <movementType>Accelerate</movementType>
+      <reversed>true</reversed>
+      <ticksToImpactRange><min>-40</min><max>-15</max></ticksToImpactRange>
+    </skyfaller>
+  </ThingDef>
+
+  <ThingDef ParentName="SkyfallerBase">
+    <defName>Lantern_Incoming</defName>
+    <label>incoming</label>
+    <thingClass>DrAke.LanternsFramework.Flight.LanternIncoming</thingClass>
+    <graphicData>
+      <texPath>Things/Skyfaller/SkyfallerShadowDropPod</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <shaderType>Transparent</shaderType>
+      <drawSize>1</drawSize>
+    </graphicData>
+    <skyfaller>
+      <movementType>Accelerate</movementType>
+      <shadow>Things/Skyfaller/SkyfallerShadowDropPod</shadow>
+      <shadowSize>(1, 1)</shadowSize>
+      <cameraShake>1</cameraShake>
+      <rotateGraphicTowardsDirection>true</rotateGraphicTowardsDirection>
+      <anticipationSound>DropPod_Fall</anticipationSound>
+      <impactSound>DropPod_Impact</impactSound>
+      <motesPerCell>3</motesPerCell>
+    </skyfaller>
+  </ThingDef>
+</Defs>

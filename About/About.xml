@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Lantern Core Framework</name>
+  <author>DrAke</author>
+  <packageId>DrAke.LanternsCore</packageId>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+  <description>Core framework for Lantern Corps mods. Provides generic handling for Power Rings, specific resource management (Willpower, Rage, etc.), transformation/costume logic, and flexible ring selection triggers.</description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+      <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+  </loadAfter>
+</ModMetaData>
