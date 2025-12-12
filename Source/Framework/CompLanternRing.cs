@@ -3,6 +3,7 @@ using System.Linq;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using DrAke.LanternsFramework.Recharge;
 
 namespace DrAke.LanternsFramework
 {
@@ -281,10 +282,12 @@ namespace DrAke.LanternsFramework
 
                 if (Extension.allowBatteryManifest)
                 {
+                    string labelKey = "Lantern_Command_ManifestBattery";
+                    string descKey = "Lantern_Command_ManifestBatteryDesc";
                     yield return new Command_Action
                     {
-                        defaultLabel = "GL_Command_ManifestBattery".Translate(), 
-                        defaultDesc = "GL_Command_ManifestBatteryDesc".Translate(),
+                        defaultLabel = labelKey.CanTranslate() ? labelKey.Translate() : "GL_Command_ManifestBattery".Translate(),
+                        defaultDesc = descKey.CanTranslate() ? descKey.Translate() : "GL_Command_ManifestBatteryDesc".Translate(),
                         icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Battery", true), 
                         action = () => TryManifestBattery()
                     };
@@ -297,19 +300,45 @@ namespace DrAke.LanternsFramework
             // Logic similar to original but using Extension.batteryDef
              if (Extension.batteryDef == null) return;
              
-             // Cost logic? Hardcoded 0.5f for now or add to extension?
-             float cost = 0.5f;
-             if (charge >= cost)
+             float cost = Extension.batteryManifestCost > 0f ? Extension.batteryManifestCost : 0.5f;
+             if (Wearer?.Map == null) return;
+
+             ManifestBatteryManager mgr = Current.Game?.GetComponent<ManifestBatteryManager>();
+             if (mgr != null)
              {
-                 charge -= cost;
-                 Thing battery = ThingMaker.MakeThing(Extension.batteryDef);
-                 MinifiedThing minified = (MinifiedThing)battery.TryMakeMinified();
-                 GenSpawn.Spawn(minified, Wearer.Position, Wearer.Map);
+                 int global = mgr.CountGlobal(Extension.batteryDef);
+                 if (Extension.batteryManifestMaxGlobal > 0 && global >= Extension.batteryManifestMaxGlobal)
+                 {
+                     Messages.Message("Lantern_ManifestBattery_LimitGlobal".Translate(Extension.batteryManifestMaxGlobal), Wearer, MessageTypeDefOf.RejectInput);
+                     return;
+                 }
+
+                 int perMap = mgr.CountOnMap(Extension.batteryDef, Wearer.Map);
+                 if (Extension.batteryManifestMaxPerMap > 0 && perMap >= Extension.batteryManifestMaxPerMap)
+                 {
+                     Messages.Message("Lantern_ManifestBattery_LimitPerMap".Translate(Extension.batteryManifestMaxPerMap), Wearer, MessageTypeDefOf.RejectInput);
+                     return;
+                 }
              }
-             else
+
+             if (charge < cost)
              {
-                 // Feedback: Not enough charge
+                 Messages.Message("Lantern_NotEnoughWillpower".Translate(), Wearer, MessageTypeDefOf.RejectInput);
+                 return;
              }
+
+             charge -= cost;
+             Thing battery = ThingMaker.MakeThing(Extension.batteryDef);
+             Thing innerThing = battery;
+             Thing spawnThing = battery;
+             if (battery.TryMakeMinified() is MinifiedThing minified)
+             {
+                 innerThing = minified.InnerThing ?? battery;
+                 spawnThing = minified;
+             }
+
+             GenSpawn.Spawn(spawnThing, Wearer.Position, Wearer.Map);
+             mgr?.Register(Extension.batteryDef, innerThing, Wearer.Map);
         }
         
         public bool TryConsumeCharge(float amount)

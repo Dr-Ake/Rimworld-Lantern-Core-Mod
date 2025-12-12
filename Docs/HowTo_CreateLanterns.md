@@ -76,12 +76,15 @@ Optional:
 - `associatedHediff` - hediff to add while worn (for passive effects).
 - `allowBatteryManifest` - adds a gizmo to manifest a battery at the wearer.
 - `batteryDef` - what battery to manifest.
+- `batteryManifestCost` - charge fraction consumed when manifesting (default `0.5`).
+- `batteryManifestMaxGlobal` - max manifested batteries total across all maps for this ring's `batteryDef` (0 = unlimited).
+- `batteryManifestMaxPerMap` - max manifested batteries per map for this ring's `batteryDef` (0 = unlimited).
 - `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
 - `chargeUseLabelColorOverride` / `chargeLabelColorOverride` - optionally override the **label text** color on the charge bar.
 - `chargeUsePercentColorOverride` / `chargePercentColorOverride` - optionally override the **percent text** color on the charge bar.
 
 Notes:
-- Battery manifest currently costs **50% charge** (hardcoded).
+- Battery manifest defaults to **50% charge** unless overridden.
 - If `blastDamageType` is omitted, Burn is used.
 - If you don't set charge text overrides, label uses `ringColor` and percent text is white.
 
@@ -351,6 +354,10 @@ If your ring should spawn a battery via gizmo:
 ```xml
 <allowBatteryManifest>true</allowBatteryManifest>
 <batteryDef>MyLantern_ChargeBattery</batteryDef>
+<!-- optional tuning -->
+<batteryManifestCost>0.5</batteryManifestCost>
+<batteryManifestMaxPerMap>1</batteryManifestMaxPerMap> <!-- allow one per map -->
+<batteryManifestMaxGlobal>0</batteryManifestMaxGlobal> <!-- 0 = unlimited across maps -->
 ```
 
 ---

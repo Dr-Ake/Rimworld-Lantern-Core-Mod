@@ -22,6 +22,12 @@ namespace DrAke.LanternsFramework
         public HediffDef associatedHediff;
         public bool allowBatteryManifest = false;
         public ThingDef batteryDef;
+        // Manifested battery settings (optional).
+        public float batteryManifestCost = 0.5f; // fraction of charge consumed
+        // Maximum manifested batteries of this batteryDef that may exist globally. 0 = unlimited.
+        public int batteryManifestMaxGlobal = 0;
+        // Maximum manifested batteries of this batteryDef that may exist per map. 0 = unlimited.
+        public int batteryManifestMaxPerMap = 0;
 
         // Transformation
         // If set, these items are equipped when the ring is worn.

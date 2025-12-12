@@ -22,4 +22,13 @@
   <!-- Generic Recharge -->
   <Lantern_Recharge_Fail_NoBattery>No Power Battery accessible.</Lantern_Recharge_Fail_NoBattery>
   <Lantern_Recharge_Fail_Full>Ring is already fully charged.</Lantern_Recharge_Fail_Full>
+
+  <!-- Generic Commands -->
+  <Lantern_Command_Recharge>Recharge Ring</Lantern_Command_Recharge>
+  <Lantern_Command_ManifestBattery>Manifest Battery</Lantern_Command_ManifestBattery>
+  <Lantern_Command_ManifestBatteryDesc>Manifest a portable power battery using ring energy.</Lantern_Command_ManifestBatteryDesc>
+
+  <!-- Manifest limits -->
+  <Lantern_ManifestBattery_LimitGlobal>Cannot manifest more than {0} batteries total.</Lantern_ManifestBattery_LimitGlobal>
+  <Lantern_ManifestBattery_LimitPerMap>Cannot manifest more than {0} batteries on this map.</Lantern_ManifestBattery_LimitPerMap>
 </LanguageData>

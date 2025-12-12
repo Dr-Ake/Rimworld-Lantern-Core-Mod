@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LanternsCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3aac536676692cf943ae46298d1d1a61b30b2732")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+daccdefaabf4c385b8340d182053b96f416a03e0")]
 [assembly: System.Reflection.AssemblyProductAttribute("LanternsCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LanternsCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
