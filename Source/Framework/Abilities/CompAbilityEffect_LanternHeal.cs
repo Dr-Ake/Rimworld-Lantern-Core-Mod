@@ -13,6 +13,12 @@ namespace DrAke.LanternsFramework.Abilities
         public bool affectAlliesOnly = true;
         public bool affectSelf = true;
         public bool affectAnimals = false;
+
+        // Optional: broaden what counts as healable injuries.
+        // By default, only non-permanent injuries that can heal naturally are affected.
+        public bool healPermanentInjuries = false;
+        public bool healNonNaturalInjuries = false;
+
         public List<HediffDef> hediffsToRemove;
         public EffecterDef effecterDef;
 
@@ -78,14 +84,19 @@ namespace DrAke.LanternsFramework.Abilities
             return true;
         }
 
-        private static void HealPawn(Pawn p, float amount)
+        private void HealPawn(Pawn p, float amount)
         {
             if (amount <= 0f) return;
             float remaining = amount;
 
             IEnumerable<Hediff_Injury> injuries = p.health.hediffSet.hediffs
                 .OfType<Hediff_Injury>()
-                .Where(h => h.CanHealNaturally() && !h.IsPermanent())
+                .Where(h =>
+                {
+                    if (!Props.healPermanentInjuries && h.IsPermanent()) return false;
+                    if (!Props.healNonNaturalInjuries && !h.CanHealNaturally()) return false;
+                    return true;
+                })
                 .OrderByDescending(h => h.Severity);
 
             foreach (Hediff_Injury injury in injuries)
@@ -111,4 +122,3 @@ namespace DrAke.LanternsFramework.Abilities
         }
     }
 }
-

@@ -202,6 +202,8 @@ Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is fl
 - `affectAlliesOnly` (bool)
 - `affectSelf` (bool)
 - `affectAnimals` (bool)
+- `healPermanentInjuries` (bool) - if true, also heals scars/permanent injuries.
+- `healNonNaturalInjuries` (bool) - if true, also heals injuries that can't heal naturally.
 - `hediffsToRemove` (list of HediffDef) - optional.
 - `effecterDef` (EffecterDef) - optional VFX.
 
