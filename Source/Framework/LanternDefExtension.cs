@@ -20,5 +20,12 @@ namespace DrAke.LanternsFramework
         // If set, these items are equipped when the ring is worn.
         // Conflicting items are stored inside the ring comp and restored upon unequip.
         public List<ThingDef> transformationApparel = new List<ThingDef>();
+
+        // Generic Abilities
+        public List<AbilityDef> abilities = new List<AbilityDef>();
+        
+        // Generic Combat
+        public int blastDamage = 10;
+        public DamageDef blastDamageType; // Defaults to Burn if null
     }
 }

@@ -20,19 +20,21 @@ namespace DrAke.LanternsFramework.Abilities
             
             if (hit && currentTarget.HasThing)
             {
-                // Damage Logic
-                // Use the Ring's defined blast damage? Or the Verb's damage?
-                // Standard Verb logic uses 'verbProps.defaultProjectile' properties usually.
-                // But here we want direct damage.
-                
                 int dmg = 10; // Default
+                DamageDef dmgType = DamageDefOf.Burn;
+
                 // Try to find Ring Setting
-                if (caster is Pawn p && LanternResources.GetRing(p) is CompLanternRing ring)
+                if (caster is Pawn p)
                 {
-                     // TODO: Add generic "GetBlastDamage()" to ring or settings
+                    var ring = LanternResources.GetRing(p);
+                    if (ring != null)
+                    {
+                        dmg = ring.GetBlastDamage();
+                        dmgType = ring.GetBlastDamageType();
+                    }
                 }
                 
-                DamageInfo dinfo = new DamageInfo(DamageDefOf.Burn, dmg, 1.0f, -1, caster, null, null);
+                DamageInfo dinfo = new DamageInfo(dmgType, dmg, 1.0f, -1, caster, null, null);
                 currentTarget.Thing.TakeDamage(dinfo);
             }
 

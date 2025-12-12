@@ -86,9 +86,24 @@ namespace DrAke.LanternsFramework
         public override void Notify_Equipped(Pawn pawn)
         {
             base.Notify_Equipped(pawn);
-            if (Extension != null && !Extension.transformationApparel.NullOrEmpty())
+            if (Extension != null)
             {
-                DoTransformation(pawn);
+                if (!Extension.transformationApparel.NullOrEmpty())
+                {
+                    DoTransformation(pawn);
+                }
+                
+                // Grant Abilities
+                if (!Extension.abilities.NullOrEmpty())
+                {
+                    foreach (var abDef in Extension.abilities)
+                    {
+                        if (pawn.abilities.GetAbility(abDef) == null)
+                        {
+                            pawn.abilities.GainAbility(abDef);
+                        }
+                    }
+                }
             }
         }
 
@@ -99,10 +114,26 @@ namespace DrAke.LanternsFramework
             RevertTransformation(pawn);
             
             // Remove Hediff immediately
-            if (Extension != null && Extension.associatedHediff != null)
+            if (Extension != null)
             {
-                var hediff = pawn.health.hediffSet.GetFirstHediffOfDef(Extension.associatedHediff);
-                if (hediff != null) pawn.health.RemoveHediff(hediff);
+                if (Extension.associatedHediff != null)
+                {
+                    var hediff = pawn.health.hediffSet.GetFirstHediffOfDef(Extension.associatedHediff);
+                    if (hediff != null) pawn.health.RemoveHediff(hediff);
+                }
+
+                // Remove Abilities
+                if (!Extension.abilities.NullOrEmpty())
+                {
+                    foreach (var abDef in Extension.abilities)
+                    {
+                        var ab = pawn.abilities.GetAbility(abDef);
+                        if (ab != null)
+                        {
+                            pawn.abilities.RemoveAbility(abDef);
+                        }
+                    }
+                }
             }
         }
 
@@ -260,6 +291,20 @@ namespace DrAke.LanternsFramework
         public void Drain(float amount)
         {
              charge = Mathf.Max(0f, charge - amount);
+        }
+
+        public int GetBlastDamage()
+        {
+            return Extension != null ? Extension.blastDamage : 10;
+        }
+
+        public DamageDef GetBlastDamageType()
+        {
+            if (Extension != null && Extension.blastDamageType != null)
+            {
+                return Extension.blastDamageType;
+            }
+            return DamageDefOf.Burn;
         }
 
         // ================== Saving ==================
