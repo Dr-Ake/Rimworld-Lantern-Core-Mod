@@ -11,6 +11,9 @@ namespace DrAke.LanternsFramework.Recharge
     public class CompProperties_LanternBattery : CompProperties
     {
         public string oathPrefix = "Lantern_Oath"; // Default translation generic
+        // Optional raw oath lines to display while recharging.
+        // If provided, these are used instead of translation keys.
+        public List<string> oathLines = new List<string>();
         public CompProperties_LanternBattery()
         {
             this.compClass = typeof(CompLanternBattery);
@@ -93,14 +96,26 @@ namespace DrAke.LanternsFramework.Recharge
         {
             // Try to find battery prop
             string prefix = "Lantern_Oath";
+            List<string> lines = null;
             if (TargetA.Thing.TryGetComp<CompLanternBattery>() is CompLanternBattery batt)
             {
                 prefix = batt.Props.oathPrefix;
+                lines = batt.Props.oathLines;
             }
 
             // Fallback for Green Lantern specifically if user hasn't updated XML yet? 
             // Better to assume XML will update.
             
+            if (lines != null && lines.Count >= lineNum)
+            {
+                string raw = lines[lineNum - 1];
+                if (!raw.NullOrEmpty())
+                {
+                    MoteMaker.ThrowText(pawn.DrawPos, pawn.Map, raw);
+                }
+                return;
+            }
+
             string key = $"{prefix}_Line{lineNum}";
             if (key.CanTranslate())
             {

@@ -14,14 +14,14 @@ namespace DrAke.LanternsFramework
         }
     }
 
-    public class CompLanternRing : ThingComp
+    public class CompLanternRing : ThingComp, IThingHolder
     {
         public float charge = 1.0f; // 0.0 to 1.0
 
         // Transformation Storage
-        // We store the original items that were replaced by the transformation.
-        // We must save this data deeply so it survives save/load.
-        private List<Thing> storedApparel = new List<Thing>();
+        // Store original items that were replaced by the transformation.
+        // Kept in a ThingOwner so it is saved/loaded safely.
+        private ThingOwner<Apparel> storedApparel;
 
         public LanternDefExtension Extension => parent.def.GetModExtension<LanternDefExtension>();
 
@@ -63,6 +63,15 @@ namespace DrAke.LanternsFramework
             else
             {
                 EnsureHediff(false);
+            }
+        }
+
+        public override void Initialize(CompProperties props)
+        {
+            base.Initialize(props);
+            if (storedApparel == null)
+            {
+                storedApparel = new ThingOwner<Apparel>(this, oneStackOnly: false);
             }
         }
 
@@ -177,7 +186,7 @@ namespace DrAke.LanternsFramework
                      if (storedApparel.Contains(conflict)) continue;
 
                      pawn.apparel.Remove(conflict);
-                     storedApparel.Add(conflict);
+                     storedApparel.TryAdd(conflict, canMergeWithExistingStacks: false);
                  }
 
                  // 3. Equip new item
@@ -209,15 +218,36 @@ namespace DrAke.LanternsFramework
             }
 
             // 2. Restore Stored Items
-            foreach (var thing in storedApparel)
+            if (storedApparel != null && pawn.apparel != null)
             {
-                if (thing == null || thing.Destroyed) continue;
-                if (thing is Apparel app)
+                var snapshot = storedApparel.InnerListForReading.ToList();
+                foreach (var app in snapshot)
                 {
-                    pawn.apparel.Wear(app);
+                    if (app == null || app.Destroyed) continue;
+                    storedApparel.Remove(app);
+                    try
+                    {
+                        pawn.apparel.Wear(app);
+                    }
+                    catch
+                    {
+                        if (pawn.Map != null)
+                        {
+                            GenPlace.TryPlaceThing(app, pawn.Position, pawn.Map, ThingPlaceMode.Near);
+                        }
+                    }
                 }
             }
-            storedApparel.Clear();
+        }
+
+        public ThingOwner GetDirectlyHeldThings()
+        {
+            return storedApparel;
+        }
+
+        public void GetChildHolders(List<IThingHolder> outChildren)
+        {
+            // Stored apparel does not contain child holders.
         }
 
         // ================== Gizmos ==================
@@ -313,7 +343,11 @@ namespace DrAke.LanternsFramework
         {
             base.PostExposeData();
             Scribe_Values.Look(ref charge, "charge", 1.0f);
-            Scribe_Collections.Look(ref storedApparel, "storedApparel", LookMode.Deep);
+            Scribe_Deep.Look(ref storedApparel, "storedApparel", this);
+            if (storedApparel == null)
+            {
+                storedApparel = new ThingOwner<Apparel>(this, oneStackOnly: false);
+            }
         }
     }
     

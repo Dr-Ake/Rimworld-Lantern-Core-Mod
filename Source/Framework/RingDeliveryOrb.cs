@@ -29,7 +29,7 @@ namespace DrAke.LanternsFramework
 
         public override Vector3 DrawPos => exactPosition;
 
-        public override void Tick()
+        protected override void Tick()
         {
             base.Tick();
             if (targetPawn == null || targetPawn.Dead || targetPawn.Map != Map)

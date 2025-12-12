@@ -1,0 +1,10 @@
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Assemblies\LanternsCore.dll
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Assemblies\LanternsCore.pdb
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.csproj.AssemblyReference.cache
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.GeneratedMSBuildEditorConfig.editorconfig
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.AssemblyInfoInputs.cache
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.AssemblyInfo.cs
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.csproj.CoreCompileInputs.cache
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.sourcelink.json
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.dll
+D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\obj\Release\LanternsCore.pdb

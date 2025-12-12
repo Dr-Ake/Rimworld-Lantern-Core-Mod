@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -77,6 +78,11 @@ namespace DrAke.LanternsFramework.Abilities
     public class CompProperties_LanternShieldAbility : CompProperties_AbilityEffect
     {
         public HediffDef shieldHediffDef;
+        public float radius = 0f; // 0 = toggle on target pawn, >0 = AOE bubble
+        public bool affectAlliesOnly = true;
+        public bool affectSelf = true;
+        // If true, caster also receives the shield when targeting someone else or a location.
+        public bool alsoShieldCaster = false;
         public CompProperties_LanternShieldAbility()
         {
             this.compClass = typeof(CompAbilityEffect_LanternShield);
@@ -90,10 +96,14 @@ namespace DrAke.LanternsFramework.Abilities
         public override void Apply(LocalTargetInfo target, LocalTargetInfo dest)
         {
             base.Apply(target, dest);
-            Pawn p = parent.pawn;
+            Pawn caster = parent.pawn;
+            if (caster == null) return;
             // Fallback if not set in XML, try finding by name or assume standard
             HediffDef def = Props.shieldHediffDef;
-            if (def == null) def = HediffDef.Named("GL_Hediff_Shield"); // Fallback for GL, or error?
+            if (def == null)
+            {
+                def = DefDatabase<HediffDef>.GetNamed("GL_Hediff_Shield", false); // Legacy fallback if present
+            }
 
             if (def == null)
             {
@@ -101,7 +111,66 @@ namespace DrAke.LanternsFramework.Abilities
                 return;
             }
             
-            // Toggle
+            Map map = caster.Map;
+            if (map == null) return;
+
+            if (Props.radius > 0.1f)
+            {
+                bool casterShieldedInAoe = false;
+                foreach (IntVec3 cell in GenRadial.RadialCellsAround(target.Cell, Props.radius, true))
+                {
+                    if (!cell.InBounds(map)) continue;
+                    // Snapshot list because ToggleShield spawns motes (modifies thing list).
+                    foreach (Thing t in cell.GetThingList(map).ToList())
+                    {
+                        if (t is Pawn p && ShouldAffect(p, caster))
+                        {
+                            ToggleShield(p, def);
+                            if (p == caster) casterShieldedInAoe = true;
+                        }
+                    }
+                }
+
+                if (Props.alsoShieldCaster && Props.affectSelf && !casterShieldedInAoe && ShouldAffect(caster, caster))
+                {
+                    ToggleShield(caster, def);
+                }
+            }
+            else
+            {
+                Pawn targetPawn = target.Pawn;
+                if (targetPawn != null)
+                {
+                    if (ShouldAffect(targetPawn, caster))
+                    {
+                        ToggleShield(targetPawn, def);
+                    }
+
+                    if (Props.alsoShieldCaster && caster != targetPawn && Props.affectSelf && ShouldAffect(caster, caster))
+                    {
+                        ToggleShield(caster, def);
+                    }
+                }
+                else if (Props.affectSelf && ShouldAffect(caster, caster))
+                {
+                    ToggleShield(caster, def);
+                }
+            }
+        }
+
+        private bool ShouldAffect(Pawn p, Pawn caster)
+        {
+            if (p == null || p.Dead) return false;
+            if (!Props.affectSelf && p == caster) return false;
+            if (Props.affectAlliesOnly && p.Faction != null && caster.Faction != null)
+            {
+                if (p.Faction != caster.Faction) return false;
+            }
+            return true;
+        }
+
+        private static void ToggleShield(Pawn p, HediffDef def)
+        {
             var hediff = p.health.hediffSet.GetFirstHediffOfDef(def);
             if (hediff != null)
             {

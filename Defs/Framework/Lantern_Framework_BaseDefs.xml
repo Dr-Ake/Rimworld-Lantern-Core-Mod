@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <!-- ===================================================== -->
+  <!-- Base templates for add-on lantern mods to inherit from -->
+  <!-- ===================================================== -->
+
+  <!-- Base ring apparel: belt-slot, framework comp included -->
+  <ThingDef ParentName="ApparelNoQualityBase" Abstract="True" Name="Lantern_RingBase">
+    <defName>Lantern_RingBase</defName>
+    <label>lantern ring</label>
+    <description>Base def for Lantern rings. Inherit and override fields in your add-on mod.</description>
+    <thingCategories>
+      <li>ApparelUtility</li>
+    </thingCategories>
+    <statBases>
+      <MarketValue>1000</MarketValue>
+      <Mass>0.1</Mass>
+      <EquipDelay>0.1</EquipDelay>
+    </statBases>
+    <smeltable>false</smeltable>
+    <tickerType>Normal</tickerType>
+    <apparel>
+      <careIfWornByCorpse>false</careIfWornByCorpse>
+      <bodyPartGroups><li>Waist</li></bodyPartGroups>
+      <layers><li>Belt</li></layers>
+      <tags><li>LanternRing</li></tags>
+    </apparel>
+    <comps>
+      <li Class="DrAke.LanternsFramework.CompProperties_LanternRing" />
+    </comps>
+  </ThingDef>
+
+  <!-- Base blast ability: uses Verb_LanternBlast and drains charge -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_BlastBase">
+    <defName>Lantern_Ability_BlastBase</defName>
+    <label>lantern blast</label>
+    <description>Base def for Lantern blast abilities. Inherit and override label/icon/range/cost.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>DrAke.LanternsFramework.Abilities.Verb_LanternBlast</verbClass>
+      <range>25</range>
+      <warmupTime>1.0</warmupTime>
+      <soundCast>Shot_ChargeRifle</soundCast>
+      <targetParams>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetBuildings>true</canTargetBuildings>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetSelf>false</canTargetSelf>
+        <canTargetLocations>false</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base heal ability: restorative construct, single or AOE -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_HealBase">
+    <defName>Lantern_Ability_HealBase</defName>
+    <label>lantern heal</label>
+    <description>Base def for Lantern healing constructs. Inherit and tune healAmount/radius.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>20</range>
+      <warmupTime>0.8</warmupTime>
+      <targetParams>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>false</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>true</canTargetSelf>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternHeal">
+        <healAmount>10</healAmount>
+        <radius>0</radius>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base stun ability: binding/containment construct -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_StunBase">
+    <defName>Lantern_Ability_StunBase</defName>
+    <label>lantern bind</label>
+    <description>Base def for Lantern stun/bind constructs. Inherit and tune stunTicks/radius.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>22</range>
+      <warmupTime>0.6</warmupTime>
+      <targetParams>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>false</canTargetSelf>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternStun">
+        <stunTicks>180</stunTicks>
+        <radius>0</radius>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base barrier ability: applies shield hediff to target or allies in AOE -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_BarrierBase">
+    <defName>Lantern_Ability_BarrierBase</defName>
+    <label>lantern barrier</label>
+    <description>Base def for Lantern barrier constructs. Inherit and set shieldHediffDef/radius.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>18</range>
+      <warmupTime>0.5</warmupTime>
+      <targetParams>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>true</canTargetSelf>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternShieldAbility">
+        <radius>0</radius>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base construct spawn ability: temporary hard-light structures -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_ConstructBase">
+    <defName>Lantern_Ability_ConstructBase</defName>
+    <label>lantern construct</label>
+    <description>Base def for spawning hard-light constructs (walls, cages, platforms). Inherit and set thingDef/duration.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>18</range>
+      <warmupTime>0.7</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetBuildings>true</canTargetBuildings>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetSelf>true</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternConstructSpawn">
+        <durationTicks>6000</durationTicks>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base summon ability: temporary autonomous projections/minions -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_SummonBase">
+    <defName>Lantern_Ability_SummonBase</defName>
+    <label>lantern projection</label>
+    <description>Base def for summoning projection minions. Inherit and set pawnKind/count/duration.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>22</range>
+      <warmupTime>1.0</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetBuildings>true</canTargetBuildings>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetSelf>true</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternSummon">
+        <count>1</count>
+        <durationTicks>6000</durationTicks>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.10</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base aura ability: applies a timed hediff buff in radius -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_AuraBase">
+    <defName>Lantern_Ability_AuraBase</defName>
+    <label>lantern aura</label>
+    <description>Base def for emotional auras. Inherit and set hediffDef/radius/duration.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>15</range>
+      <warmupTime>0.5</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>true</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternBuffAura">
+        <radius>4</radius>
+        <durationTicks>6000</durationTicks>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base flight ability: world travel using LanternFlight system -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_FlightBase">
+    <defName>Lantern_Ability_FlightBase</defName>
+    <label>lantern flight</label>
+    <description>Base def for Lantern flight abilities. Inherit and set label/icon.</description>
+    <abilityClass>DrAke.LanternsFramework.Flight.Ability_LanternFlight</abilityClass>
+    <jobDef>CastAbilityOnWorldTile</jobDef>
+    <targetRequired>false</targetRequired>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>999</range>
+      <warmupTime>0</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+  </AbilityDef>
+
+</Defs>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <!-- Generic delivery orb that flies to the chosen pawn and auto-equips the ring. -->
+  <ThingDef ParentName="BaseBullet">
+    <defName>Lantern_RingDeliveryOrb</defName>
+    <label>lantern delivery orb</label>
+    <thingClass>DrAke.LanternsFramework.RingDeliveryOrb</thingClass>
+    <tickerType>Normal</tickerType>
+    <graphicData>
+      <!-- Placeholder vanilla texture; addon makers can override by defining their own orbDef. -->
+      <texPath>Things/Projectile/Bullet_Small</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>1.0</drawSize>
+    </graphicData>
+    <projectile>
+      <damageDef>Blunt</damageDef>
+      <damageAmountBase>0</damageAmountBase>
+      <speed>10</speed>
+    </projectile>
+  </ThingDef>
+
+</Defs>
+

@@ -1,10 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld;
 using Verse;
 
 namespace DrAke.LanternsFramework
 {
+    public enum SelectionMode
+    {
+        HighestScore,
+        WeightedRandom,
+        RandomAboveThreshold
+    }
+
     public class RingSelectionDef : Def
     {
         public ThingDef ringDef;
@@ -17,6 +25,46 @@ namespace DrAke.LanternsFramework
         
         public bool triggerMentalState = false; // Checks when a pawn breaks
         public List<string> mentalStates = new List<string>(); // "Berserk", "Panic", etc. Empty = Any.
+
+        // Fires when a pawn joins the player's faction (recruited/rescued/converted).
+        public bool triggerOnJoinPlayerFaction = false;
+
+        // Fires when a pawn spawns on a player home map.
+        public bool triggerOnSpawnedOnMap = false;
+
+        // Fires when a pawn is downed.
+        public bool triggerOnDowned = false;
+
+        // Fires when a pawn kills another pawn.
+        public bool triggerOnKillAny = false;
+        // Fires only when the victim was hostile to the player at time of death.
+        public bool triggerOnKillHostile = false;
+
+        // Fires when a hediff is added to a pawn.
+        public bool triggerOnHediffAdded = false;
+        // If non-empty, only these hediffs trigger. Empty = any hediff.
+        public List<HediffDef> hediffsToTriggerOn = new List<HediffDef>();
+
+        // Candidate filters (defaults preserve legacy Green Lantern behavior)
+        public bool allowColonists = true;
+        public bool allowPrisoners = false;
+        public bool allowSlaves = false;
+        public bool allowGuests = false;
+        public bool allowAnimals = false;
+        public bool allowMechs = false;
+        public bool allowHostiles = false;
+        public bool allowDead = false;
+        public bool allowDowned = false;
+        public bool requireViolenceCapable = true;
+
+        // If true, pawns already wearing any Lantern ring are excluded.
+        public bool excludeIfHasAnyLanternRing = false;
+        // Optional apparel tags that, if present on any worn apparel, exclude the pawn.
+        public List<string> excludedApparelTags = new List<string>();
+
+        // Selection behavior
+        public SelectionMode selectionMode = SelectionMode.HighestScore;
+        public float minScoreToSelect = 0.01f;
 
         // Conditions
         // Generic score modifiers
@@ -38,7 +86,11 @@ namespace DrAke.LanternsFramework
         public override float CalculateScore(Pawn p, RingSelectionDef def)
         {
             Trait t = p.story.traits.GetTrait(trait);
-            if (t != null) return scoreBonus;
+            if (t != null)
+            {
+                if (degree != 0 && t.Degree != degree) return 0f;
+                return scoreBonus;
+            }
             return 0f;
         }
     }
@@ -80,6 +132,114 @@ namespace DrAke.LanternsFramework
                 }
             }
             return score;
+        }
+    }
+
+    // Skill-based condition.
+    public class Condition_Skill : SelectionCondition
+    {
+        public SkillDef skill;
+        public int minLevel = 0;
+        public float scoreMultiplier = 1f;
+        public float flatBonus = 0f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (skill == null || p.skills == null) return 0f;
+            int level = p.skills.GetSkill(skill)?.Level ?? 0;
+            if (level < minLevel) return 0f;
+            return flatBonus + level * scoreMultiplier;
+        }
+    }
+
+    // Mood condition (higher or lower mood can be favored).
+    public class Condition_Mood : SelectionCondition
+    {
+        public bool lowerIsBetter = false;
+        public float scoreMultiplier = 10f;
+        public float flatBonus = 0f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (p.needs?.mood == null) return 0f;
+            float mood = p.needs.mood.CurLevelPercentage; // 0..1
+            float val = lowerIsBetter ? (1f - mood) : mood;
+            return flatBonus + val * scoreMultiplier;
+        }
+    }
+
+    // Age window condition.
+    public class Condition_Age : SelectionCondition
+    {
+        public float minAge = 0f;
+        public float maxAge = 999f;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            float age = p.ageTracker?.AgeBiologicalYearsFloat ?? 0f;
+            if (age < minAge || age > maxAge) return 0f;
+            return scoreBonus;
+        }
+    }
+
+    // Gender preference condition.
+    public class Condition_Gender : SelectionCondition
+    {
+        public Gender gender = Gender.None;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (gender == Gender.None) return 0f;
+            return p.gender == gender ? scoreBonus : 0f;
+        }
+    }
+
+    // Hediff presence/severity condition.
+    public class Condition_Hediff : SelectionCondition
+    {
+        public HediffDef hediff;
+        public float minSeverity = 0f;
+        public float maxSeverity = 9999f;
+        public float scoreBonus = 5f;
+        public bool scaleBySeverity = false;
+        public float severityMultiplier = 1f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (hediff == null || p.health == null) return 0f;
+            Hediff h = p.health.hediffSet.GetFirstHediffOfDef(hediff);
+            if (h == null) return 0f;
+            if (h.Severity < minSeverity || h.Severity > maxSeverity) return 0f;
+            if (scaleBySeverity) return scoreBonus + h.Severity * severityMultiplier;
+            return scoreBonus;
+        }
+    }
+
+    // Gene presence condition (Biotech). Safe no-op if genes not present.
+    public class Condition_Gene : SelectionCondition
+    {
+        public GeneDef gene;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (gene == null || p.genes == null) return 0f;
+            return p.genes.HasGene(gene) ? scoreBonus : 0f;
+        }
+    }
+
+    // Ideology meme condition (Ideology). Safe no-op if no ideo.
+    public class Condition_Meme : SelectionCondition
+    {
+        public MemeDef meme;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (meme == null || p.Ideo == null) return 0f;
+            return p.Ideo.HasMeme(meme) ? scoreBonus : 0f;
         }
     }
 }

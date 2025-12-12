@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
@@ -81,11 +82,34 @@ namespace DrAke.LanternsFramework.Flight
         {
             if (!target.IsValid || target.Tile < 0) return false;
             Tile tile = Find.WorldGrid[target.Tile];
-            if (tile.biome == BiomeDefOf.Ocean && Find.WorldObjects.MapParentAt(target.Tile) == null)
+            BiomeDef biome = GetTileBiome(tile);
+            if (biome == BiomeDefOf.Ocean && Find.WorldObjects.MapParentAt(target.Tile) == null)
             {
                 return false;
             }
             return true;
+        }
+
+        private static BiomeDef GetTileBiome(Tile tile)
+        {
+            Type tileType = typeof(Tile);
+
+            FieldInfo field =
+                tileType.GetField("biome", BindingFlags.Public | BindingFlags.Instance) ??
+                tileType.GetField("biomeDef", BindingFlags.Public | BindingFlags.Instance) ??
+                tileType.GetField("Biome", BindingFlags.Public | BindingFlags.Instance);
+
+            if (field != null)
+            {
+                return field.GetValue(tile) as BiomeDef;
+            }
+
+            PropertyInfo prop =
+                tileType.GetProperty("biome", BindingFlags.Public | BindingFlags.Instance) ??
+                tileType.GetProperty("biomeDef", BindingFlags.Public | BindingFlags.Instance) ??
+                tileType.GetProperty("Biome", BindingFlags.Public | BindingFlags.Instance);
+
+            return prop?.GetValue(tile, null) as BiomeDef;
         }
 
         private bool TryLaunchToTarget(GlobalTargetInfo target, CompLanternRing ring, int originTile)
@@ -301,7 +325,7 @@ namespace DrAke.LanternsFramework.Flight
             Tile = origin;
         }
 
-        public override void Tick()
+        protected override void Tick()
         {
             base.Tick();
             ticksToArrive--;

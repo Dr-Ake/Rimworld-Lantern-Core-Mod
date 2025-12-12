@@ -46,7 +46,6 @@ namespace DrAke.LanternsFramework
         public void Notify_MentalStateStarted(Pawn pawn, MentalStateDef stateDef)
         {
             if (pawn == null || stateDef == null) return;
-            if (!pawn.IsColonist) return; // Only care about colonists for now?
 
             foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
             {
@@ -70,18 +69,98 @@ namespace DrAke.LanternsFramework
             }
         }
 
+        public void Notify_PawnJoinedFaction(Pawn pawn, Faction oldFaction, Faction newFaction)
+        {
+            if (pawn == null || newFaction != Faction.OfPlayer) return;
+            if (oldFaction == Faction.OfPlayer) return;
+
+            foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
+            {
+                if (def.triggerOnJoinPlayerFaction)
+                {
+                    TryAssignRingToPawn(pawn, def);
+                }
+            }
+        }
+
+        public void Notify_PawnSpawned(Pawn pawn, Map map, bool respawningAfterLoad)
+        {
+            if (respawningAfterLoad) return;
+            if (pawn == null || map == null || !map.IsPlayerHome) return;
+
+            foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
+            {
+                if (def.triggerOnSpawnedOnMap)
+                {
+                    TryAssignRingToPawn(pawn, def);
+                }
+            }
+        }
+
+        public void Notify_PawnDowned(Pawn pawn)
+        {
+            if (pawn == null || pawn.Dead) return;
+
+            foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
+            {
+                if (def.triggerOnDowned)
+                {
+                    TryAssignRingToPawn(pawn, def);
+                }
+            }
+        }
+
+        public void Notify_PawnKilled(Pawn killer, Pawn victim)
+        {
+            if (killer == null || victim == null) return;
+            if (killer.Dead || killer.Destroyed) return;
+
+            bool victimWasHostile = victim.HostileTo(Faction.OfPlayer);
+
+            foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
+            {
+                if (def.triggerOnKillAny)
+                {
+                    TryAssignRingToPawn(killer, def);
+                    continue;
+                }
+
+                if (def.triggerOnKillHostile && victimWasHostile)
+                {
+                    TryAssignRingToPawn(killer, def);
+                }
+            }
+        }
+
+        public void Notify_HediffAdded(Pawn pawn, Hediff hediff)
+        {
+            if (pawn == null || hediff?.def == null) return;
+
+            foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
+            {
+                if (!def.triggerOnHediffAdded) continue;
+
+                if (!def.hediffsToTriggerOn.NullOrEmpty() && !def.hediffsToTriggerOn.Contains(hediff.def))
+                {
+                    continue;
+                }
+
+                TryAssignRingToPawn(pawn, def);
+            }
+        }
+
         public void TryRunSelection(RingSelectionDef def)
         {
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
 
-            Pawn bestCandidate = null;
-            float bestScore = 0f;
-
             RingSelectionWorker worker = (RingSelectionWorker)Activator.CreateInstance(def.workerClass);
 
-            foreach (Pawn p in map.mapPawns.FreeColonistsSpawned)
+            var scored = new List<(Pawn pawn, float score)>();
+
+            foreach (Pawn p in map.mapPawns.AllPawnsSpawned)
             {
+                if (p == null) continue;
                 // Skip if already has this ring
                 if (def.ringDef != null && p.apparel != null && p.apparel.WornApparel.Any(a => a.def == def.ringDef))
                 {
@@ -89,18 +168,20 @@ namespace DrAke.LanternsFramework
                 }
 
                 float score = worker.ScorePawn(p, def);
-                // Log.Message($"[LanternsDebug] Scoring {p}: {score}");
-                if (score > bestScore)
+                if (score >= def.minScoreToSelect)
                 {
-                    bestScore = score;
-                    bestCandidate = p;
+                    scored.Add((p, score));
                 }
             }
-            Log.Message($"[LanternsDebug] Best Candidate for {def.defName}: {bestCandidate} (Score: {bestScore})");
 
-            if (bestCandidate != null && bestScore > 0)
+            Pawn chosen = ChooseCandidate(def, scored);
+            float chosenScore = scored.FirstOrDefault(s => s.pawn == chosen).score;
+
+            Log.Message($"[LanternsDebug] Candidate for {def.defName}: {chosen} (Score: {chosenScore})");
+
+            if (chosen != null)
             {
-                TriggerEvent(bestCandidate, def);
+                TriggerEvent(chosen, def);
             }
         }
         
@@ -110,9 +191,36 @@ namespace DrAke.LanternsFramework
             float score = worker.ScorePawn(p, def);
             
             // Threshold check? For now assume > 0 is valid.
-            if (score > 0)
+            if (score >= def.minScoreToSelect)
             {
                 TriggerEvent(p, def);
+            }
+        }
+
+        private static Pawn ChooseCandidate(RingSelectionDef def, List<(Pawn pawn, float score)> scored)
+        {
+            if (scored.NullOrEmpty()) return null;
+
+            switch (def.selectionMode)
+            {
+                case SelectionMode.RandomAboveThreshold:
+                    return scored.RandomElement().pawn;
+
+                case SelectionMode.WeightedRandom:
+                    float total = scored.Sum(s => Mathf.Max(0f, s.score));
+                    if (total <= 0f) return null;
+                    float pick = Rand.Value * total;
+                    float acc = 0f;
+                    foreach (var s in scored)
+                    {
+                        acc += Mathf.Max(0f, s.score);
+                        if (acc >= pick) return s.pawn;
+                    }
+                    return scored.Last().pawn;
+
+                case SelectionMode.HighestScore:
+                default:
+                    return scored.OrderByDescending(s => s.score).First().pawn;
             }
         }
 
@@ -122,8 +230,11 @@ namespace DrAke.LanternsFramework
             ThingDef orbDef = def.orbDef;
             if (orbDef == null) 
             {
-                orbDef = ThingDef.Named("GL_SectorScanOrb"); // Fallback
-                Log.Message("[LanternsDebug] Using fallback orbDef: GL_SectorScanOrb");
+                orbDef =
+                    DefDatabase<ThingDef>.GetNamed("Lantern_RingDeliveryOrb", false) ??
+                    DefDatabase<ThingDef>.GetNamed("GL_SectorScanOrb", false);
+
+                Log.Message($"[LanternsDebug] Using fallback orbDef: {orbDef?.defName ?? "none"}");
             }
             else
             {

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <JobDef>
+    <defName>Lantern_Job_Recharge</defName>
+    <driverClass>DrAke.LanternsFramework.Recharge.JobDriver_LanternRecharge</driverClass>
+    <reportString>recharging ring.</reportString>
+  </JobDef>
+
+</Defs>
+

@@ -1,9 +1,15 @@
-# Lantern's Light Add-on Hooks
+# LanternsCore Add‑on Hooks (Advanced)
 
-## Trait scoring hook
-- Attach `DrAke.LanternsFramework.LanternTraitScoreExtension` to any `TraitDef` to adjust how strongly that trait pushes a pawn toward (or away from) being chosen by the ring.
-- If no extension is present, the legacy bonuses for Iron Will, Steadfast, and Sanguine still apply so vanilla behavior is preserved.
-- Example snippet:
+This file covers optional XML hooks and extension points for add‑on authors who want deeper control.  
+For the full “no‑C#” authoring path, see `Docs/HowTo_CreateLanterns.md`.
+
+---
+
+## 1) Trait scoring hook
+
+Attach `LanternTraitScoreExtension` to any `TraitDef`.  
+`Condition_TraitExtensions` will automatically add these scores during ring selection.
+
 ```xml
 <TraitDef>
   <defName>MyWillfulTrait</defName>
@@ -22,13 +28,52 @@
 </TraitDef>
 ```
 
-## Making new rings (framework-style)
-1) Create an apparel `ThingDef` and add `CompProperties_LanternRing` (or derive your own comp from it to override charge/behavior).
-2) Point the ring at a hediff that grants abilities. The built-in `GL_Hediff_Powers` uses `HediffComp_GiveAbilities` to add `GL_Ability_*` defs, but you can clone that hediff and swap in your own ability list.
-3) Abilities consume charge through `CompAbilityEffect_RingCost`, so reusing that comp keeps costs tied to mod settings.
-4) Provide your own textures/labels as desired; the comp handles charge ticking, death handling, and scan re-triggers.
+---
 
-## Adding new abilities
-- Follow the existing `GL_Ability_*` defs as a template. Add a `CompAbilityEffect_RingCost` entry to drain charge, plus your effect/verb (e.g., a custom `Verb`, `CompAbilityEffect_Spawn`, or a vanilla ability effect).
-- If an ability should spawn things, reuse `CompAbilityEffect_Spawn` or make a new `CompAbilityEffect` in C# under the `DrAke.LanternsLight` namespace.
-- Add your new `AbilityDef` to the hediff that the ring applies so pawns gain it when wearing your ring.
+## 2) Custom ring selection worker (C#)
+
+If built‑in conditions aren’t enough, you can write your own worker:
+
+```csharp
+public class MyRingSelectionWorker : RingSelectionWorker
+{
+    public override float ScorePawn(Pawn p, RingSelectionDef def)
+    {
+        float baseScore = base.ScorePawn(p, def);
+        if (baseScore <= 0f) return 0f;
+        // Add custom logic...
+        return baseScore + 5f;
+    }
+}
+```
+
+Then point your XML at it:
+
+```xml
+<workerClass>MyNamespace.MyRingSelectionWorker</workerClass>
+```
+
+---
+
+## 3) Custom ability effects (C#)
+
+All generic Lantern techniques are implemented as `CompAbilityEffect_*` with XML `CompProperties_*`.  
+If you want a new technique, create a new `CompAbilityEffect` + properties class under your own namespace, and add it to an `AbilityDef` like any vanilla ability comp.
+
+---
+
+## 4) Legacy hediff‑based power grants
+
+If you prefer “ring applies a hediff, hediff grants abilities,” use:
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_GiveAbilities">
+  <abilities>
+    <li>MyLantern_Ability_Blast</li>
+    <li>MyLantern_Ability_Shield</li>
+  </abilities>
+</li>
+```
+
+Most add‑ons should list abilities directly on the ring extension instead.
+

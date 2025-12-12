@@ -6,83 +6,110 @@
   <!-- ========================================== -->
 
   <!-- 1. The Ring Item -->
-  <ThingDef ParentName="ApparelNoQualityBase">
+  <ThingDef ParentName="Lantern_RingBase">
     <defName>YL_Ring</defName>
-    <label>Yellow Lantern Ring</label>
-    <description>A power ring fueled by the ability to instill fear.</description>
+    <label>yellow lantern ring</label>
+    <description>A power ring fueled by fear.</description>
     <graphicData>
-      <texPath>LanternsLight/Items/GL_Ring</texPath> <!-- Use your own texture -->
+      <texPath>YellowLantern/Items/YL_Ring</texPath>
       <graphicClass>Graphic_Single</graphicClass>
-      <color>(1, 0.9, 0, 1)</color> <!-- Yellow Tint -->
+      <color>(1, 0.9, 0, 1)</color>
     </graphicData>
-    <thingCategories><li>ApparelUtility</li></thingCategories>
     <statBases>
       <MarketValue>5000</MarketValue>
       <Mass>0.1</Mass>
     </statBases>
-    <apparel>
-      <careIfWornByCorpse>false</careIfWornByCorpse>
-      <bodyPartGroups><li>Hands</li></bodyPartGroups>
-      <layers><li>Belt</li></layers>
-      <tags><li>LanternRing</li></tags>
-    </apparel>
-    <tickerType>Normal</tickerType>
-    
-    <!-- REQUIRED: The Framework Component -->
-    <comps>
-       <li Class="DrAke.LanternsFramework.CompProperties_LanternRing" />
-    </comps>
-    
-    <!-- REQUIRED: Framework Configuration -->
+
     <modExtensions>
-       <li Class="DrAke.LanternsFramework.LanternDefExtension">
-          <ringColor>(1, 0.9, 0, 1)</ringColor>
-          <resourceLabel>Fear</resourceLabel>
-          
-          <!-- Optional: Capabilities -->
-          <allowBatteryManifest>true</allowBatteryManifest>
-          <batteryDef>GL_ChargeBattery</batteryDef> <!-- Can define YL_ChargeBattery -->
-          <associatedHediff>GL_Hediff_Powers</associatedHediff> <!-- Can define YL_Hediff_Powers -->
-          
-          <!-- Optional: Transformation -->
-          <!-- Items to equip when ring is worn. Conflicting items are stored safely. -->
-          <transformationApparel>
-             <!-- <li>YL_Uniform_Yellow</li> -->
-          </transformationApparel>
-       </li>
+      <li Class="DrAke.LanternsFramework.LanternDefExtension">
+        <ringColor>(1, 0.9, 0, 1)</ringColor>
+        <resourceLabel>Fear</resourceLabel>
+
+        <blastDamage>18</blastDamage>
+        <blastDamageType>Burn</blastDamageType>
+
+        <abilities>
+          <li>YL_Ability_Blast</li>
+          <li>YL_Ability_FearBind</li>
+          <li>YL_Ability_FearAura</li>
+        </abilities>
+
+        <!-- Optional batteries / costumes can go here. -->
+      </li>
     </modExtensions>
   </ThingDef>
 
-  <!-- 2. Selection Logic -->
-  <!-- Defines WHO gets the ring and WHEN -->
+  <!-- 2. Abilities (short example) -->
+  <AbilityDef ParentName="Lantern_Ability_BlastBase">
+    <defName>YL_Ability_Blast</defName>
+    <label>fear blast</label>
+    <iconPath>YellowLantern/UI/Blast</iconPath>
+  </AbilityDef>
+
+  <AbilityDef ParentName="Lantern_Ability_StunBase">
+    <defName>YL_Ability_FearBind</defName>
+    <label>fear bind</label>
+    <iconPath>YellowLantern/UI/Bind</iconPath>
+    <comps Inherit="False">
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternStun">
+        <stunTicks>240</stunTicks>
+        <radius>2.5</radius>
+        <affectHostilesOnly>true</affectHostilesOnly>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.06</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <AbilityDef ParentName="Lantern_Ability_AuraBase">
+    <defName>YL_Ability_FearAura</defName>
+    <label>aura of fear</label>
+    <iconPath>YellowLantern/UI/Aura</iconPath>
+    <statBases>
+      <Ability_EffectRadius>6</Ability_EffectRadius>
+    </statBases>
+    <comps Inherit="False">
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternBuffAura">
+        <hediffDef>YL_Hediff_FearBuff</hediffDef>
+        <severity>0.12</severity>
+        <radius>6</radius>
+        <durationTicks>6000</durationTicks>
+        <affectAlliesOnly>false</affectAlliesOnly>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.05</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <HediffDef>
+    <defName>YL_Hediff_FearBuff</defName>
+    <label>fear surge</label>
+    <hediffClass>HediffWithComps</hediffClass>
+  </HediffDef>
+
+  <!-- 3. Selection Logic -->
   <DrAke.LanternsFramework.RingSelectionDef>
     <defName>YL_Selection_Fear</defName>
     <ringDef>YL_Ring</ringDef>
-    
-    <!-- Trigger 1: Mental State (Panic/Fleeing) -->
-    <!-- "You have the ability to instill great fear" (or feel it?) -->
+
     <triggerMentalState>true</triggerMentalState>
     <mentalStates>
-        <li>PanicFlee</li>
-        <li>Wander_Psychotic</li>
+      <li>PanicFlee</li>
+      <li>Wander_Psychotic</li>
     </mentalStates>
-    
-    <!-- Trigger 2: Periodic Check? (Optional) -->
-    <!-- <triggerPeriodic>true</triggerPeriodic> -->
-    
-    <!-- Scoring Conditions -->
+
     <conditions>
-       <!-- Trait: Wimp (Good for feeling fear?) or Psychopath (Instill fear?) -->
-       <!-- Let's say Wimps attract the ring -->
-       <!-- <li Class="DrAke.LanternsLight.Condition_Trait"> <trait>Wimp</trait> <scoreBonus>20</scoreBonus> </li> -->
-       
-       <!-- Stat Condition: Cowardice? -->
-       <!-- Example: Check Mental Break Threshold. High Threshold = Unstable = Fearful? -->
-       <li Class="DrAke.LanternsFramework.Condition_Stat">
-          <stat>MentalBreakThreshold</stat>
-          <lowerIsBetter>false</lowerIsBetter>
-          <scoreMultiplier>5</scoreMultiplier>
-       </li>
+      <li Class="DrAke.LanternsFramework.Condition_Mood">
+        <lowerIsBetter>true</lowerIsBetter>
+        <scoreMultiplier>6</scoreMultiplier>
+      </li>
+      <li Class="DrAke.LanternsFramework.Condition_Stat">
+        <stat>MentalBreakThreshold</stat>
+        <lowerIsBetter>false</lowerIsBetter>
+        <scoreMultiplier>5</scoreMultiplier>
+      </li>
     </conditions>
   </DrAke.LanternsFramework.RingSelectionDef>
 

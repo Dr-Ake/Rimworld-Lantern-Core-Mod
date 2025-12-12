@@ -4,6 +4,8 @@ using Verse;
 using Verse.AI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using DrAke.LanternsFramework.Abilities;
 
 namespace DrAke.LanternsFramework.HarmonyPatches
 {
@@ -52,6 +54,15 @@ namespace DrAke.LanternsFramework.HarmonyPatches
                  }
             }
             return true; 
+        }
+
+        private static void Postfix(Hediff hediff, Pawn ___pawn)
+        {
+            if (hediff == null || ___pawn == null) return;
+            if (___pawn.health?.hediffSet == null) return;
+            if (!___pawn.health.hediffSet.hediffs.Contains(hediff)) return; // not actually applied
+
+            Current.Game?.GetComponent<RingSelectionManager>()?.Notify_HediffAdded(___pawn, hediff);
         }
     }
 
@@ -123,6 +134,71 @@ namespace DrAke.LanternsFramework.HarmonyPatches
             Current.Game.GetComponent<RingSelectionManager>()?.Notify_MentalStateStarted(__instance.pawn, __instance.def);
         }
     }
+
+    // Trigger ring selection when a pawn joins the player's faction.
+    [HarmonyPatch(typeof(Pawn), "SetFaction", new Type[] { typeof(Faction), typeof(Pawn) })]
+    public static class Patch_Pawn_SetFaction
+    {
+        static void Prefix(Pawn __instance, out Faction __state)
+        {
+            __state = __instance?.Faction;
+        }
+
+        static void Postfix(Pawn __instance, Faction newFaction, Pawn recruiter, Faction __state)
+        {
+            if (__instance == null || Current.Game == null) return;
+            Current.Game.GetComponent<RingSelectionManager>()?.Notify_PawnJoinedFaction(__instance, __state, newFaction);
+        }
+    }
+
+    // Trigger ring selection when a pawn spawns on a player home map.
+    [HarmonyPatch(typeof(Pawn), "SpawnSetup")]
+    public static class Patch_Pawn_SpawnSetup
+    {
+        static void Postfix(Pawn __instance, Map map, bool respawningAfterLoad)
+        {
+            Current.Game?.GetComponent<RingSelectionManager>()?.Notify_PawnSpawned(__instance, map, respawningAfterLoad);
+        }
+    }
+
+    // Trigger ring selection when a pawn is downed.
+    [HarmonyPatch(typeof(Pawn_HealthTracker), "MakeDowned")]
+    public static class Patch_Pawn_HealthTracker_MakeDowned
+    {
+        static void Postfix(Pawn ___pawn)
+        {
+            if (___pawn != null && ___pawn.Downed)
+            {
+                Current.Game?.GetComponent<RingSelectionManager>()?.Notify_PawnDowned(___pawn);
+            }
+        }
+    }
+
+    // Trigger ring selection when a pawn kills another pawn.
+    [HarmonyPatch(typeof(Pawn), "Kill")]
+    public static class Patch_Pawn_Kill
+    {
+        static void Postfix(Pawn __instance, object[] __args)
+        {
+            if (__instance == null) return;
+
+            Pawn killer = null;
+            if (__args != null)
+            {
+                foreach (object arg in __args)
+                {
+                    if (arg is DamageInfo dinfo)
+                    {
+                        killer = dinfo.Instigator as Pawn;
+                        if (killer != null) break;
+                    }
+                }
+            }
+
+            if (killer == null || killer == __instance) return;
+            Current.Game?.GetComponent<RingSelectionManager>()?.Notify_PawnKilled(killer, __instance);
+        }
+    }
     [HarmonyPatch(typeof(Game), MethodType.Constructor)]
     public static class Patch_Game_Constructor
     {
@@ -130,7 +206,14 @@ namespace DrAke.LanternsFramework.HarmonyPatches
         {
             if (__instance.components != null)
             {
-                __instance.components.Add(new RingSelectionManager(__instance));
+                if (!__instance.components.Any(c => c is RingSelectionManager))
+                {
+                    __instance.components.Add(new RingSelectionManager(__instance));
+                }
+                if (!__instance.components.Any(c => c is ConstructLifetimeManager))
+                {
+                    __instance.components.Add(new ConstructLifetimeManager(__instance));
+                }
             }
         }
     }
