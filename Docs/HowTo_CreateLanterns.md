@@ -1,7 +1,7 @@
-# LanternsCore Add‑on Authoring Guide
+﻿# LanternsCore Add-on Authoring Guide
 
-This guide is written so you can make a fully‑working Lantern ring mod with **only XML and textures**.  
-Anything marked “optional” can be skipped without errors.
+This guide is written so you can make a fully-working Lantern ring mod with **only XML and textures**.  
+Anything marked "optional" can be skipped without errors.
 
 The framework lives in `DrAke.LanternsCore` / `LanternsCore.dll`. Your mod should load after it.
 
@@ -9,13 +9,13 @@ The framework lives in `DrAke.LanternsCore` / `LanternsCore.dll`. Your mod shoul
 
 ## Folder Setup (minimal)
 
-In your add‑on mod:
+In your add-on mod:
 
 - `About/About.xml` (normal RimWorld mod metadata)
 - `Defs/` for your XML
 - `Textures/` for your art
 
-No C# required unless you want brand‑new logic.
+No C# required unless you want brand-new logic.
 
 ---
 
@@ -67,16 +67,16 @@ No C# required unless you want brand‑new logic.
 ### LanternDefExtension fields
 
 Required:
-- `ringColor` – UI bar color (RGBA).
-- `resourceLabel` – text on the charge bar.
-- `abilities` – list of `AbilityDef` defNames you want the ring to grant.
+- `ringColor` - UI bar color (RGBA).
+- `resourceLabel` - text on the charge bar.
+- `abilities` - list of `AbilityDef` defNames you want the ring to grant.
 
 Optional:
-- `blastDamage` / `blastDamageType` – defaults used by blast abilities.
-- `associatedHediff` – hediff to add while worn (for passive effects).
-- `allowBatteryManifest` – adds a gizmo to manifest a battery at the wearer.
-- `batteryDef` – what battery to manifest.
-- `transformationApparel` – costume/uniform pieces to auto‑equip while worn (restores original apparel on unequip).
+- `blastDamage` / `blastDamageType` - defaults used by blast abilities.
+- `associatedHediff` - hediff to add while worn (for passive effects).
+- `allowBatteryManifest` - adds a gizmo to manifest a battery at the wearer.
+- `batteryDef` - what battery to manifest.
+- `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
 
 Notes:
 - Battery manifest currently costs **50% charge** (hardcoded).
@@ -86,7 +86,7 @@ Notes:
 
 ## 2) Create Abilities (AbilityDef)
 
-You can make abilities however you want, but the framework provides **generic Lantern technique comps** so most add‑ons don’t need C#.
+You can make abilities however you want, but the framework provides **generic Lantern technique comps** so most add-ons don't need C#.
 
 ### Always add a cost comp
 
@@ -118,7 +118,7 @@ Core bases live in `Defs/Framework/Lantern_Framework_BaseDefs.xml`:
 
 They already set sane targeting defaults. You can override any `verbProperties` if you need different targeting.
 
-If you override a base’s `<comps>` block, add `Inherit="False"` to avoid duplicate comps.
+If you override a base's `<comps>` block, add `Inherit="False"` to avoid duplicate comps.
 
 ### UI AOE preview ring
 
@@ -134,10 +134,11 @@ If your Lantern comp uses a radius (`heal/stun/barrier/aura`), set the same valu
 
 ### Generic technique comps (fields)
 
-**Blast (hard‑light beam / bolt)**  
-Base handles targeting and cost. Damage comes from ring defaults unless overridden.
+**Blast (hard-light beam / bolt)**  
+Base handles targeting and cost. Damage comes from ring defaults unless overridden.  
+You can also add beam visuals via `VerbProperties_LanternBlast` (or set ring-level defaults).
 
-Optional per‑ability override:
+Optional per-ability override:
 ```xml
 <verbProperties Class="DrAke.LanternsFramework.Abilities.VerbProperties_LanternBlast">
   <verbClass>DrAke.LanternsFramework.Abilities.Verb_LanternBlast</verbClass>
@@ -145,55 +146,102 @@ Optional per‑ability override:
   <damageOverride>18</damageOverride> <!-- optional -->
   <damageTypeOverride>Burn</damageTypeOverride> <!-- optional -->
   <damageMultiplier>1.0</damageMultiplier> <!-- optional -->
+  <!-- optional beam visuals -->
+  <beamFleckDef>LightningGlow</beamFleckDef>
+  <beamFleckScale>0.7</beamFleckScale>
+  <beamFleckCount>0</beamFleckCount> <!-- 0 = auto based on distance -->
+  <tintBeamToRingColor>true</tintBeamToRingColor>
+  <!-- optional impact fleck -->
+  <!-- <impactFleckDef>MicroSparks</impactFleckDef> -->
+  <!-- optional projectile mode -->
+  <!-- <projectileDef>MyLantern_BlastProjectile</projectileDef> -->
+  <!-- optional beam that stretches to the flying projectile -->
+  <!-- <projectileBeamMoteDef>MyLantern_BeamMote</projectileBeamMoteDef> -->
+  <!-- <projectileBeamOffsetA>(0,0,0)</projectileBeamOffsetA> -->
+  <!-- <projectileBeamOffsetB>(0,0,0)</projectileBeamOffsetB> -->
+  <!-- <projectileBeamScale>0.5</projectileBeamScale> -->
 </verbProperties>
 ```
 
+Ring-level blast visual defaults (used when the ability does not override):
+```xml
+<blastBeamFleckDef>LightningGlow</blastBeamFleckDef>
+<blastBeamFleckScale>0.7</blastBeamFleckScale>
+<blastBeamFleckCount>0</blastBeamFleckCount>
+<blastTintBeamToRingColor>true</blastTintBeamToRingColor>
+<!-- or force a specific color -->
+<!--
+<blastUseBeamColorOverride>true</blastUseBeamColorOverride>
+<blastBeamColorOverride>(0,1,0,1)</blastBeamColorOverride>
+-->
+```
+
+**Projectile blast (travels across the map)**
+1) Define a projectile (inherit the core base so damage comes from the ring):
+```xml
+<ThingDef ParentName="Lantern_Projectile_BlastBase">
+  <defName>MyLantern_BlastProjectile</defName>
+  <graphicData>
+    <texPath>MyLantern/Projectiles/MyBlast</texPath>
+    <graphicClass>Graphic_Single</graphicClass>
+    <drawSize>0.6</drawSize>
+  </graphicData>
+  <projectile>
+    <speed>65</speed>
+  </projectile>
+</ThingDef>
+```
+2) In your blast ability, set `projectileDef` to that defName. The verb will launch it instead of instant damage.
+
+**Cartoon laser (one end anchored, other end zips out)**
+Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is flying, a `MoteDualAttached` beam will connect caster -> projectile and stretch as it moves. Use any mote def with `scaleToConnectTargets=true` and your beam PNG.
+
 **Heal construct (`CompProperties_LanternHeal`)**
-- `healAmount` (float) – total healing to distribute to injuries.
-- `radius` (float) – `0` = single target, `>0` = AOE around target cell.
+- `healAmount` (float) - total healing to distribute to injuries.
+- `radius` (float) - `0` = single target, `>0` = AOE around target cell.
 - `affectAlliesOnly` (bool)
 - `affectSelf` (bool)
 - `affectAnimals` (bool)
-- `hediffsToRemove` (list of HediffDef) – optional.
-- `effecterDef` (EffecterDef) – optional VFX.
+- `hediffsToRemove` (list of HediffDef) - optional.
+- `effecterDef` (EffecterDef) - optional VFX.
 
 **Bind/stun construct (`CompProperties_LanternStun`)**
 - `stunTicks` (int)
-- `radius` (float) – `0` single, `>0` AOE.
+- `radius` (float) - `0` single, `>0` AOE.
 - `affectHostilesOnly` (bool)
 - `affectAnimals` (bool)
 - `effecterDef` (optional)
 
 **Barrier / shield (`CompProperties_LanternShieldAbility`)**
-- `shieldHediffDef` (HediffDef) – **required unless you rely on legacy GL shield**.
-- `radius` (float) – `0` single target toggle; `>0` AOE bubble.
+- `shieldHediffDef` (HediffDef) - **required unless you rely on legacy GL shield**.
+- `radius` (float) - `0` single target toggle; `>0` AOE bubble.
 - `affectAlliesOnly` (bool)
 - `affectSelf` (bool)
-- `alsoShieldCaster` (bool) – if targeting others/locations, also shields caster.
+- `alsoShieldCaster` (bool) - if targeting others/locations, also shields caster.
 
-**Hard‑light constructs (`CompProperties_LanternConstructSpawn`)**
-- `thingDef` (ThingDef) – what to spawn.
+**Hard-light constructs (`CompProperties_LanternConstructSpawn`)**
+- `thingDef` (ThingDef) - what to spawn.
 - `spawnCount` (int)
-- `spreadRadius` (float) – `0` places exactly on click, otherwise random within radius.
-- `durationTicks` (int) – `0` = permanent, `>0` auto‑vanish.
-- `setFaction` (bool) – sets spawned thing to caster faction if possible.
-- `replaceExisting` (bool) – destroys same‑def thing at cell first.
+- `spreadRadius` (float) - `0` places exactly on click, otherwise random within radius.
+- `durationTicks` (int) - `0` = permanent, `>0` auto-vanish.
+- `setFaction` (bool) - sets spawned thing to caster faction if possible.
+- `replaceExisting` (bool) - destroys same-def thing at cell first.
 - `effecterDef` (optional)
 
 **Summon projections/minions (`CompProperties_LanternSummon`)**
 - `pawnKind` (PawnKindDef)
 - `count` (int)
-- `spawnRadius` (float) – `0` exact click, otherwise random nearby.
-- `durationTicks` (int) – `0` permanent; `>0` auto‑despawn.
+- `spawnRadius` (float) - `0` exact click, otherwise random nearby.
+- `durationTicks` (int) - `0` permanent; `>0` auto-despawn.
 - `setFactionToCaster` (bool)
-- `factionDefOverride` (FactionDef) – optional override.
+- `factionDefOverride` (FactionDef) - optional override.
 - `effecterDef` (optional)
 
 **Emotional aura buff (`CompProperties_LanternBuffAura`)**
-- `hediffDef` (HediffDef) – what buff to apply.
-- `severity` (float) – how much severity per cast.
+- `hediffDef` (HediffDef) - what buff to apply.
+- `severity` (float) - how much severity per cast.
 - `radius` (float)
-- `durationTicks` (int) – if `removeOnExpire=true`, buff is removed later.
+- `durationTicks` (int) - if `removeOnExpire=true`, buff is removed later.
 - `removeOnExpire` (bool)
 - `affectAlliesOnly` (bool)
 - `affectSelf` (bool)
@@ -202,7 +250,7 @@ Optional per‑ability override:
 
 **Simple spawn (legacy utility)**
 
-If you just want “spawn one thing permanently at click”:
+If you just want "spawn one thing permanently at click":
 
 ```xml
 <li Class="DrAke.LanternsFramework.Abilities.CompProperties_AbilitySpawn">
@@ -235,7 +283,7 @@ Create your own shield hediff and add the Lantern shield comp:
 
 ### Aura visuals that follow pawns (optional)
 
-Add to any hediff you want to “glow” or show a mote while active:
+Add to any hediff you want to "glow" or show a mote while active:
 
 ```xml
 <li Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_LanternAuraVfx">
@@ -246,7 +294,7 @@ Add to any hediff you want to “glow” or show a mote while active:
 </li>
 ```
 
-### Legacy/advanced: hediff‑granted abilities
+### Legacy/advanced: hediff-granted abilities
 
 You can also grant abilities from a hediff using:
 
@@ -258,7 +306,7 @@ You can also grant abilities from a hediff using:
 </li>
 ```
 
-Most add‑ons should prefer listing abilities directly on the ring extension.
+Most add-ons should prefer listing abilities directly on the ring extension.
 
 ---
 
@@ -289,9 +337,9 @@ Most add‑ons should prefer listing abilities directly on the ring extension.
 </ThingDef>
 ```
 
-When a pawn wearing any Lantern ring right‑clicks this battery, they get a **Recharge Ring** float‑menu option.
+When a pawn wearing any Lantern ring right-clicks this battery, they get a **Recharge Ring** float-menu option.
 
-### Ring‑manifested batteries
+### Ring-manifested batteries
 
 If your ring should spawn a battery via gizmo:
 
@@ -302,7 +350,7 @@ If your ring should spawn a battery via gizmo:
 
 ---
 
-## 5) Ring Selection (auto‑choosing bearers) (optional)
+## 5) Ring Selection (auto-choosing bearers) (optional)
 
 Create a `RingSelectionDef` to let rings seek out a bearer.
 
@@ -374,7 +422,7 @@ Create a `RingSelectionDef` to let rings seek out a bearer.
 </DrAke.LanternsFramework.RingSelectionDef>
 ```
 
-### Built‑in condition classes
+### Built-in condition classes
 
 Use any number:
 - `Condition_Trait` (`trait`, optional `degree`, `scoreBonus`)
@@ -404,7 +452,7 @@ Attach to any `TraitDef`:
 
 ---
 
-## 6) Flight (optional built‑in ability)
+## 6) Flight (optional built-in ability)
 
 Core includes Lantern flight systems and defs (job/world travel/skyfallers).  
 To give flight to a ring, define an ability like:
@@ -418,14 +466,14 @@ To give flight to a ring, define an ability like:
 </AbilityDef>
 ```
 
-Add its defName to the ring’s `abilities` list.
+Add its defName to the ring's `abilities` list.
 
 ---
 
-# Full End‑to‑End Example (copy/paste template)
+# Full End-to-End Example (copy/paste template)
 
 This example includes **every required field and every optional field**.  
-Delete what you don’t need.
+Delete what you don't need.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>

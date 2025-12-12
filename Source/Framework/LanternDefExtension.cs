@@ -27,5 +27,13 @@ namespace DrAke.LanternsFramework
         // Generic Combat
         public int blastDamage = 10;
         public DamageDef blastDamageType; // Defaults to Burn if null
+
+        // Optional blast visuals (used if the blast ability doesn't override them).
+        public FleckDef blastBeamFleckDef;
+        public float blastBeamFleckScale = 1f;
+        public int blastBeamFleckCount = 0; // 0 = auto based on distance
+        public bool blastTintBeamToRingColor = true;
+        public bool blastUseBeamColorOverride = false;
+        public Color blastBeamColorOverride = Color.white;
     }
 }

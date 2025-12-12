@@ -59,6 +59,24 @@
     </comps>
   </AbilityDef>
 
+  <!-- Base blast projectile ThingDef (traveling hard-light shot). Add-ons should inherit this and set texPath. -->
+  <ThingDef ParentName="BaseBullet" Abstract="True" Name="Lantern_Projectile_BlastBase">
+    <defName>Lantern_Projectile_BlastBase</defName>
+    <label>lantern blast projectile</label>
+    <thingClass>DrAke.LanternsFramework.Abilities.Projectile_LanternBlast</thingClass>
+    <tickerType>Normal</tickerType>
+    <graphicData>
+      <texPath>Things/Projectile/Bullet_Small</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>0.5</drawSize>
+    </graphicData>
+    <projectile>
+      <damageDef>Burn</damageDef>
+      <damageAmountBase>0</damageAmountBase> <!-- overridden by ring/verb -->
+      <speed>55</speed>
+    </projectile>
+  </ThingDef>
+
   <!-- Base heal ability: restorative construct, single or AOE -->
   <AbilityDef Abstract="True" Name="Lantern_Ability_HealBase">
     <defName>Lantern_Ability_HealBase</defName>
