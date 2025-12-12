@@ -270,7 +270,13 @@ namespace DrAke.LanternsFramework
                 {
                     ringComp = this,
                     label = Extension.resourceLabel,
-                    barColor = Extension.ringColor
+                    barColor = Extension.ringColor,
+                    labelTextColor = Extension.chargeUseLabelColorOverride
+                        ? Extension.chargeLabelColorOverride
+                        : Extension.ringColor,
+                    percentTextColor = Extension.chargeUsePercentColorOverride
+                        ? Extension.chargePercentColorOverride
+                        : Color.white
                 };
 
                 if (Extension.allowBatteryManifest)
@@ -358,6 +364,8 @@ namespace DrAke.LanternsFramework
         public CompLanternRing ringComp;
         public string label;
         public Color barColor;
+        public Color labelTextColor = Color.white;
+        public Color percentTextColor = Color.white;
 
         private static readonly Texture2D EmptyBarTex = SolidColorMaterials.NewSolidColorTexture(Color.gray);
         private Texture2D cachedFillTex;
@@ -383,13 +391,13 @@ namespace DrAke.LanternsFramework
             
             Text.Font = GameFont.Small;
             Text.Anchor = TextAnchor.MiddleCenter;
-            GUI.color = Color.white; // Text always white? Or Black on light colors?
+            GUI.color = percentTextColor;
             Widgets.Label(barRect, $"{ringComp.charge:P0}");
             
             Rect labelRect = new Rect(rect.x, rect.y + 5, rect.width, 20f);
             Text.Font = GameFont.Tiny;
             Text.Anchor = TextAnchor.UpperCenter;
-            GUI.color = barColor;
+            GUI.color = labelTextColor;
             Widgets.Label(labelRect, label);
             GUI.color = Color.white;
             Text.Anchor = TextAnchor.UpperLeft;

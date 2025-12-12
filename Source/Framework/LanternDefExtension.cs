@@ -11,6 +11,13 @@ namespace DrAke.LanternsFramework
         public Color ringColor = Color.green;
         public string resourceLabel = "Willpower";
 
+        // Charge gizmo text colors (optional overrides).
+        // If override flags are false, label uses ringColor and percent uses white.
+        public bool chargeUseLabelColorOverride = false;
+        public Color chargeLabelColorOverride = Color.white;
+        public bool chargeUsePercentColorOverride = false;
+        public Color chargePercentColorOverride = Color.white;
+
         // Mechanics
         public HediffDef associatedHediff;
         public bool allowBatteryManifest = false;

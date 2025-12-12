@@ -66,6 +66,14 @@ namespace DrAke.LanternsFramework
         public SelectionMode selectionMode = SelectionMode.HighestScore;
         public float minScoreToSelect = 0.01f;
 
+        // Run/limit behavior (optional)
+        // If true, this selection def stops triggering after it runs once (success or not).
+        public bool runOnlyOnce = false;
+        // If true, this selection def stops triggering after the first successful ring assignment.
+        public bool stopAfterFirstSuccess = false;
+        // Maximum number of rings this def may assign total for the colony/game. 0 = unlimited.
+        public int maxRingsTotal = 0;
+
         // Conditions
         // Generic score modifiers
         public List<SelectionCondition> conditions = new List<SelectionCondition>();

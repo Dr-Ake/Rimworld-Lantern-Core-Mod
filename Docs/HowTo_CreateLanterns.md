@@ -77,10 +77,13 @@ Optional:
 - `allowBatteryManifest` - adds a gizmo to manifest a battery at the wearer.
 - `batteryDef` - what battery to manifest.
 - `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
+- `chargeUseLabelColorOverride` / `chargeLabelColorOverride` - optionally override the **label text** color on the charge bar.
+- `chargeUsePercentColorOverride` / `chargePercentColorOverride` - optionally override the **percent text** color on the charge bar.
 
 Notes:
 - Battery manifest currently costs **50% charge** (hardcoded).
 - If `blastDamageType` is omitted, Burn is used.
+- If you don't set charge text overrides, label uses `ringColor` and percent text is white.
 
 ---
 
@@ -410,6 +413,14 @@ Create a `RingSelectionDef` to let rings seek out a bearer.
   <selectionMode>HighestScore</selectionMode>
   <minScoreToSelect>0.01</minScoreToSelect>
 
+  <!-- Run/limit behavior (optional) -->
+  <!-- If true, this selection def stops after it runs once (success or not). -->
+  <!-- <runOnlyOnce>false</runOnlyOnce> -->
+  <!-- If true, this selection def stops after the first successful ring assignment. -->
+  <!-- <stopAfterFirstSuccess>false</stopAfterFirstSuccess> -->
+  <!-- Total rings this def may assign. 0 = unlimited. -->
+  <!-- <maxRingsTotal>0</maxRingsTotal> -->
+
   <!-- Scoring conditions -->
   <conditions>
     <li Class="DrAke.LanternsFramework.Condition_Trait">
@@ -423,6 +434,11 @@ Create a `RingSelectionDef` to let rings seek out a bearer.
   </conditions>
 </DrAke.LanternsFramework.RingSelectionDef>
 ```
+
+**Run/limit options**
+- `runOnlyOnce`: disables this selection def after its first trigger attempt (even if no pawn qualifies).
+- `stopAfterFirstSuccess`: keeps trying on triggers until it successfully gives a ring once, then disables.
+- `maxRingsTotal`: hard cap on how many rings this selection def can ever give; set to `1` to mimic Lantern's Light behavior.
 
 ### Built-in condition classes
 

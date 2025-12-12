@@ -9,8 +9,21 @@ namespace DrAke.LanternsFramework
 {
     public class RingSelectionManager : GameComponent
     {
+        // Persistent state per RingSelectionDef.
+        private List<RingSelectionStateEntry> selectionStates = new List<RingSelectionStateEntry>();
+
         public RingSelectionManager(Game game)
         {
+        }
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Collections.Look(ref selectionStates, "selectionStates", LookMode.Deep);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit && selectionStates == null)
+            {
+                selectionStates = new List<RingSelectionStateEntry>();
+            }
         }
 
         public override void GameComponentTick()
@@ -31,6 +44,7 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerPeriodic && def.periodicInterval > 0)
                 {
+                    if (ShouldSkip(def)) continue;
                     long ticks = Find.TickManager.TicksGame;
                     // Log.Message($"[LanternsDebug] Checking {def.defName}: Interval {def.periodicInterval}. Modulo: {ticks % def.periodicInterval}");
                     
@@ -51,6 +65,7 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerMentalState)
                 {
+                    if (ShouldSkip(def)) continue;
                     bool match = false;
                     if (def.mentalStates.NullOrEmpty())
                     {
@@ -78,6 +93,7 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerOnJoinPlayerFaction)
                 {
+                    if (ShouldSkip(def)) continue;
                     TryAssignRingToPawn(pawn, def);
                 }
             }
@@ -92,6 +108,7 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerOnSpawnedOnMap)
                 {
+                    if (ShouldSkip(def)) continue;
                     TryAssignRingToPawn(pawn, def);
                 }
             }
@@ -105,6 +122,7 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerOnDowned)
                 {
+                    if (ShouldSkip(def)) continue;
                     TryAssignRingToPawn(pawn, def);
                 }
             }
@@ -121,12 +139,14 @@ namespace DrAke.LanternsFramework
             {
                 if (def.triggerOnKillAny)
                 {
+                    if (ShouldSkip(def)) continue;
                     TryAssignRingToPawn(killer, def);
                     continue;
                 }
 
                 if (def.triggerOnKillHostile && victimWasHostile)
                 {
+                    if (ShouldSkip(def)) continue;
                     TryAssignRingToPawn(killer, def);
                 }
             }
@@ -139,6 +159,7 @@ namespace DrAke.LanternsFramework
             foreach (RingSelectionDef def in DefDatabase<RingSelectionDef>.AllDefs)
             {
                 if (!def.triggerOnHediffAdded) continue;
+                if (ShouldSkip(def)) continue;
 
                 if (!def.hediffsToTriggerOn.NullOrEmpty() && !def.hediffsToTriggerOn.Contains(hediff.def))
                 {
@@ -151,6 +172,10 @@ namespace DrAke.LanternsFramework
 
         public void TryRunSelection(RingSelectionDef def)
         {
+            if (ShouldSkip(def)) return;
+            var state = GetState(def);
+            if (def.runOnlyOnce) state.hasRunOnce = true;
+
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
 
@@ -181,19 +206,23 @@ namespace DrAke.LanternsFramework
 
             if (chosen != null)
             {
-                TriggerEvent(chosen, def);
+                GiveRingToPawn(chosen, def);
             }
         }
         
         public void TryAssignRingToPawn(Pawn p, RingSelectionDef def)
         {
+            if (ShouldSkip(def)) return;
+            var state = GetState(def);
+            if (def.runOnlyOnce) state.hasRunOnce = true;
+
             RingSelectionWorker worker = (RingSelectionWorker)Activator.CreateInstance(def.workerClass);
             float score = worker.ScorePawn(p, def);
             
             // Threshold check? For now assume > 0 is valid.
             if (score >= def.minScoreToSelect)
             {
-                TriggerEvent(p, def);
+                GiveRingToPawn(p, def);
             }
         }
 
@@ -271,6 +300,67 @@ namespace DrAke.LanternsFramework
                 // Simple spawn backup
                 GenSpawn.Spawn(def.ringDef, target.Position, target.Map);
             }
+        }
+
+        private bool GiveRingToPawn(Pawn target, RingSelectionDef def)
+        {
+            if (target == null || def?.ringDef == null) return false;
+            if (PawnHasRing(target, def.ringDef)) return false;
+
+            TriggerEvent(target, def);
+
+            var state = GetState(def);
+            state.ringsGiven++;
+
+            if (def.stopAfterFirstSuccess) state.completed = true;
+            if (def.maxRingsTotal > 0 && state.ringsGiven >= def.maxRingsTotal) state.completed = true;
+
+            return true;
+        }
+
+        private static bool PawnHasRing(Pawn p, ThingDef ringDef)
+        {
+            return ringDef != null && p?.apparel != null && p.apparel.WornApparel.Any(a => a.def == ringDef);
+        }
+
+        private bool ShouldSkip(RingSelectionDef def)
+        {
+            if (def == null) return true;
+            var state = GetState(def);
+            if (state.completed) return true;
+            if (def.runOnlyOnce && state.hasRunOnce) return true;
+            if (def.maxRingsTotal > 0 && state.ringsGiven >= def.maxRingsTotal)
+            {
+                state.completed = true;
+                return true;
+            }
+            return false;
+        }
+
+        private RingSelectionStateEntry GetState(RingSelectionDef def)
+        {
+            if (def == null) return null;
+            var existing = selectionStates.FirstOrDefault(s => s != null && s.defName == def.defName);
+            if (existing != null) return existing;
+            var created = new RingSelectionStateEntry { defName = def.defName };
+            selectionStates.Add(created);
+            return created;
+        }
+    }
+
+    public class RingSelectionStateEntry : IExposable
+    {
+        public string defName;
+        public int ringsGiven = 0;
+        public bool completed = false;
+        public bool hasRunOnce = false;
+
+        public void ExposeData()
+        {
+            Scribe_Values.Look(ref defName, "defName");
+            Scribe_Values.Look(ref ringsGiven, "ringsGiven", 0);
+            Scribe_Values.Look(ref completed, "completed", false);
+            Scribe_Values.Look(ref hasRunOnce, "hasRunOnce", false);
         }
     }
 }
