@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
+using UnityEngine;
 
 namespace DrAke.LanternsFramework.Abilities
 {
@@ -11,6 +12,16 @@ namespace DrAke.LanternsFramework.Abilities
         public bool affectHostilesOnly = true;
         public bool affectAnimals = true;
         public EffecterDef effecterDef;
+
+        // Optional VFX/SFX.
+        public FleckDef castFleckDef;
+        public float castFleckScale = 1f;
+        public FleckDef impactFleckDef;
+        public float impactFleckScale = 1f;
+        public ThingDef moteDefOnTarget;
+        public float moteScaleOnTarget = 1f;
+        public bool attachMoteToTarget = true;
+        public SoundDef soundCastOverride;
 
         public CompProperties_LanternStun()
         {
@@ -36,6 +47,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Props.effecterDef.Spawn(target.Cell, map, 1f);
             }
 
+            LanternVfx.PlayCast(parent.pawn, target.Cell, map, Props.castFleckDef, Props.castFleckScale, Props.soundCastOverride);
+
             if (Props.radius > 0.1f)
             {
                 foreach (IntVec3 cell in GenRadial.RadialCellsAround(target.Cell, Props.radius, true))
@@ -45,6 +58,8 @@ namespace DrAke.LanternsFramework.Abilities
                     {
                         if (t is Pawn p && ShouldAffect(p))
                         {
+                            LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                                Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                             p.stances?.stunner?.StunFor(Props.stunTicks, parent.pawn);
                         }
                     }
@@ -55,6 +70,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Pawn p = target.Pawn;
                 if (p != null && ShouldAffect(p))
                 {
+                    LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                        Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                     p.stances?.stunner?.StunFor(Props.stunTicks, parent.pawn);
                 }
             }
@@ -71,4 +88,3 @@ namespace DrAke.LanternsFramework.Abilities
         }
     }
 }
-

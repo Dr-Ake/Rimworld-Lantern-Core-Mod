@@ -90,6 +90,39 @@ Notes:
 
 ---
 
+## Crafting (optional)
+
+Rings are **not craftable by default**. To make a ring craftable using only XML, add a vanilla `<recipeMaker>` block to your ring `ThingDef` and a `<costList>`. RimWorld will auto‑generate a `RecipeDef` for you.
+
+Example:
+
+```xml
+<ThingDef ParentName="Lantern_RingBase">
+  <defName>MyLantern_Ring</defName>
+  ...
+  <recipeMaker>
+    <researchPrerequisite>Smithing</researchPrerequisite>
+    <recipeUsers>
+      <li>ElectricSmithy</li>
+      <!-- or FabricationBench, CraftingSpot, etc -->
+    </recipeUsers>
+    <workAmount>2000</workAmount>
+    <workSkill>Crafting</workSkill>
+    <skillRequirements>
+      <Crafting>6</Crafting>
+    </skillRequirements>
+  </recipeMaker>
+  <costList>
+    <Jade>20</Jade>
+    <ComponentIndustrial>2</ComponentIndustrial>
+  </costList>
+</ThingDef>
+```
+
+To make a ring **uncraftable**, omit the `<recipeMaker>` block.
+
+---
+
 ## 2) Create Abilities (AbilityDef)
 
 You can make abilities however you want, but the framework provides **generic Lantern technique comps** so most add-ons don't need C#.
@@ -220,6 +253,12 @@ Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is fl
 - `affectAnimals` (bool)
 - `effecterDef` (optional)
 
+**Common VFX/SFX fields (all Lantern comps, optional)**
+- `castFleckDef` / `castFleckScale` - VFX at cast point.
+- `impactFleckDef` / `impactFleckScale` - VFX at each affected target/cell.
+- `moteDefOnTarget` / `moteScaleOnTarget` / `attachMoteToTarget` - optional mote on targets.
+- `soundCastOverride` - plays an extra sound when cast.
+
 **Barrier / shield (`CompProperties_LanternShieldAbility`)**
 - `shieldHediffDef` (HediffDef) - **required unless you rely on legacy GL shield**.
 - `radius` (float) - `0` single target toggle; `>0` AOE bubble.
@@ -234,6 +273,11 @@ Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is fl
 - `durationTicks` (int) - `0` = permanent, `>0` auto-vanish.
 - `setFaction` (bool) - sets spawned thing to caster faction if possible.
 - `replaceExisting` (bool) - destroys same-def thing at cell first.
+- `stuffDef` (ThingDef) - optional stuff to use if `thingDef` is made-from-stuff.
+- `spawnPattern` (enum) - `Single`, `Scatter` (default), `Line`, `Wall`, `Ring`.
+- `requireStandableCell` (bool) - skip non-standable cells.
+- `lineLength` (int) - for `Line`/`Wall`, 0 = use `spawnCount`.
+- `ringRadius` / `ringThickness` (float) - for `Ring` pattern; if `ringRadius` is 0, `spreadRadius` is used.
 - `effecterDef` (optional)
 
 **Summon projections/minions (`CompProperties_LanternSummon`)**
@@ -255,6 +299,58 @@ Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is fl
 - `affectSelf` (bool)
 - `affectAnimals` (bool)
 - `effecterDef` (optional)
+
+### Cookbook examples (copy/paste)
+
+**Anchored beam blast**
+```xml
+<AbilityDef ParentName="Lantern_Ability_BlastBase">
+  <defName>MyLantern_Ability_Blast</defName>
+  <iconPath>MyLantern/UI/Blast</iconPath>
+  <verbProperties Class="DrAke.LanternsFramework.Abilities.VerbProperties_LanternBlast">
+    <projectileDef>MyLantern_Projectile_Blast</projectileDef>
+    <projectileBeamMoteDef>MyLantern_Mote_BeamLine</projectileBeamMoteDef>
+    <projectileBeamScale>0.6</projectileBeamScale>
+  </verbProperties>
+</AbilityDef>
+```
+
+**Wall/line construct**
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternConstructSpawn">
+  <thingDef>Sandbags</thingDef>
+  <spawnPattern>Wall</spawnPattern>
+  <lineLength>8</lineLength>
+  <durationTicks>1800</durationTicks>
+  <replaceExisting>true</replaceExisting>
+</li>
+```
+
+**Ring construct around a spot**
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternConstructSpawn">
+  <thingDef>WoodLog</thingDef>
+  <spawnPattern>Ring</spawnPattern>
+  <ringRadius>5</ringRadius>
+  <ringThickness>1</ringThickness>
+  <spawnCount>0</spawnCount> <!-- 0 = fill all ring cells -->
+</li>
+```
+
+**Shield that follows the pawn**
+```xml
+<HediffDef>
+  <defName>MyLantern_Hediff_Shield</defName>
+  <hediffClass>HediffWithComps</hediffClass>
+  <comps>
+    <li Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_LanternShield"/>
+    <li Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_LanternAuraVfx">
+      <moteDef>MyLantern_Mote_ShieldBubble</moteDef>
+      <attachToPawn>true</attachToPawn>
+    </li>
+  </comps>
+</HediffDef>
+```
 
 **Simple spawn (legacy utility)**
 
@@ -299,8 +395,11 @@ Add to any hediff you want to "glow" or show a mote while active:
   <moteDef>MyLantern_Mote_Glow</moteDef>
   <moteScale>1.2</moteScale>
   <intervalTicks>60</intervalTicks>
+  <attachToPawn>true</attachToPawn> <!-- optional: follows pawn movement -->
+  <!-- <attachedOffset>(0,0,0)</attachedOffset> -->
 </li>
 ```
+Note: if you use `attachToPawn=true`, your `moteDef` should use a mote class that supports attachments (e.g. `thingClass>MoteDualAttached</thingClass>` or `MoteBubble`). Plain `MoteThrown` motes will trail behind.
 
 ### Legacy/advanced: hediff-granted abilities
 
@@ -446,6 +545,7 @@ Create a `RingSelectionDef` to let rings seek out a bearer.
 - `runOnlyOnce`: disables this selection def after its first trigger attempt (even if no pawn qualifies).
 - `stopAfterFirstSuccess`: keeps trying on triggers until it successfully gives a ring once, then disables.
 - `maxRingsTotal`: hard cap on how many rings this selection def can ever give; set to `1` to mimic Lantern's Light behavior.
+- `maxActiveRingsInColony`: caps how many pawns can *currently wear* this ring at once; selection pauses when at cap.
 
 ### Built-in condition classes
 
@@ -459,6 +559,8 @@ Use any number:
 - `Condition_Hediff` (`hediff`, `minSeverity`, `maxSeverity`, `scoreBonus`, `scaleBySeverity`, `severityMultiplier`)
 - `Condition_Gene` (`gene`, `scoreBonus`)
 - `Condition_Meme` (`meme`, `scoreBonus`)
+- `Condition_Passion` (`skill`, `minPassion`, `minorBonus`, `majorBonus`, `flatBonus`)
+- `Condition_Record` (`record`, `minValue`, `maxValue`, `lowerIsBetter`, `scoreMultiplier`, `flatBonus`)
 - `Condition_TraitExtensions` (scores traits using `LanternTraitScoreExtension`)
 
 ### Trait score extension (optional)

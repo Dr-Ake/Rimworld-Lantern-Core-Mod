@@ -73,6 +73,8 @@ namespace DrAke.LanternsFramework
         public bool stopAfterFirstSuccess = false;
         // Maximum number of rings this def may assign total for the colony/game. 0 = unlimited.
         public int maxRingsTotal = 0;
+        // Maximum number of active (currently worn) rings of ringDef allowed in the colony at once. 0 = unlimited.
+        public int maxActiveRingsInColony = 0;
 
         // Conditions
         // Generic score modifiers
@@ -234,7 +236,7 @@ namespace DrAke.LanternsFramework
         public override float CalculateScore(Pawn p, RingSelectionDef def)
         {
             if (gene == null || p.genes == null) return 0f;
-            return p.genes.HasGene(gene) ? scoreBonus : 0f;
+            return p.genes.HasActiveGene(gene) ? scoreBonus : 0f;
         }
     }
 
@@ -248,6 +250,52 @@ namespace DrAke.LanternsFramework
         {
             if (meme == null || p.Ideo == null) return 0f;
             return p.Ideo.HasMeme(meme) ? scoreBonus : 0f;
+        }
+    }
+
+    // Passion-based condition. Scores pawns with passion in a given skill.
+    public class Condition_Passion : SelectionCondition
+    {
+        public SkillDef skill;
+        public Passion minPassion = Passion.Minor;
+        public float minorBonus = 5f;
+        public float majorBonus = 10f;
+        public float flatBonus = 0f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (skill == null || p.skills == null) return 0f;
+            var s = p.skills.GetSkill(skill);
+            if (s == null) return 0f;
+            Passion passion = s.passion;
+            if (passion < minPassion) return 0f;
+            float bonus = passion switch
+            {
+                Passion.Major => majorBonus,
+                Passion.Minor => minorBonus,
+                _ => 0f
+            };
+            return flatBonus + bonus;
+        }
+    }
+
+    // Generic record-based condition (kills, downed, etc.).
+    public class Condition_Record : SelectionCondition
+    {
+        public RecordDef record;
+        public float minValue = 0f;
+        public float maxValue = 999999f;
+        public bool lowerIsBetter = false;
+        public float scoreMultiplier = 1f;
+        public float flatBonus = 0f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (record == null || p.records == null) return 0f;
+            float val = p.records.GetValue(record);
+            if (val < minValue || val > maxValue) return 0f;
+            float scoreVal = lowerIsBetter ? (1f / (1f + val)) : val;
+            return flatBonus + scoreVal * scoreMultiplier;
         }
     }
 }

@@ -17,6 +17,16 @@ namespace DrAke.LanternsFramework.Abilities
         public FactionDef factionDefOverride;
         public EffecterDef effecterDef;
 
+        // Optional VFX/SFX.
+        public FleckDef castFleckDef;
+        public float castFleckScale = 1f;
+        public FleckDef impactFleckDef;
+        public float impactFleckScale = 1f;
+        public ThingDef moteDefOnTarget;
+        public float moteScaleOnTarget = 1f;
+        public bool attachMoteToTarget = true;
+        public SoundDef soundCastOverride;
+
         public CompProperties_LanternSummon()
         {
             compClass = typeof(CompAbilityEffect_LanternSummon);
@@ -57,6 +67,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Props.effecterDef.Spawn(baseCell, map, 1f);
             }
 
+            LanternVfx.PlayCast(caster, baseCell, map, Props.castFleckDef, Props.castFleckScale, Props.soundCastOverride);
+
             for (int i = 0; i < Mathf.Max(1, Props.count); i++)
             {
                 IntVec3 cell = baseCell;
@@ -64,6 +76,9 @@ namespace DrAke.LanternsFramework.Abilities
                 {
                     CellFinder.TryFindRandomCellNear(baseCell, map, Mathf.CeilToInt(Props.spawnRadius), c => c.Standable(map), out cell);
                 }
+
+                LanternVfx.PlayImpact(new LocalTargetInfo(cell), cell, map, Props.impactFleckDef, Props.impactFleckScale,
+                    Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
 
                 Pawn pawn = GeneratePawnStable(Props.pawnKind, faction);
                 if (pawn == null) continue;

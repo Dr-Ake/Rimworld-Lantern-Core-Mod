@@ -29,7 +29,10 @@ namespace DrAke.LanternsFramework
         public override void GameComponentTick()
         {
             // Debug: Prove existence
-            if (Find.TickManager.TicksGame % 5000 == 0) Log.Message($"[LanternsDebug] RingSelectionManager is Alive. Tick: {Find.TickManager.TicksGame}");
+            if (LanternDebug.LoggingEnabled && Find.TickManager.TicksGame % 5000 == 0)
+            {
+                Log.Message($"[LanternsDebug] RingSelectionManager is Alive. Tick: {Find.TickManager.TicksGame}");
+            }
 
             // Periodic checks
             if (Find.TickManager.TicksGame % 250 == 0) 
@@ -50,7 +53,10 @@ namespace DrAke.LanternsFramework
                     
                     if (ticks % def.periodicInterval < 250)
                     {
-                         Log.Message($"[LanternsDebug] Triggering Periodic Selection for {def.defName} at tick {ticks} (Interval {def.periodicInterval})");
+                         if (LanternDebug.LoggingEnabled)
+                         {
+                             Log.Message($"[LanternsDebug] Triggering Periodic Selection for {def.defName} at tick {ticks} (Interval {def.periodicInterval})");
+                         }
                          TryRunSelection(def);
                     }
                 }
@@ -202,7 +208,15 @@ namespace DrAke.LanternsFramework
             Pawn chosen = ChooseCandidate(def, scored);
             float chosenScore = scored.FirstOrDefault(s => s.pawn == chosen).score;
 
-            Log.Message($"[LanternsDebug] Candidate for {def.defName}: {chosen} (Score: {chosenScore})");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message($"[LanternsDebug] Candidate for {def.defName}: {chosen} (Score: {chosenScore})");
+                if (chosen != null && def.conditions != null && def.conditions.Count > 0)
+                {
+                    var parts = def.conditions.Select(c => $"{c.GetType().Name}:{c.CalculateScore(chosen, def):0.###}");
+                    Log.Message($"[LanternsDebug] Score breakdown for {chosen}: {string.Join(", ", parts)}");
+                }
+            }
 
             if (chosen != null)
             {
@@ -255,7 +269,10 @@ namespace DrAke.LanternsFramework
 
         private void TriggerEvent(Pawn target, RingSelectionDef def)
         {
-            Log.Message($"[LanternsDebug] Triggering Event for {target}. Def: {def.defName}");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message($"[LanternsDebug] Triggering Event for {target}. Def: {def.defName}");
+            }
             ThingDef orbDef = def.orbDef;
             if (orbDef == null) 
             {
@@ -263,11 +280,17 @@ namespace DrAke.LanternsFramework
                     DefDatabase<ThingDef>.GetNamed("Lantern_RingDeliveryOrb", false) ??
                     DefDatabase<ThingDef>.GetNamed("GL_SectorScanOrb", false);
 
-                Log.Message($"[LanternsDebug] Using fallback orbDef: {orbDef?.defName ?? "none"}");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message($"[LanternsDebug] Using fallback orbDef: {orbDef?.defName ?? "none"}");
+                }
             }
             else
             {
-                Log.Message($"[LanternsDebug] Using orbDef from XML: {orbDef.defName}");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message($"[LanternsDebug] Using orbDef from XML: {orbDef.defName}");
+                }
             }
 
             if (orbDef == null)
@@ -277,7 +300,10 @@ namespace DrAke.LanternsFramework
             }
 
             IntVec3 start = target.Map.AllCells.Where(c => c.OnEdge(target.Map)).RandomElement();
-            Log.Message($"[LanternsDebug] Spawning at edge: {start}");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message($"[LanternsDebug] Spawning at edge: {start}");
+            }
             
             Thing orbThing = ThingMaker.MakeThing(orbDef);
             if (orbThing == null)
@@ -288,15 +314,24 @@ namespace DrAke.LanternsFramework
             
             if (orbThing is RingDeliveryOrb orb)
             {
-                Log.Message("[LanternsDebug] Thing IS RingDeliveryOrb. configuring...");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message("[LanternsDebug] Thing IS RingDeliveryOrb. configuring...");
+                }
                 orb.targetPawn = target;
                 orb.ringToGive = def.ringDef;
                 GenSpawn.Spawn(orb, start, target.Map);
-                Log.Message("[LanternsDebug] Orb Spawned.");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message("[LanternsDebug] Orb Spawned.");
+                }
             }
             else
             {
-                Log.Message($"[LanternsDebug] Thing is NOT RingDeliveryOrb (Type: {orbThing.GetType().Name}). Spawning ring directly at {target.Position}");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message($"[LanternsDebug] Thing is NOT RingDeliveryOrb (Type: {orbThing.GetType().Name}). Spawning ring directly at {target.Position}");
+                }
                 // Simple spawn backup
                 GenSpawn.Spawn(def.ringDef, target.Position, target.Map);
             }
@@ -306,6 +341,11 @@ namespace DrAke.LanternsFramework
         {
             if (target == null || def?.ringDef == null) return false;
             if (PawnHasRing(target, def.ringDef)) return false;
+
+            if (def.maxActiveRingsInColony > 0 && CountActiveRingsInColony(def.ringDef) >= def.maxActiveRingsInColony)
+            {
+                return false;
+            }
 
             TriggerEvent(target, def);
 
@@ -334,7 +374,26 @@ namespace DrAke.LanternsFramework
                 state.completed = true;
                 return true;
             }
+            if (def.maxActiveRingsInColony > 0 && CountActiveRingsInColony(def.ringDef) >= def.maxActiveRingsInColony)
+            {
+                return true;
+            }
             return false;
+        }
+
+        private static int CountActiveRingsInColony(ThingDef ringDef)
+        {
+            if (ringDef == null) return 0;
+            int count = 0;
+            foreach (Pawn p in PawnsFinder.AllMapsCaravansAndTravellingTransporters_Alive_FreeColonists)
+            {
+                if (p?.apparel == null) continue;
+                if (p.apparel.WornApparel.Any(a => a.def == ringDef))
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         private RingSelectionStateEntry GetState(RingSelectionDef def)

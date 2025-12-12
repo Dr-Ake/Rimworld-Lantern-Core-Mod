@@ -14,6 +14,16 @@ namespace DrAke.LanternsFramework.Abilities
         public bool affectSelf = true;
         public bool affectAnimals = false;
 
+        // Optional VFX/SFX.
+        public FleckDef castFleckDef;
+        public float castFleckScale = 1f;
+        public FleckDef impactFleckDef;
+        public float impactFleckScale = 1f;
+        public ThingDef moteDefOnTarget;
+        public float moteScaleOnTarget = 1f;
+        public bool attachMoteToTarget = true;
+        public SoundDef soundCastOverride;
+
         // Optional: broaden what counts as healable injuries.
         // By default, only non-permanent injuries that can heal naturally are affected.
         public bool healPermanentInjuries = false;
@@ -46,6 +56,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Props.effecterDef.Spawn(target.Cell, map, 1f);
             }
 
+            LanternVfx.PlayCast(parent.pawn, target.Cell, map, Props.castFleckDef, Props.castFleckScale, Props.soundCastOverride);
+
             if (Props.radius > 0.1f)
             {
                 foreach (IntVec3 cell in GenRadial.RadialCellsAround(target.Cell, Props.radius, true))
@@ -55,6 +67,8 @@ namespace DrAke.LanternsFramework.Abilities
                     {
                         if (t is Pawn p && ShouldAffect(p))
                         {
+                            LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                                Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                             HealPawn(p, Props.healAmount);
                             RemoveHediffs(p);
                         }
@@ -66,6 +80,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Pawn p = target.Pawn ?? (Props.affectSelf ? parent.pawn : null);
                 if (p != null && ShouldAffect(p))
                 {
+                    LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                        Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                     HealPawn(p, Props.healAmount);
                     RemoveHediffs(p);
                 }

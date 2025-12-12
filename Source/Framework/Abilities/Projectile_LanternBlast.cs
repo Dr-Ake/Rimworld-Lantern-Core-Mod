@@ -52,10 +52,12 @@ namespace DrAke.LanternsFramework.Abilities
 
         protected override void Impact(Thing hitThing, bool blockedByShield = false)
         {
-            beamMote?.Destroy(DestroyMode.Vanish);
+            if (beamMote != null && !beamMote.Destroyed)
+            {
+                beamMote.Destroy(DestroyMode.Vanish);
+            }
             beamMote = null;
             base.Impact(hitThing, blockedByShield);
         }
     }
 }
-

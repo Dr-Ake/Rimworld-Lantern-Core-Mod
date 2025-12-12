@@ -292,6 +292,24 @@ namespace DrAke.LanternsFramework
                         action = () => TryManifestBattery()
                     };
                 }
+
+                if (LanternDebug.GizmosEnabled)
+                {
+                    yield return new Command_Action
+                    {
+                        defaultLabel = "Debug: Refill Charge",
+                        defaultDesc = "Sets ring charge to 100%.",
+                        icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Battery", true),
+                        action = () => charge = 1f
+                    };
+                    yield return new Command_Action
+                    {
+                        defaultLabel = "Debug: Drain 10%",
+                        defaultDesc = "Drains 10% charge.",
+                        icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Blast", true),
+                        action = () => Drain(0.10f)
+                    };
+                }
             }
         }
 

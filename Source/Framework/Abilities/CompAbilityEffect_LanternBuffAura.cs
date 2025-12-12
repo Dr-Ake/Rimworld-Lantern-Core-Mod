@@ -17,6 +17,16 @@ namespace DrAke.LanternsFramework.Abilities
         public bool affectAnimals = false;
         public EffecterDef effecterDef;
 
+        // Optional VFX/SFX.
+        public FleckDef castFleckDef;
+        public float castFleckScale = 1f;
+        public FleckDef impactFleckDef;
+        public float impactFleckScale = 1f;
+        public ThingDef moteDefOnTarget;
+        public float moteScaleOnTarget = 1f;
+        public bool attachMoteToTarget = true;
+        public SoundDef soundCastOverride;
+
         public CompProperties_LanternBuffAura()
         {
             compClass = typeof(CompAbilityEffect_LanternBuffAura);
@@ -44,6 +54,8 @@ namespace DrAke.LanternsFramework.Abilities
                 Props.effecterDef.Spawn(center, map, 1f);
             }
 
+            LanternVfx.PlayCast(caster, center, map, Props.castFleckDef, Props.castFleckScale, Props.soundCastOverride);
+
             foreach (IntVec3 cell in GenRadial.RadialCellsAround(center, Props.radius, true))
             {
                 if (!cell.InBounds(map)) continue;
@@ -51,6 +63,8 @@ namespace DrAke.LanternsFramework.Abilities
                 {
                     if (t is Pawn p && ShouldAffect(p, caster))
                     {
+                        LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                            Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                         ApplyBuff(p);
                     }
                 }
@@ -98,4 +112,3 @@ namespace DrAke.LanternsFramework.Abilities
         }
     }
 }
-

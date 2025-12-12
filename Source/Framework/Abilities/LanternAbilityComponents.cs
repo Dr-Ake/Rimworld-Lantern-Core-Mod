@@ -83,6 +83,16 @@ namespace DrAke.LanternsFramework.Abilities
         public bool affectSelf = true;
         // If true, caster also receives the shield when targeting someone else or a location.
         public bool alsoShieldCaster = false;
+
+        // Optional VFX/SFX.
+        public FleckDef castFleckDef;
+        public float castFleckScale = 1f;
+        public FleckDef impactFleckDef;
+        public float impactFleckScale = 1f;
+        public ThingDef moteDefOnTarget;
+        public float moteScaleOnTarget = 1f;
+        public bool attachMoteToTarget = true;
+        public SoundDef soundCastOverride;
         public CompProperties_LanternShieldAbility()
         {
             this.compClass = typeof(CompAbilityEffect_LanternShield);
@@ -114,6 +124,8 @@ namespace DrAke.LanternsFramework.Abilities
             Map map = caster.Map;
             if (map == null) return;
 
+            LanternVfx.PlayCast(caster, target.Cell, map, Props.castFleckDef, Props.castFleckScale, Props.soundCastOverride);
+
             if (Props.radius > 0.1f)
             {
                 bool casterShieldedInAoe = false;
@@ -125,6 +137,8 @@ namespace DrAke.LanternsFramework.Abilities
                     {
                         if (t is Pawn p && ShouldAffect(p, caster))
                         {
+                            LanternVfx.PlayImpact(new LocalTargetInfo(p), p.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                                Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                             ToggleShield(p, def);
                             if (p == caster) casterShieldedInAoe = true;
                         }
@@ -143,16 +157,22 @@ namespace DrAke.LanternsFramework.Abilities
                 {
                     if (ShouldAffect(targetPawn, caster))
                     {
+                        LanternVfx.PlayImpact(new LocalTargetInfo(targetPawn), targetPawn.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                            Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                         ToggleShield(targetPawn, def);
                     }
 
                     if (Props.alsoShieldCaster && caster != targetPawn && Props.affectSelf && ShouldAffect(caster, caster))
                     {
+                        LanternVfx.PlayImpact(new LocalTargetInfo(caster), caster.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                            Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                         ToggleShield(caster, def);
                     }
                 }
                 else if (Props.affectSelf && ShouldAffect(caster, caster))
                 {
+                    LanternVfx.PlayImpact(new LocalTargetInfo(caster), caster.Position, map, Props.impactFleckDef, Props.impactFleckScale,
+                        Props.moteDefOnTarget, Props.moteScaleOnTarget, Props.attachMoteToTarget);
                     ToggleShield(caster, def);
                 }
             }

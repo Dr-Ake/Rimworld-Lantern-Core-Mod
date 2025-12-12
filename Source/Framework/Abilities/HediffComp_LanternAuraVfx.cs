@@ -10,6 +10,9 @@ namespace DrAke.LanternsFramework.Abilities
         public ThingDef moteDef;
         public float moteScale = 1f;
         public int intervalTicks = 60;
+        // If true, motes are attached to the pawn so they follow movement.
+        public bool attachToPawn = false;
+        public Vector3 attachedOffset = Vector3.zero;
 
         public HediffCompProperties_LanternAuraVfx()
         {
@@ -41,9 +44,15 @@ namespace DrAke.LanternsFramework.Abilities
             if (Props.moteDef != null)
             {
                 float scale = Props.moteScale > 0f ? Props.moteScale : 1f;
-                MoteMaker.MakeStaticMote(Pawn.Position, map, Props.moteDef, scale);
+                if (Props.attachToPawn)
+                {
+                    MoteMaker.MakeAttachedOverlay(Pawn, Props.moteDef, Props.attachedOffset, scale);
+                }
+                else
+                {
+                    MoteMaker.MakeStaticMote(Pawn.Position, map, Props.moteDef, scale);
+                }
             }
         }
     }
 }
-
