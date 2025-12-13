@@ -8,6 +8,8 @@ It provides generic abilities (constructs, summons, barriers, heals, auras, blas
 - `Docs/AddonHooks.md` - optional advanced hooks.
 - `Docs/Compatibility.md` - what is safe to depend on.
 - `Docs/SmokeTest.md` - quick manual verification steps.
+- `Docs/CommunityTestPlan.md` - checklist for playtesters/bug reports.
+- `Docs/BugReportTemplate.md` - copy/paste issue template.
 - `CHANGELOG.md` - release notes.
 
 **Example add-on:** see `Docs/Example_Addon_YellowLantern.xml`.
