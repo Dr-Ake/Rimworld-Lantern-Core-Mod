@@ -8,11 +8,12 @@ For the full, detailed instructions, read:
 ## How to use (Windows)
 
 1) Open `LanternsCore_ModBuilder/index.html` in Edge or Chrome.
-2) (Optional) Open the **Import Defs** tab and click **Import from folder...** to load defNames from your RimWorld `Data/` or `Mods/` folders (enables autocomplete).
-3) Fill out the tabs.
-4) Click **Export ZIP**.
-5) Unzip into your RimWorld `Mods/` folder.
-6) Add your own textures at the paths listed in the export checklist (no placeholders are included).
+2) (Optional) Click **Import ZIP** to load a previously generated mod ZIP so you can make quick edits and re-export.
+3) (Optional) Open the **Import Defs** tab and click **Import from folder...** to load defNames from your RimWorld `Data/` or `Mods/` folders (enables autocomplete).
+4) Fill out the tabs.
+5) Click **Export ZIP**.
+6) Unzip into your RimWorld `Mods/` folder.
+7) Add your own textures at the paths listed in the export checklist (no placeholders are included).
 
 ## Notes
 

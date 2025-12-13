@@ -13,12 +13,14 @@
         <p>Offline, no-install mod generator (exports a ZIP). Powered by LanternsCore.</p>
       </div>
       <div class="header__actions">
+        <button id="btnImportZip" class="btn">Import ZIP</button>
         <button id="btnExport" class="btn btn--primary">Export ZIP</button>
         <button id="btnReset" class="btn btn--danger">Reset</button>
       </div>
     </header>
 
     <main class="main">
+      <input id="fileImportZip" type="file" accept=".zip" style="display:none" />
       <nav class="tabs" aria-label="Builder tabs">
         <button class="tab tab--active" data-tab="mod">Mod</button>
         <button class="tab" data-tab="ring">Gear</button>

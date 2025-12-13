@@ -2130,6 +2130,27 @@ function wireActions() {
     renderExportPanel();
   });
 
+  const btnImportZip = document.getElementById("btnImportZip");
+  const fileImportZip = document.getElementById("fileImportZip");
+  if (btnImportZip && fileImportZip) {
+    btnImportZip.addEventListener("click", () => fileImportZip.click());
+    fileImportZip.addEventListener("change", async () => {
+      const file = fileImportZip.files?.[0];
+      fileImportZip.value = "";
+      if (!file) return;
+      if (!confirm("Import this ZIP and overwrite the current builder fields?")) return;
+      try {
+        await importBuilderZip(file);
+        saveState();
+        renderExportPanel();
+        alert("Import complete.");
+      } catch (e) {
+        console.error(e);
+        alert(`ZIP import failed: ${e?.message || e}`);
+      }
+    });
+  }
+
   const btnImport = document.getElementById("btnImportFolder");
   if (btnImport) {
     btnImport.addEventListener("click", async () => {
@@ -2258,6 +2279,632 @@ function wireActions() {
       renderExportPanel();
     });
   }
+}
+
+function parseXmlOrThrow(xmlText, context) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(xmlText || ""), "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) {
+    throw new Error(`Failed to parse XML (${context}).`);
+  }
+  return doc;
+}
+
+function xmlText(node, selector, fallback = "") {
+  if (!node) return fallback;
+  const el = selector ? node.querySelector(selector) : node;
+  const t = el?.textContent?.trim();
+  return t != null && t !== "" ? t : fallback;
+}
+
+function xmlBool(node, selector, fallback = false) {
+  const t = xmlText(node, selector, "");
+  if (!t) return fallback;
+  return t.toLowerCase() === "true";
+}
+
+function xmlNum(node, selector, fallback) {
+  const t = xmlText(node, selector, "");
+  if (!t) return fallback;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function findDefsByTagAndDefName(doc, tagName, defName) {
+  const all = Array.from(doc.getElementsByTagName(tagName) || []);
+  for (const el of all) {
+    const dn = xmlText(el, "defName", "");
+    if (dn === defName) return el;
+  }
+  return null;
+}
+
+function abilityParentToKey(parentName) {
+  const map = {
+    Lantern_Ability_BlastBase: "Blast",
+    Lantern_Ability_HealBase: "Heal",
+    Lantern_Ability_StunBase: "Stun",
+    Lantern_Ability_BarrierBase: "Barrier",
+    Lantern_Ability_ConstructBase: "Construct",
+    Lantern_Ability_SummonBase: "Summon",
+    Lantern_Ability_AuraBase: "Aura",
+    Lantern_Ability_FlightBase: "Flight",
+    Lantern_Ability_TeleportBase: "Teleport",
+    Lantern_Ability_DisplaceBase: "Displace",
+  };
+  return map[parentName] || null;
+}
+
+function flagsToTargetRule(flags) {
+  const f = flags || {};
+  const allowSelf = !!f.allowSelf;
+  const allowAllies = !!f.allowAllies;
+  const allowNeutral = !!f.allowNeutral;
+  const allowHostiles = !!f.allowHostiles;
+  const allowNoFaction = !!f.allowNoFaction;
+
+  if (allowHostiles && !allowSelf && !allowAllies && !allowNeutral && !allowNoFaction) return "HostilesOnly";
+  if (allowSelf && allowAllies && !allowNeutral && !allowHostiles && !allowNoFaction) return "AlliesOnly";
+  if (allowSelf && allowAllies && allowNeutral && !allowHostiles && allowNoFaction) return "NonHostilesOnly";
+  if (allowSelf && !allowAllies && !allowNeutral && !allowHostiles && !allowNoFaction) return "SelfOnly";
+  return "Any";
+}
+
+function setValueIfPresent(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = value == null ? "" : String(value);
+}
+
+function setCheckedIfPresent(id, checked) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.checked = !!checked;
+}
+
+function setSelectYesNoIfPresent(id, enabled) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = enabled ? "yes" : "no";
+}
+
+async function importBuilderZip(file) {
+  if (!file) throw new Error("No ZIP file selected.");
+  const zip = await JSZip.loadAsync(file);
+  const paths = Object.keys(zip.files || {});
+
+  const aboutPath = paths.find((p) => /\/About\/About\.xml$/i.test(p));
+  if (!aboutPath) throw new Error("ZIP does not contain About/About.xml.");
+
+  let defsPath = paths.find((p) => /\/Defs\/Generated_Gear\.xml$/i.test(p));
+  if (!defsPath) {
+    // Fallback: scan Defs/*.xml for LanternDefExtension (builder-generated gear)
+    const defCandidates = paths.filter((p) => /\/Defs\/.+\.xml$/i.test(p));
+    for (const p of defCandidates) {
+      const text = await zip.file(p).async("text");
+      if (text.includes("DrAke.LanternsFramework.LanternDefExtension")) {
+        defsPath = p;
+        break;
+      }
+    }
+  }
+  if (!defsPath) throw new Error("ZIP does not contain a LanternsCore gear defs XML (expected Defs/Generated_Gear.xml).");
+
+  const aboutText = await zip.file(aboutPath).async("text");
+  const defsText = await zip.file(defsPath).async("text");
+
+  const aboutDoc = parseXmlOrThrow(aboutText, aboutPath);
+  const defsDoc = parseXmlOrThrow(defsText, defsPath);
+
+  const parsed = parseBuilderModFromXml(aboutDoc, defsDoc);
+  applyImportedStateToUi(parsed);
+}
+
+function parseBuilderModFromXml(aboutDoc, defsDoc) {
+  const out = {};
+
+  const meta = aboutDoc.documentElement;
+  out.modName = xmlText(meta, "name", "");
+  out.modAuthor = xmlText(meta, "author", "");
+  out.packageId = xmlText(meta, "packageId", "");
+  out.modDesc = xmlText(meta, "description", "");
+
+  const depIds = Array.from(meta.querySelectorAll("modDependencies > li > packageId"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+  const extra = depIds.filter((p) => p !== "DrAke.LanternsCore");
+  out.autoAddDependencies = false;
+  out.extraDependencies = uniqueSorted(extra).join("\n");
+
+  // Find the gear ThingDef (has LanternDefExtension)
+  const thingDefs = Array.from(defsDoc.getElementsByTagName("ThingDef") || []);
+  let gearThing = null;
+  let ext = null;
+  for (const td of thingDefs) {
+    const e = td.querySelector('modExtensions > li[Class="DrAke.LanternsFramework.LanternDefExtension"]');
+    if (e) {
+      gearThing = td;
+      ext = e;
+      break;
+    }
+  }
+  if (!gearThing || !ext) throw new Error("Could not find gear ThingDef with LanternDefExtension in defs XML.");
+
+  out.ringDefName = xmlText(gearThing, "defName", "");
+  out.ringLabel = xmlText(gearThing, "label", "");
+  out.ringDesc = xmlText(gearThing, "description", "");
+
+  const parentName = gearThing.getAttribute("ParentName") || "";
+  const knownParents = new Set([
+    "Lantern_RingBase",
+    "Lantern_GearBeltBase",
+    "Lantern_GearSuitBase",
+    "Lantern_GearMaskBase",
+    "Lantern_GearApparelBase",
+  ]);
+  if (knownParents.has(parentName)) {
+    out.gearParent = parentName;
+    out.gearParentCustom = "";
+  } else {
+    out.gearParent = "custom";
+    out.gearParentCustom = parentName;
+  }
+
+  out.ringTexPath = xmlText(gearThing, "graphicData > texPath", "");
+  const gc = xmlText(gearThing, "graphicData > graphicClass", "Graphic_Single");
+  out.gearGraphicClass = gc === "Graphic_Multi" ? "Graphic_Multi" : "Graphic_Single";
+
+  out.marketValue = xmlNum(gearThing, "statBases > MarketValue", 5000);
+  out.mass = xmlNum(gearThing, "statBases > Mass", 0.1);
+
+  // Extension basics
+  out.ringColor = xmlText(ext, "ringColor", "(1, 1, 1, 1)");
+  out.resourceLabel = xmlText(ext, "resourceLabel", "Willpower");
+  out.maxCharge = xmlNum(ext, "maxCharge", 1);
+  out.passiveRegenPerDay = xmlNum(ext, "passiveRegenPerDay", 0);
+  out.passiveDrainPerDay = xmlNum(ext, "passiveDrainPerDay", 0);
+
+  out.regenFromMood = xmlBool(ext, "regenFromMood", false);
+  out.moodMin = xmlNum(ext, "moodMin", 0.8);
+  out.moodRegenPerDay = xmlNum(ext, "moodRegenPerDay", 0.1);
+
+  out.regenFromPain = xmlBool(ext, "regenFromPain", false);
+  out.painMin = xmlNum(ext, "painMin", 0.2);
+  out.painRegenPerDay = xmlNum(ext, "painRegenPerDay", 0.1);
+
+  out.regenFromSunlight = xmlBool(ext, "regenFromSunlight", false);
+  out.sunlightMinGlow = xmlNum(ext, "sunlightMinGlow", 0.5);
+  out.sunlightRegenPerDay = xmlNum(ext, "sunlightRegenPerDay", 0.1);
+
+  out.regenFromPsyfocus = xmlBool(ext, "regenFromPsyfocus", false);
+  out.psyfocusMin = xmlNum(ext, "psyfocusMin", 0.5);
+  out.psyfocusRegenPerDay = xmlNum(ext, "psyfocusRegenPerDay", 0.1);
+
+  out.regenFromNearbyAllies = xmlBool(ext, "regenFromNearbyAllies", false);
+  out.alliesRadius = xmlNum(ext, "alliesRadius", 10);
+  out.alliesMaxCount = xmlNum(ext, "alliesMaxCount", 5);
+  out.alliesRegenPerDayEach = xmlNum(ext, "alliesRegenPerDayEach", 0.02);
+
+  out.associatedHediff = xmlText(ext, "associatedHediff", "");
+
+  out.allowBatteryManifest = xmlBool(ext, "allowBatteryManifest", false);
+  out.batteryDef = xmlText(ext, "batteryDef", "");
+  out.batteryManifestCost = xmlNum(ext, "batteryManifestCost", 0.5);
+
+  // Costume/transformation
+  const apparel = Array.from(ext.querySelectorAll("transformationApparel > li"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+  out.enableCostume = apparel.length > 0;
+  out.transformationOnlyWhenDrafted = xmlBool(ext, "transformationOnlyWhenDrafted", false);
+  out.transformationSkipConflictingApparel = xmlBool(ext, "transformationSkipConflictingApparel", false);
+
+  out.transformationAllowMaleGender = xmlBool(ext, "transformationAllowMaleGender", true);
+  out.transformationAllowFemaleGender = xmlBool(ext, "transformationAllowFemaleGender", true);
+  out.transformationAllowNoneGender = xmlBool(ext, "transformationAllowNoneGender", true);
+
+  const disallowed = new Set(
+    Array.from(ext.querySelectorAll("transformationDisallowedBodyTypes > li"))
+      .map((x) => x.textContent?.trim())
+      .filter(Boolean)
+  );
+  out.transformationDisallowBodyTypeThin = disallowed.has("Thin");
+  out.transformationDisallowBodyTypeFat = disallowed.has("Fat");
+  out.transformationDisallowBodyTypeHulk = disallowed.has("Hulk");
+
+  out.transformationToggleGizmo = xmlBool(ext, "transformationToggleGizmo", false);
+  out.transformationToggleDefaultOn = xmlBool(ext, "transformationToggleDefaultOn", true);
+
+  const skipIfMissing = xmlBool(ext, "transformationSkipIfMissingWornGraphic", false);
+  const overrideBodyType = xmlBool(ext, "transformationOverrideBodyType", false);
+  if (skipIfMissing) out.transformationMissingGraphicBehavior = "skip";
+  else if (overrideBodyType) out.transformationMissingGraphicBehavior = "override";
+  else out.transformationMissingGraphicBehavior = "none";
+
+  out.transformationOverrideBodyType = overrideBodyType;
+  out.transformationOverrideBodyTypeOnlyIfMissing = xmlBool(ext, "transformationOverrideBodyTypeOnlyIfMissing", true);
+  out.transformationBodyTypeOverride = xmlText(ext, "transformationBodyTypeOverride", "Male");
+
+  // Costume lists: generated vs existing
+  const generated = [];
+  const existing = [];
+  for (const defName of apparel) {
+    const td = findDefsByTagAndDefName(defsDoc, "ThingDef", defName);
+    const worn = td ? xmlText(td, "apparel > wornGraphicPath", "") : "";
+    if (td && worn) {
+      generated.push({
+        defName,
+        label: xmlText(td, "label", defName),
+        texPath: worn,
+        layers: Array.from(td.querySelectorAll("apparel > layers > li")).map((x) => x.textContent?.trim()).filter(Boolean),
+        bodyParts: Array.from(td.querySelectorAll("apparel > bodyPartGroups > li")).map((x) => x.textContent?.trim()).filter(Boolean),
+      });
+    } else {
+      existing.push(defName);
+    }
+  }
+  out.costume_generatedApparel = generated;
+  out.costume_existingApparel = existing;
+
+  // Stat buffs (hediffsWhileWorn -> HediffDef stages/statOffsets)
+  const hediffsWhileWorn = Array.from(ext.querySelectorAll("hediffsWhileWorn > li"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+  out.statBuffs = [];
+  if (hediffsWhileWorn.length) {
+    for (const hd of hediffsWhileWorn) {
+      const h = findDefsByTagAndDefName(defsDoc, "HediffDef", hd);
+      const statOffsets = h?.querySelector("stages > li > statOffsets");
+      if (!statOffsets) continue;
+      const buffs = [];
+      for (const child of Array.from(statOffsets.children || [])) {
+        const stat = child.tagName;
+        const offset = Number(child.textContent?.trim() || "0");
+        if (stat && Number.isFinite(offset) && offset !== 0) buffs.push({ stat, offset });
+      }
+      if (buffs.length) {
+        out.statBuffs = buffs;
+        break;
+      }
+    }
+  }
+
+  // Abilities
+  const abilityDefNames = Array.from(ext.querySelectorAll("abilities > li"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+
+  const abilities = [];
+  for (const defName of abilityDefNames) {
+    const ad = findDefsByTagAndDefName(defsDoc, "AbilityDef", defName);
+    if (!ad) continue;
+    const parent = ad.getAttribute("ParentName") || "";
+    const key = abilityParentToKey(parent);
+    if (!key) continue;
+
+    const a = {
+      key,
+      parent,
+      defName,
+      label: xmlText(ad, "label", ""),
+      iconPath: xmlText(ad, "iconPath", ""),
+      description: xmlText(ad, "description", ""),
+      cost: 0.05,
+      cooldownTicks: 0,
+      maxCastsPerDay: 0,
+      targetRule: "Any",
+    };
+
+    const comps = Array.from(ad.querySelectorAll("comps > li"));
+    const getComp = (cls) => comps.find((c) => c.getAttribute("Class") === cls) || null;
+
+    const costComp = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternCost");
+    if (costComp) a.cost = xmlNum(costComp, "cost", 0.05);
+    if (key === "Flight" && !costComp) a.cost = 0;
+
+    const lim = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternCastLimits");
+    if (lim) {
+      a.cooldownTicks = Math.max(0, Math.floor(xmlNum(lim, "cooldownTicks", 0)));
+      a.maxCastsPerDay = Math.max(0, Math.floor(xmlNum(lim, "maxCastsPerDay", 0)));
+    }
+
+    const rules = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternTargetRules");
+    if (rules) {
+      a.targetRule = flagsToTargetRule({
+        allowSelf: xmlBool(rules, "allowSelf", true),
+        allowAllies: xmlBool(rules, "allowAllies", true),
+        allowNeutral: xmlBool(rules, "allowNeutral", true),
+        allowHostiles: xmlBool(rules, "allowHostiles", true),
+        allowNoFaction: xmlBool(rules, "allowNoFaction", true),
+      });
+    }
+
+    // Ability-specific
+    const heal = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternHeal");
+    if (heal) {
+      a.healAmount = xmlNum(heal, "healAmount", 10);
+      a.radius = xmlNum(heal, "radius", 0);
+    }
+
+    const stun = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternStun");
+    if (stun) {
+      a.stunTicks = Math.max(1, Math.floor(xmlNum(stun, "stunTicks", 180)));
+      a.radius = xmlNum(stun, "radius", 0);
+      a.affectHostilesOnly = xmlBool(stun, "affectHostilesOnly", true);
+    }
+
+    const aura = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternBuffAura");
+    if (aura) {
+      a.severity = xmlNum(aura, "severity", 0.12);
+      a.radius = xmlNum(aura, "radius", 6);
+      a.durationTicks = Math.max(0, Math.floor(xmlNum(aura, "durationTicks", 6000)));
+    }
+
+    const construct = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternConstructSpawn");
+    if (construct) {
+      a.thingDef = xmlText(construct, "thingDef", "Sandbags");
+      a.spawnCount = Math.max(1, Math.floor(xmlNum(construct, "spawnCount", 1)));
+      a.durationTicks = Math.max(0, Math.floor(xmlNum(construct, "durationTicks", 6000)));
+    }
+
+    const summon = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternSummon");
+    if (summon) {
+      a.pawnKind = xmlText(summon, "pawnKind", "");
+      a.count = Math.max(1, Math.floor(xmlNum(summon, "count", 1)));
+      a.durationTicks = Math.max(0, Math.floor(xmlNum(summon, "durationTicks", 6000)));
+    }
+
+    const tp = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternTeleport");
+    if (tp) {
+      a.allowRoofed = xmlBool(tp, "allowRoofed", true);
+      a.allowOccupied = xmlBool(tp, "allowOccupied", false);
+    }
+
+    const disp = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternDisplace");
+    if (disp) {
+      a.distance = Math.max(0, Math.floor(xmlNum(disp, "distance", 4)));
+      a.pullTowardsCaster = xmlBool(disp, "pullTowardsCaster", false);
+      a.requireLineOfSight = xmlBool(disp, "requireLineOfSight", false);
+    }
+
+    const shield = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternShieldAbility");
+    if (shield) {
+      a.radius = xmlNum(shield, "radius", 0);
+      const shieldHediff = xmlText(shield, "shieldHediffDef", "");
+      a.shieldMaxHp = 200;
+      if (shieldHediff) {
+        const h = findDefsByTagAndDefName(defsDoc, "HediffDef", shieldHediff);
+        const hp = h
+          ? xmlNum(h, 'comps > li[Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_LanternShield"] > defaultMaxHp', 200)
+          : 200;
+        a.shieldMaxHp = Math.max(1, Math.floor(hp));
+      }
+    }
+
+    abilities.push(a);
+  }
+  out.abilities = abilities;
+
+  // Selection def
+  const sel = defsDoc.getElementsByTagName("DrAke.LanternsFramework.RingSelectionDef")?.[0] || null;
+  out.enableSelection = !!sel;
+  out.selectionDefName = sel ? xmlText(sel, "defName", derivedDefName(out.ringDefName, "Selection")) : derivedDefName(out.ringDefName, "Selection");
+  out.selectionTrigger = "onJoin";
+  if (sel) {
+    if (xmlBool(sel, "triggerOnSpawnedOnMap", false)) out.selectionTrigger = "onSpawn";
+    if (xmlBool(sel, "triggerMentalState", false)) out.selectionTrigger = "onMental";
+    if (xmlBool(sel, "triggerOnJoinPlayerFaction", false)) out.selectionTrigger = "onJoin";
+  }
+  out.excludeIfHasAnyLanternRing = sel ? xmlBool(sel, "excludeIfHasAnyLanternRing", true) : true;
+
+  const filterDefaults = {
+    sel_allowColonists: true,
+    sel_allowPrisoners: false,
+    sel_allowSlaves: false,
+    sel_allowGuests: false,
+    sel_allowAnimals: false,
+    sel_allowMechs: false,
+    sel_allowHostiles: false,
+    sel_allowDead: false,
+    sel_allowDowned: false,
+    sel_requireViolenceCapable: true,
+  };
+  for (const [k, v] of Object.entries(filterDefaults)) out[k] = v;
+  if (sel) {
+    out.sel_allowColonists = xmlBool(sel, "allowColonists", true);
+    out.sel_allowPrisoners = xmlBool(sel, "allowPrisoners", false);
+    out.sel_allowSlaves = xmlBool(sel, "allowSlaves", false);
+    out.sel_allowGuests = xmlBool(sel, "allowGuests", false);
+    out.sel_allowAnimals = xmlBool(sel, "allowAnimals", false);
+    out.sel_allowMechs = xmlBool(sel, "allowMechs", false);
+    out.sel_allowHostiles = xmlBool(sel, "allowHostiles", false);
+    out.sel_allowDead = xmlBool(sel, "allowDead", false);
+    out.sel_allowDowned = xmlBool(sel, "allowDowned", false);
+    out.sel_requireViolenceCapable = xmlBool(sel, "requireViolenceCapable", true);
+  }
+
+  const conds = [];
+  if (sel) {
+    for (const li of Array.from(sel.querySelectorAll("conditions > li") || [])) {
+      const cls = li.getAttribute("Class") || "";
+      const params = {};
+      let type = null;
+      let def = "";
+
+      if (cls.endsWith(".Condition_Trait")) {
+        type = "Trait";
+        def = xmlText(li, "trait", "");
+        if (li.querySelector("degree")) params.degree = xmlText(li, "degree", "");
+        if (li.querySelector("scoreBonus")) params.scoreBonus = xmlText(li, "scoreBonus", "");
+      } else if (cls.endsWith(".Condition_Stat")) {
+        type = "Stat";
+        def = xmlText(li, "stat", "");
+        if (li.querySelector("lowerIsBetter")) params.lowerIsBetter = xmlText(li, "lowerIsBetter", "");
+        if (li.querySelector("scoreMultiplier")) params.scoreMultiplier = xmlText(li, "scoreMultiplier", "");
+      } else if (cls.endsWith(".Condition_Skill")) {
+        type = "Skill";
+        def = xmlText(li, "skill", "");
+        if (li.querySelector("minLevel")) params.minLevel = xmlText(li, "minLevel", "");
+        if (li.querySelector("scoreMultiplier")) params.scoreMultiplier = xmlText(li, "scoreMultiplier", "");
+        if (li.querySelector("flatBonus")) params.flatBonus = xmlText(li, "flatBonus", "");
+      } else if (cls.endsWith(".Condition_Mood")) {
+        type = "Mood";
+        def = "";
+        if (li.querySelector("lowerIsBetter")) params.lowerIsBetter = xmlText(li, "lowerIsBetter", "");
+        if (li.querySelector("scoreMultiplier")) params.scoreMultiplier = xmlText(li, "scoreMultiplier", "");
+        if (li.querySelector("flatBonus")) params.flatBonus = xmlText(li, "flatBonus", "");
+      } else if (cls.endsWith(".Condition_Need")) {
+        type = "Need";
+        def = xmlText(li, "need", "");
+        if (li.querySelector("minLevel")) params.minLevel = xmlText(li, "minLevel", "");
+        if (li.querySelector("maxLevel")) params.maxLevel = xmlText(li, "maxLevel", "");
+        if (li.querySelector("lowerIsBetter")) params.lowerIsBetter = xmlText(li, "lowerIsBetter", "");
+        if (li.querySelector("scoreMultiplier")) params.scoreMultiplier = xmlText(li, "scoreMultiplier", "");
+        if (li.querySelector("flatBonus")) params.flatBonus = xmlText(li, "flatBonus", "");
+      } else if (cls.endsWith(".Condition_Thought")) {
+        type = "Thought";
+        def = xmlText(li, "thought", "");
+        if (li.querySelector("scoreBonus")) params.scoreBonus = xmlText(li, "scoreBonus", "");
+      } else if (cls.endsWith(".Condition_Record")) {
+        type = "Record";
+        def = xmlText(li, "record", "");
+        if (li.querySelector("minValue")) params.minValue = xmlText(li, "minValue", "");
+        if (li.querySelector("maxValue")) params.maxValue = xmlText(li, "maxValue", "");
+        if (li.querySelector("lowerIsBetter")) params.lowerIsBetter = xmlText(li, "lowerIsBetter", "");
+        if (li.querySelector("scoreMultiplier")) params.scoreMultiplier = xmlText(li, "scoreMultiplier", "");
+        if (li.querySelector("flatBonus")) params.flatBonus = xmlText(li, "flatBonus", "");
+      }
+
+      if (type) conds.push({ type, def, params });
+    }
+  }
+  out.sel_conditions = conds;
+
+  return out;
+}
+
+function applyImportedStateToUi(s) {
+  setDefaults();
+
+  setValueIfPresent("modName", s.modName);
+  setValueIfPresent("modAuthor", s.modAuthor);
+  setValueIfPresent("packageId", s.packageId);
+  setValueIfPresent("modDesc", s.modDesc);
+  setCheckedIfPresent("autoAddDependencies", !!s.autoAddDependencies);
+  setValueIfPresent("extraDependencies", s.extraDependencies);
+
+  setValueIfPresent("gearParent", s.gearParent || "Lantern_RingBase");
+  setValueIfPresent("gearParentCustom", s.gearParentCustom || "");
+  setValueIfPresent("gearGraphicClass", s.gearGraphicClass || "Graphic_Single");
+
+  setValueIfPresent("ringDefName", s.ringDefName);
+  setValueIfPresent("ringLabel", s.ringLabel);
+  setValueIfPresent("ringDesc", s.ringDesc);
+  setValueIfPresent("ringColor", s.ringColor);
+  setValueIfPresent("resourceLabel", s.resourceLabel);
+  setValueIfPresent("ringTexPath", s.ringTexPath);
+  setValueIfPresent("marketValue", s.marketValue);
+  setValueIfPresent("mass", s.mass);
+
+  setSelectYesNoIfPresent("enableCostume", !!s.enableCostume);
+  setValueIfPresent("associatedHediff", s.associatedHediff || "");
+
+  setCheckedIfPresent("transformationAllowMaleGender", s.transformationAllowMaleGender ?? true);
+  setCheckedIfPresent("transformationAllowFemaleGender", s.transformationAllowFemaleGender ?? true);
+  setCheckedIfPresent("transformationAllowNoneGender", s.transformationAllowNoneGender ?? true);
+  setCheckedIfPresent("transformationDisallowBodyTypeThin", !!s.transformationDisallowBodyTypeThin);
+  setCheckedIfPresent("transformationDisallowBodyTypeFat", !!s.transformationDisallowBodyTypeFat);
+  setCheckedIfPresent("transformationDisallowBodyTypeHulk", !!s.transformationDisallowBodyTypeHulk);
+  setCheckedIfPresent("transformationOnlyWhenDrafted", !!s.transformationOnlyWhenDrafted);
+  setCheckedIfPresent("transformationSkipConflictingApparel", !!s.transformationSkipConflictingApparel);
+  setValueIfPresent("transformationMissingGraphicBehavior", s.transformationMissingGraphicBehavior || "none");
+  setValueIfPresent("transformationToggleGizmo", s.transformationToggleGizmo ? "yes" : "no");
+  setValueIfPresent("transformationToggleDefaultOn", s.transformationToggleDefaultOn === false ? "no" : "yes");
+  setValueIfPresent("transformationOverrideBodyType", s.transformationOverrideBodyType ? "yes" : "no");
+  setValueIfPresent("transformationOverrideBodyTypeOnlyIfMissing", s.transformationOverrideBodyTypeOnlyIfMissing === false ? "no" : "yes");
+  // Body type override selector
+  if (document.getElementById("transformationBodyTypeOverride")) {
+    const builtin = ["Male", "Female", "Thin", "Fat", "Hulk"];
+    const v = String(s.transformationBodyTypeOverride ?? "Male");
+    byId("transformationBodyTypeOverride").value = builtin.includes(v) ? v : "custom";
+    if (document.getElementById("transformationBodyTypeOverrideCustom")) byId("transformationBodyTypeOverrideCustom").value = builtin.includes(v) ? "" : v;
+  }
+
+  setCheckedIfPresent("allowBatteryManifest", !!s.allowBatteryManifest);
+  setValueIfPresent("batteryDef", s.batteryDef || "");
+  setValueIfPresent("batteryManifestCost", s.batteryManifestCost ?? 0.5);
+
+  // Lists
+  if (document.getElementById("existingApparelList")) writeExistingCostumeList(s.costume_existingApparel || []);
+  if (document.getElementById("generatedApparelList")) writeGeneratedCostumeList(s.costume_generatedApparel || []);
+  if (document.getElementById("statBuffList")) writeStatBuffs(s.statBuffs || []);
+
+  // Charge
+  setValueIfPresent("maxCharge", s.maxCharge ?? 1);
+  setValueIfPresent("passiveRegenPerDay", s.passiveRegenPerDay ?? 0);
+  setValueIfPresent("passiveDrainPerDay", s.passiveDrainPerDay ?? 0);
+
+  setCheckedIfPresent("regenFromMood", !!s.regenFromMood);
+  setValueIfPresent("moodMin", s.moodMin ?? 0.8);
+  setValueIfPresent("moodRegenPerDay", s.moodRegenPerDay ?? 0.1);
+
+  setCheckedIfPresent("regenFromPain", !!s.regenFromPain);
+  setValueIfPresent("painMin", s.painMin ?? 0.2);
+  setValueIfPresent("painRegenPerDay", s.painRegenPerDay ?? 0.1);
+
+  setCheckedIfPresent("regenFromSunlight", !!s.regenFromSunlight);
+  setValueIfPresent("sunlightMinGlow", s.sunlightMinGlow ?? 0.5);
+  setValueIfPresent("sunlightRegenPerDay", s.sunlightRegenPerDay ?? 0.1);
+
+  setCheckedIfPresent("regenFromPsyfocus", !!s.regenFromPsyfocus);
+  setValueIfPresent("psyfocusMin", s.psyfocusMin ?? 0.5);
+  setValueIfPresent("psyfocusRegenPerDay", s.psyfocusRegenPerDay ?? 0.1);
+
+  setCheckedIfPresent("regenFromNearbyAllies", !!s.regenFromNearbyAllies);
+  setValueIfPresent("alliesRadius", s.alliesRadius ?? 10);
+  setValueIfPresent("alliesMaxCount", s.alliesMaxCount ?? 5);
+  setValueIfPresent("alliesRegenPerDayEach", s.alliesRegenPerDayEach ?? 0.02);
+
+  // Abilities
+  const picks = new Set((s.abilities || []).map((a) => a.key));
+  qsa('input[type="checkbox"][data-ability]').forEach((cb) => {
+    cb.checked = picks.has(cb.dataset.ability);
+  });
+  rebuildAbilityEditors(s.abilities || []);
+
+  // Selection
+  setSelectYesNoIfPresent("enableSelection", !!s.enableSelection);
+  setValueIfPresent("selectionDefName", s.selectionDefName || "");
+  setValueIfPresent("selectionTrigger", s.selectionTrigger || "onJoin");
+  setValueIfPresent("excludeIfHasAnyLanternRing", s.excludeIfHasAnyLanternRing ? "true" : "false");
+
+  setCheckedIfPresent("sel_allowColonists", s.sel_allowColonists ?? true);
+  setCheckedIfPresent("sel_allowPrisoners", !!s.sel_allowPrisoners);
+  setCheckedIfPresent("sel_allowSlaves", !!s.sel_allowSlaves);
+  setCheckedIfPresent("sel_allowGuests", !!s.sel_allowGuests);
+  setCheckedIfPresent("sel_allowAnimals", !!s.sel_allowAnimals);
+  setCheckedIfPresent("sel_allowMechs", !!s.sel_allowMechs);
+  setCheckedIfPresent("sel_allowHostiles", !!s.sel_allowHostiles);
+  setCheckedIfPresent("sel_allowDead", !!s.sel_allowDead);
+  setCheckedIfPresent("sel_allowDowned", !!s.sel_allowDowned);
+  setCheckedIfPresent("sel_requireViolenceCapable", s.sel_requireViolenceCapable ?? true);
+
+  if (document.getElementById("conditionList")) {
+    writeSelectionConditions(s.sel_conditions || []);
+    renderSelectionConditions();
+  }
+
+  // Refresh any derived UI rules/help (without re-wiring event listeners)
+  document.getElementById("gearParent")?.dispatchEvent(new Event("change"));
+  document.getElementById("gearGraphicClass")?.dispatchEvent(new Event("change"));
+  document.getElementById("enableCostume")?.dispatchEvent(new Event("change"));
+  document.getElementById("transformationMissingGraphicBehavior")?.dispatchEvent(new Event("change"));
+  document.getElementById("transformationToggleGizmo")?.dispatchEvent(new Event("change"));
+  document.getElementById("transformationOverrideBodyType")?.dispatchEvent(new Event("change"));
+  refreshSelectHelpText();
+  renderExistingCostumeList();
+  renderGeneratedCostumeList();
+  renderStatBuffs();
 }
 
 function init() {
