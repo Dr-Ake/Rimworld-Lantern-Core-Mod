@@ -14,7 +14,7 @@
     <worldObjectClass>DrAke.LanternsFramework.Flight.WorldObject_LanternFlightTravel</worldObjectClass>
     <useDynamicDrawer>true</useDynamicDrawer>
     <!-- Generic texture required or placeholder -->
-    <texture>LanternsLight/Effects/In Flight</texture> 
+    <texture>World/WorldObjects/Sites/GenericSite</texture> 
   </WorldObjectDef>
   
   <WorldObjectDef>

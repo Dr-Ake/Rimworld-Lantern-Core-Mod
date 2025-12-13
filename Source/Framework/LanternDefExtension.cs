@@ -11,12 +11,46 @@ namespace DrAke.LanternsFramework
         public Color ringColor = Color.green;
         public string resourceLabel = "Willpower";
 
+        // Charge
+        // Max "capacity" for this ring. Most XML settings use fractions (0..1) of this max.
+        public float maxCharge = 1f;
+
         // Charge gizmo text colors (optional overrides).
         // If override flags are false, label uses ringColor and percent uses white.
         public bool chargeUseLabelColorOverride = false;
         public Color chargeLabelColorOverride = Color.white;
         public bool chargeUsePercentColorOverride = false;
         public Color chargePercentColorOverride = Color.white;
+
+        // Passive charge model (rates are fractions of maxCharge per day).
+        public float passiveRegenPerDay = 0f;
+        public float passiveDrainPerDay = 0f;
+
+        // Conditional charge regen (optional).
+        public bool regenFromMood = false;
+        public float moodMin = 0.80f;
+        public float moodRegenPerDay = 0.10f;
+        public bool moodRegenScale = true;
+
+        public bool regenFromPain = false;
+        public float painMin = 0.20f;
+        public float painRegenPerDay = 0.10f;
+        public bool painRegenScale = true;
+
+        public bool regenFromSunlight = false;
+        public float sunlightMinGlow = 0.50f;
+        public float sunlightRegenPerDay = 0.10f;
+        public bool sunlightRegenScale = true;
+
+        public bool regenFromPsyfocus = false;
+        public float psyfocusMin = 0.50f;
+        public float psyfocusRegenPerDay = 0.10f;
+        public bool psyfocusRegenScale = true;
+
+        public bool regenFromNearbyAllies = false;
+        public int alliesRadius = 10;
+        public int alliesMaxCount = 5;
+        public float alliesRegenPerDayEach = 0.02f;
 
         // Mechanics
         public HediffDef associatedHediff;
@@ -48,5 +82,26 @@ namespace DrAke.LanternsFramework
         public bool blastTintBeamToRingColor = true;
         public bool blastUseBeamColorOverride = false;
         public Color blastBeamColorOverride = Color.white;
+
+        // Protection (opt-in per ring; framework defaults to off).
+        // These are intended for "environmental" threats (vacuum, hypoxia, etc.) and optional damage absorption.
+        public bool blockEnvironmentalHediffs = false;
+        // Charge fraction consumed each time a blocked hediff would be applied (0 = free).
+        public float blockEnvironmentalHediffsCost = 0f;
+        // Optional allowlist of specific hediffs to block. If empty, keyword matching is used.
+        public List<HediffDef> blockedHediffs = new List<HediffDef>();
+        // Optional keyword matching against hediff.defName (case-insensitive).
+        public List<string> blockedHediffDefNameKeywords = new List<string>();
+
+        public bool absorbEnvironmentalDamage = false;
+        public float absorbEnvironmentalDamageCost = 0f;
+        public List<DamageDef> environmentalDamageDefs = new List<DamageDef>();
+        public List<string> environmentalDamageDefNameKeywords = new List<string>();
+
+        public bool absorbCombatDamage = false;
+        // Charge fraction consumed each time combat damage is absorbed.
+        public float absorbCombatDamageCost = 0.02f;
+        // Optional allowlist of combat damage defs to absorb. If empty, any non-environmental damage may be absorbed.
+        public List<DamageDef> combatDamageDefs = new List<DamageDef>();
     }
 }

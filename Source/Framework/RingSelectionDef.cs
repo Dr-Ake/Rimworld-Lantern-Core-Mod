@@ -298,4 +298,82 @@ namespace DrAke.LanternsFramework
             return flatBonus + scoreVal * scoreMultiplier;
         }
     }
+
+    // Needs condition (food, rest, joy, etc.).
+    public class Condition_Need : SelectionCondition
+    {
+        public NeedDef need;
+        public float minLevel = 0f; // 0..1
+        public float maxLevel = 1f; // 0..1
+        public bool lowerIsBetter = false;
+        public float scoreMultiplier = 10f;
+        public float flatBonus = 0f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (need == null || p.needs == null) return 0f;
+            Need n = p.needs.TryGetNeed(need);
+            if (n == null) return 0f;
+            float lvl = n.CurLevelPercentage;
+            if (lvl < minLevel || lvl > maxLevel) return 0f;
+            float val = lowerIsBetter ? (1f - lvl) : lvl;
+            return flatBonus + val * scoreMultiplier;
+        }
+    }
+
+    // Thought/memory condition (Mood memories).
+    public class Condition_Thought : SelectionCondition
+    {
+        public ThoughtDef thought;
+        public float scoreBonus = 10f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (thought == null) return 0f;
+            if (p.needs?.mood?.thoughts?.memories == null) return 0f;
+            return p.needs.mood.thoughts.memories.GetFirstMemoryOfDef(thought) != null ? scoreBonus : 0f;
+        }
+    }
+
+    // Drafted/undrafted condition.
+    public class Condition_Drafted : SelectionCondition
+    {
+        public bool mustBeDrafted = true;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (p?.drafter == null) return 0f;
+            if (p.drafter.Drafted != mustBeDrafted) return 0f;
+            return scoreBonus;
+        }
+    }
+
+    // Biome condition (map-only).
+    public class Condition_Biome : SelectionCondition
+    {
+        public BiomeDef biome;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (biome == null) return 0f;
+            if (p?.Map == null) return 0f;
+            return p.Map.Biome == biome ? scoreBonus : 0f;
+        }
+    }
+
+    // Ideology precept condition (Ideology).
+    public class Condition_Precept : SelectionCondition
+    {
+        public PreceptDef precept;
+        public float scoreBonus = 5f;
+
+        public override float CalculateScore(Pawn p, RingSelectionDef def)
+        {
+            if (precept == null) return 0f;
+            if (p?.Ideo == null) return 0f;
+            return p.Ideo.HasPrecept(precept) ? scoreBonus : 0f;
+        }
+    }
 }

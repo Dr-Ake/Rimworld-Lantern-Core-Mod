@@ -15,7 +15,10 @@ namespace DrAke.LanternsFramework
 
         static LanternResources()
         {
-            Log.Message("[LanternsCore] Resources Initialized.");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message("[LanternsCore] Resources Initialized.");
+            }
         }
 
         public static CompLanternRing GetRing(Pawn pawn)

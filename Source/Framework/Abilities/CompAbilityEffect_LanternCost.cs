@@ -22,7 +22,7 @@ namespace DrAke.LanternsFramework.Abilities
                 return true;
             }
 
-            if (ring.charge < Props.cost)
+            if (ring.ChargePercent < ring.GetEffectiveCostFraction(Props.cost))
             {
                 reason = "Not enough charge";
                 return true;

@@ -280,4 +280,63 @@
     </verbProperties>
   </AbilityDef>
 
+  <!-- Base teleport ability: moves the caster to target cell -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_TeleportBase">
+    <defName>Lantern_Ability_TeleportBase</defName>
+    <label>lantern teleport</label>
+    <description>Base def for Lantern teleport abilities. Inherit and tune range/cost.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>18</range>
+      <warmupTime>0.3</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetPawns>false</canTargetPawns>
+        <canTargetAnimals>false</canTargetAnimals>
+        <canTargetMechs>false</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>false</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternTeleport" />
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.08</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- Base displace ability: pushes/pulls a pawn -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_DisplaceBase">
+    <defName>Lantern_Ability_DisplaceBase</defName>
+    <label>lantern displace</label>
+    <description>Base def for Lantern push/pull constructs. Inherit and tune distance/cost.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>18</range>
+      <warmupTime>0.4</warmupTime>
+      <targetParams>
+        <canTargetLocations>false</canTargetLocations>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>false</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternDisplace">
+        <distance>3</distance>
+        <pullTowardsCaster>false</pullTowardsCaster>
+      </li>
+      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCost">
+        <cost>0.06</cost>
+      </li>
+    </comps>
+  </AbilityDef>
+
 </Defs>

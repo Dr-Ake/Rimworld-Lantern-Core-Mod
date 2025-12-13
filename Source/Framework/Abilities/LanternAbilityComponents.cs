@@ -28,7 +28,7 @@ namespace DrAke.LanternsFramework.Abilities
             {
                 // TODO: Add generic Settings access to Core if needed, or rely on Props
                 float cost = Props.costPercent; 
-                if (ring.charge < cost)
+                if (ring.ChargePercent < ring.GetEffectiveCostFraction(cost))
                 {
                     reason = "Lantern_NotEnoughWillpower".Translate(); // Generic Translation Key
                     return true;

@@ -74,12 +74,24 @@ Required:
 Optional:
 - `blastDamage` / `blastDamageType` - defaults used by blast abilities.
 - `associatedHediff` - hediff to add while worn (for passive effects).
+- `maxCharge` - ring capacity (default `1.0`). Most costs/regen are fractions of this.
+- `passiveRegenPerDay` / `passiveDrainPerDay` - passive charge change per day (fractions of `maxCharge`).
+- `regenFromMood` / `moodMin` / `moodRegenPerDay` - optional regen while mood is above a threshold.
+- `regenFromPain` / `painMin` / `painRegenPerDay` - optional regen while pain is above a threshold.
+- `regenFromSunlight` / `sunlightMinGlow` / `sunlightRegenPerDay` - optional regen while standing in bright light.
+- `regenFromPsyfocus` / `psyfocusMin` / `psyfocusRegenPerDay` - optional regen while psyfocus is above a threshold.
+- `regenFromNearbyAllies` / `alliesRadius` / `alliesMaxCount` / `alliesRegenPerDayEach` - optional regen scaling with nearby allied pawns.
 - `allowBatteryManifest` - adds a gizmo to manifest a battery at the wearer.
 - `batteryDef` - what battery to manifest.
 - `batteryManifestCost` - charge fraction consumed when manifesting (default `0.5`).
 - `batteryManifestMaxGlobal` - max manifested batteries total across all maps for this ring's `batteryDef` (0 = unlimited).
 - `batteryManifestMaxPerMap` - max manifested batteries per map for this ring's `batteryDef` (0 = unlimited).
 - `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
+- `blockEnvironmentalHediffs` / `blockEnvironmentalHediffsCost` - opt-in protection against environmental hediffs.
+- `blockedHediffs` / `blockedHediffDefNameKeywords` - optional lists to control what counts as "environmental".
+- `absorbEnvironmentalDamage` / `absorbEnvironmentalDamageCost` - opt-in protection against environmental damage.
+- `environmentalDamageDefs` / `environmentalDamageDefNameKeywords` - optional lists for what counts as "environmental".
+- `absorbCombatDamage` / `absorbCombatDamageCost` / `combatDamageDefs` - optional combat damage absorption (off by default).
 - `chargeUseLabelColorOverride` / `chargeLabelColorOverride` - optionally override the **label text** color on the charge bar.
 - `chargeUsePercentColorOverride` / `chargePercentColorOverride` - optionally override the **percent text** color on the charge bar.
 
@@ -87,6 +99,24 @@ Notes:
 - Battery manifest defaults to **50% charge** unless overridden.
 - If `blastDamageType` is omitted, Burn is used.
 - If you don't set charge text overrides, label uses `ringColor` and percent text is white.
+- Global balance multipliers and safety toggles are available in the mod settings.
+
+Example: charge model + opt-in protection:
+
+```xml
+<maxCharge>2</maxCharge>
+<passiveRegenPerDay>0.05</passiveRegenPerDay> <!-- 5% per day -->
+
+<regenFromSunlight>true</regenFromSunlight>
+<sunlightMinGlow>0.6</sunlightMinGlow>
+<sunlightRegenPerDay>0.20</sunlightRegenPerDay> <!-- +20% per day in bright light -->
+
+<blockEnvironmentalHediffs>true</blockEnvironmentalHediffs>
+<blockedHediffDefNameKeywords>
+  <li>hypothermia</li>
+  <li>heatstroke</li>
+</blockedHediffDefNameKeywords>
+```
 
 ---
 
@@ -142,6 +172,16 @@ Legacy alias still supported:
 </li>
 ```
 
+### Optional: charge threshold requirement
+
+If you want an ability to be usable only when the ring is above some charge %, add:
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternChargeRequirement">
+  <minChargePercent>0.25</minChargePercent> <!-- 25% -->
+</li>
+```
+
 ### Inherit the abstract bases
 
 Core bases live in `Defs/Framework/Lantern_Framework_BaseDefs.xml`:
@@ -154,6 +194,8 @@ Core bases live in `Defs/Framework/Lantern_Framework_BaseDefs.xml`:
 - `Lantern_Ability_SummonBase`
 - `Lantern_Ability_AuraBase`
 - `Lantern_Ability_FlightBase`
+- `Lantern_Ability_TeleportBase`
+- `Lantern_Ability_DisplaceBase`
 
 They already set sane targeting defaults. You can override any `verbProperties` if you need different targeting.
 
@@ -363,6 +405,79 @@ If you just want "spawn one thing permanently at click":
 ```
 
 There is also `CompProperties_AbilitySpawnShuttle` for simple shuttle constructs.
+
+**Apply a hediff (buff/debuff)**
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternApplyHediff">
+  <hediffDef>MyLantern_Hediff_Buff</hediffDef>
+  <severity>0.15</severity>
+  <radius>0</radius> <!-- 0 = single target -->
+  <!-- optional targeting helpers -->
+  <!-- <maxTargets>0</maxTargets> -->
+  <!-- <requireLineOfSight>false</requireLineOfSight> -->
+</li>
+```
+
+**Remove a hediff**
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternRemoveHediff">
+  <hediffDef>MyLantern_Hediff_Buff</hediffDef>
+  <radius>0</radius>
+</li>
+```
+
+**Start / end a mental state**
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternStartMentalState">
+  <mentalStateDef>Berserk</mentalStateDef>
+  <radius>0</radius>
+  <affectHostilesOnly>true</affectHostilesOnly>
+</li>
+```
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternEndMentalState">
+  <radius>6</radius> <!-- AOE calm -->
+  <affectAlliesOnly>true</affectAlliesOnly>
+</li>
+```
+
+**Teleport (moves the caster to the target cell)**
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternTeleport">
+  <requireStandable>true</requireStandable>
+  <allowRoofed>true</allowRoofed>
+  <allowOccupied>false</allowOccupied>
+</li>
+```
+
+**Push / pull (displace pawns)**
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternDisplace">
+  <pullTowardsCaster>false</pullTowardsCaster> <!-- false = push away -->
+  <distance>4</distance>
+  <radius>0</radius>
+  <!-- optional targeting helpers -->
+  <!-- <maxTargets>0</maxTargets> -->
+  <!-- <requireLineOfSight>false</requireLineOfSight> -->
+</li>
+```
+
+**Channelled drain (hediff-based)**
+
+Add this to a hediff you apply via an ability to make it drain charge over time:
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.HediffCompProperties_LanternChargeDrain">
+  <drainPerDay>0.20</drainPerDay> <!-- 20% per day while active -->
+  <removeWhenEmpty>true</removeWhenEmpty>
+</li>
+```
 
 ---
 
@@ -589,11 +704,48 @@ To give flight to a ring, define an ability like:
   <defName>MyLantern_Ability_Flight</defName>
   <label>flight</label>
   <description>Fly across the world using ring power.</description>
-  <iconPath>LanternsLight/UI/Flight</iconPath>
+  <iconPath>MyLantern/UI/Flight</iconPath>
 </AbilityDef>
 ```
 
 Add its defName to the ring's `abilities` list.
+
+---
+
+## 7) Ring selection conditions (XML list)
+
+Inside a `RingSelectionDef`, you can add entries under `<conditions>`:
+
+- `Condition_Trait` (`trait`, optional `degree`, `scoreBonus`)
+- `Condition_TraitExtensions` (auto-scores via `LanternTraitScoreExtension` on traits)
+- `Condition_Stat` (`stat`, `lowerIsBetter`, `scoreMultiplier`)
+- `Condition_Skill` (`skill`, `minLevel`, `scoreMultiplier`, `flatBonus`)
+- `Condition_Passion` (`skill`, `minPassion`, `minorBonus`, `majorBonus`, `flatBonus`)
+- `Condition_Mood` (`lowerIsBetter`, `scoreMultiplier`, `flatBonus`)
+- `Condition_Need` (`need`, `minLevel`, `maxLevel`, `lowerIsBetter`, `scoreMultiplier`, `flatBonus`)
+- `Condition_Thought` (`thought`, `scoreBonus`)
+- `Condition_Record` (`record`, `minValue`, `maxValue`, `lowerIsBetter`, `scoreMultiplier`, `flatBonus`)
+- `Condition_Age` (`minAge`, `maxAge`, `scoreBonus`)
+- `Condition_Gender` (`gender`, `scoreBonus`)
+- `Condition_Hediff` (`hediff`, `minSeverity`, `maxSeverity`, `scoreBonus`, `scaleBySeverity`, `severityMultiplier`)
+- `Condition_Gene` (`gene`, `scoreBonus`) (Biotech)
+- `Condition_Meme` (`meme`, `scoreBonus`) (Ideology)
+- `Condition_Precept` (`precept`, `scoreBonus`) (Ideology)
+- `Condition_Drafted` (`mustBeDrafted`, `scoreBonus`)
+- `Condition_Biome` (`biome`, `scoreBonus`)
+
+---
+
+## 8) Targeting helpers (for AOE comps)
+
+These optional fields are supported on several generic comps that affect pawns (apply/remove hediff, mental state start/end, displace):
+
+- `radius` (float) - `0` = single target, `>0` = AOE around target cell
+- `maxTargets` (int) - `0` = unlimited
+- `requireLineOfSight` (bool)
+- `affectAlliesOnly` / `affectHostilesOnly` / `affectSelf`
+- `affectDowned` / `affectNotDowned`
+- `affectAnimals` / `affectMechs`
 
 ---
 
@@ -823,7 +975,7 @@ Delete what you don't need.
     <defName>EX_Ability_Flight</defName>
     <label>flight</label>
     <description>Fly across the world using ring power.</description>
-    <iconPath>LanternsLight/UI/Flight</iconPath>
+    <iconPath>ExampleLantern/UI/Flight</iconPath>
   </AbilityDef>
 
 

@@ -31,4 +31,31 @@
   <!-- Manifest limits -->
   <Lantern_ManifestBattery_LimitGlobal>Cannot manifest more than {0} batteries total.</Lantern_ManifestBattery_LimitGlobal>
   <Lantern_ManifestBattery_LimitPerMap>Cannot manifest more than {0} batteries on this map.</Lantern_ManifestBattery_LimitPerMap>
+
+  <!-- Generic requirements -->
+  <Lantern_RequiresCharge>Requires at least {0} charge.</Lantern_RequiresCharge>
+  <Lantern_ChannelEnded_NoCharge>Ring energy is depleted.</Lantern_ChannelEnded_NoCharge>
+
+  <!-- UI -->
+  <Lantern_RingInfo_Title>Ring Info</Lantern_RingInfo_Title>
+  <Lantern_RingInfo_Desc>Shows detailed ring charge/regen/protection info.</Lantern_RingInfo_Desc>
+
+  <!-- Settings UI -->
+  <Lantern_Settings_EnableDebugLogging_Label>Enable debug logging</Lantern_Settings_EnableDebugLogging_Label>
+  <Lantern_Settings_EnableDebugLogging_Desc>Logs ring selection scoring and other framework internals.</Lantern_Settings_EnableDebugLogging_Desc>
+  <Lantern_Settings_EnableDebugGizmos_Label>Enable debug gizmos</Lantern_Settings_EnableDebugGizmos_Label>
+  <Lantern_Settings_EnableDebugGizmos_Desc>Adds debug-only gizmos on rings (refill charge, etc.).</Lantern_Settings_EnableDebugGizmos_Desc>
+  <Lantern_Settings_ShowRingInspector_Label>Show ring inspector gizmo</Lantern_Settings_ShowRingInspector_Label>
+  <Lantern_Settings_ShowRingInspector_Desc>Adds a gizmo on rings that shows detailed charge/regen/protection info.</Lantern_Settings_ShowRingInspector_Desc>
+
+  <Lantern_Settings_Balance_Header>Balance</Lantern_Settings_Balance_Header>
+  <Lantern_Settings_CostMultiplier>Cost multiplier: {0}</Lantern_Settings_CostMultiplier>
+  <Lantern_Settings_RegenMultiplier>Regen multiplier: {0}</Lantern_Settings_RegenMultiplier>
+  <Lantern_Settings_DrainMultiplier>Drain multiplier: {0}</Lantern_Settings_DrainMultiplier>
+
+  <Lantern_Settings_Safety_Header>Safety toggles</Lantern_Settings_Safety_Header>
+  <Lantern_Settings_DisableCombatAbsorb_Label>Disable combat damage absorption (global)</Lantern_Settings_DisableCombatAbsorb_Label>
+  <Lantern_Settings_DisableCombatAbsorb_Desc>Forces all rings to stop absorbing combat damage, even if enabled in XML.</Lantern_Settings_DisableCombatAbsorb_Desc>
+  <Lantern_Settings_DisableEnvProtection_Label>Disable environmental protection (global)</Lantern_Settings_DisableEnvProtection_Label>
+  <Lantern_Settings_DisableEnvProtection_Desc>Forces all rings to stop blocking hediffs/absorbing environmental damage, even if enabled in XML.</Lantern_Settings_DisableEnvProtection_Desc>
 </LanguageData>

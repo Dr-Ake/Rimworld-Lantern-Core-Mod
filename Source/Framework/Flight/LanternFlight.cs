@@ -123,7 +123,7 @@ namespace DrAke.LanternsFramework.Flight
             }
 
             float cost = CalculateFlightCost(originTile, target.Tile);
-            if (ring.charge < cost)
+            if (ring.ChargePercent < ring.GetEffectiveCostFraction(cost))
             {
                 Messages.Message("Lantern_FlightFail_NotEnoughCharge".Translate(cost.ToString("P0")), pawn, MessageTypeDefOf.RejectInput, historical: false);
                 return false;
@@ -157,7 +157,7 @@ namespace DrAke.LanternsFramework.Flight
             if (pawn.Map == null) { reason = "Lantern_FlightFail_Map".Translate(); return false; }
             if (pawn.Downed) { reason = "Lantern_FlightFail_Downed".Translate(); return false; }
             if (pawn.Position.Roofed(pawn.Map)) { reason = "Lantern_FlightFail_Roof".Translate(); return false; }
-            if (ring.charge <= 0f) { reason = "Lantern_FlightFail_NoCharge".Translate(); return false; }
+            if (ring.ChargePercent <= 0f) { reason = "Lantern_FlightFail_NoCharge".Translate(); return false; }
             return true;
         }
     }

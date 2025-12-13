@@ -1,5 +1,6 @@
 using HarmonyLib;
 using RimWorld;
+using UnityEngine;
 using Verse;
 using Verse.AI;
 using System;
@@ -22,10 +23,10 @@ namespace DrAke.LanternsFramework.HarmonyPatches
     [HarmonyPatch(typeof(Pawn_HealthTracker), "AddHediff", new Type[] { typeof(Hediff), typeof(BodyPartRecord), typeof(DamageInfo?), typeof(DamageWorker.DamageResult) })]
     public static class Patch_PreventSpaceDamage
     {
-        private static readonly HashSet<string> BlockedHediffKeywords = new HashSet<string>
+        private static readonly HashSet<string> DefaultBlockedHediffKeywords = new HashSet<string>
         {
             "vacuum", "hypoxia", "decompression", "suffocation", 
-            "oxygen", "breath", "hypothermia", "heatstroke" 
+            "oxygen", "breath", "hypothermia", "heatstroke", "toxic"
         };
 
         private static bool Prefix(Pawn_HealthTracker __instance, Hediff hediff, Pawn ___pawn)
@@ -37,23 +38,54 @@ namespace DrAke.LanternsFramework.HarmonyPatches
 
             if (!ring.IsActive || ring.charge <= 0f) return true;
 
+            var ext = ring.Extension;
+            if (ext == null || !ext.blockEnvironmentalHediffs) return true;
+            if (LanternCoreMod.Settings?.disableEnvironmentalProtectionGlobally == true) return true;
+
             if (hediff.def != null)
             {
-                 if (hediff.def == HediffDefOf.Hypothermia || hediff.def == HediffDefOf.Heatstroke || hediff.def == HediffDefOf.ToxicBuildup)
-                 {
-                     return false; 
-                 }
+                if (!ShouldBlockHediff(hediff.def, ext)) return true;
 
-                 string defName = hediff.def.defName.ToLower();
-                 foreach (var keyword in BlockedHediffKeywords)
-                 {
-                     if (defName.Contains(keyword))
-                     {
-                         return false;
-                     }
-                 }
+                float cost = Mathf.Max(0f, ext.blockEnvironmentalHediffsCost);
+                if (cost > 0f && !ring.TryConsumeCharge(cost)) return true;
+
+                return false;
             }
             return true; 
+        }
+
+        private static bool ShouldBlockHediff(HediffDef def, LanternDefExtension ext)
+        {
+            if (def == null) return false;
+
+            if (ext.blockedHediffs != null && ext.blockedHediffs.Count > 0)
+            {
+                return ext.blockedHediffs.Contains(def);
+            }
+
+            string defName = def.defName?.ToLowerInvariant() ?? string.Empty;
+
+            if (ext.blockedHediffDefNameKeywords != null && ext.blockedHediffDefNameKeywords.Count > 0)
+            {
+                for (int i = 0; i < ext.blockedHediffDefNameKeywords.Count; i++)
+                {
+                    string kw = ext.blockedHediffDefNameKeywords[i];
+                    if (kw.NullOrEmpty()) continue;
+                    if (defName.Contains(kw.ToLowerInvariant())) return true;
+                }
+                return false;
+            }
+
+            if (def == HediffDefOf.Hypothermia || def == HediffDefOf.Heatstroke || def == HediffDefOf.ToxicBuildup)
+            {
+                return true;
+            }
+
+            foreach (var keyword in DefaultBlockedHediffKeywords)
+            {
+                if (defName.Contains(keyword)) return true;
+            }
+            return false;
         }
 
         private static void Postfix(Hediff hediff, Pawn ___pawn)
@@ -69,7 +101,7 @@ namespace DrAke.LanternsFramework.HarmonyPatches
     [HarmonyPatch(typeof(Pawn_HealthTracker), "PreApplyDamage")]
     public static class Patch_PreventSpacePhysicalDamage
     {
-        private static readonly HashSet<string> BlockedDamageKeywords = new HashSet<string>
+        private static readonly HashSet<string> DefaultBlockedDamageKeywords = new HashSet<string>
         {
             "vacuum", "decompression", "hypoxia", "suffocation"
         };
@@ -84,43 +116,82 @@ namespace DrAke.LanternsFramework.HarmonyPatches
             if (ring == null) return true;
             if (!ring.IsActive || ring.charge <= 0f) return true;
 
+            var ext = ring.Extension;
+            if (ext == null) return true;
+            if (LanternCoreMod.Settings?.disableEnvironmentalProtectionGlobally == true)
+            {
+                // Also implies no combat absorption override; handled below.
+            }
+
             bool isSpaceDamage = false;
 
             if (dinfo.Def != null)
             {
-                if (dinfo.Def.defName == "VacuumBurn")
+                if (IsEnvironmentalDamage(dinfo.Def, ext))
                 {
                     isSpaceDamage = true;
                 }
-                else
+
+                if (isSpaceDamage && ext.absorbEnvironmentalDamage && LanternCoreMod.Settings?.disableEnvironmentalProtectionGlobally != true)
                 {
-                    string defName = dinfo.Def.defName.ToLower();
-                    foreach (var keyword in BlockedDamageKeywords)
+                    float cost = Mathf.Max(0f, ext.absorbEnvironmentalDamageCost);
+                    if (cost <= 0f || ring.TryConsumeCharge(cost))
                     {
-                        if (defName.Contains(keyword))
-                        {
-                            isSpaceDamage = true;
-                            break;
-                        }
+                        absorbed = true;
+                        return false;
                     }
                 }
-
-                if (isSpaceDamage)
-                {
-                    absorbed = true;
-                    return false; // Block Space Damage (Free)
-                }
                 
-                // NOT Space Damage (Combat Damage) - Only block if config allows?
-                // For now kept simple: Block 2% charge per hit
-                if (ring.TryConsumeCharge(0.02f)) 
+                // Non-environmental damage: optional combat absorption (opt-in).
+                if (!isSpaceDamage && ext.absorbCombatDamage && LanternCoreMod.Settings?.disableCombatAbsorbGlobally != true)
                 {
-                    absorbed = true; 
-                    return false; // Block Combat Damage
+                    if (ext.combatDamageDefs != null && ext.combatDamageDefs.Count > 0 && !ext.combatDamageDefs.Contains(dinfo.Def))
+                    {
+                        return true;
+                    }
+
+                    float cost = Mathf.Max(0f, ext.absorbCombatDamageCost);
+                    if (cost <= 0f || ring.TryConsumeCharge(cost))
+                    {
+                        absorbed = true;
+                        return false;
+                    }
                 }
             }
 
             return true;
+        }
+
+        private static bool IsEnvironmentalDamage(DamageDef def, LanternDefExtension ext)
+        {
+            if (def == null) return false;
+
+            if (ext.environmentalDamageDefs != null && ext.environmentalDamageDefs.Count > 0)
+            {
+                return ext.environmentalDamageDefs.Contains(def);
+            }
+
+            string defName = def.defName ?? string.Empty;
+            if (ext.environmentalDamageDefNameKeywords != null && ext.environmentalDamageDefNameKeywords.Count > 0)
+            {
+                string lower = defName.ToLowerInvariant();
+                for (int i = 0; i < ext.environmentalDamageDefNameKeywords.Count; i++)
+                {
+                    string kw = ext.environmentalDamageDefNameKeywords[i];
+                    if (kw.NullOrEmpty()) continue;
+                    if (lower.Contains(kw.ToLowerInvariant())) return true;
+                }
+                return false;
+            }
+
+            if (defName == "VacuumBurn") return true;
+
+            string lowerName = defName.ToLowerInvariant();
+            foreach (var keyword in DefaultBlockedDamageKeywords)
+            {
+                if (lowerName.Contains(keyword)) return true;
+            }
+            return false;
         }
     }
 

@@ -85,7 +85,7 @@ namespace DrAke.LanternsFramework.Recharge
                 var ring = LanternResources.GetRing(actor);
                 if (ring != null)
                 {
-                    ring.charge = 1.0f;
+                    ring.charge = ring.MaxCharge;
                     // TODO: Play Sound?
                 }
             };

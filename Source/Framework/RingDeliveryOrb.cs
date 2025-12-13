@@ -60,7 +60,10 @@ namespace DrAke.LanternsFramework
             else
             {
                 // Circle behavior
-                if (circleDuration == 0) Log.Message($"[LanternsDebug] Orb reached target {targetPawn}. Entering Circle Mode.");
+                if (circleDuration == 0 && LanternDebug.LoggingEnabled)
+                {
+                    Log.Message($"[LanternsDebug] Orb reached target {targetPawn}. Entering Circle Mode.");
+                }
                 
                 circleDuration++;
                 angle += 5f; // Spin speed
@@ -101,7 +104,10 @@ namespace DrAke.LanternsFramework
         {
             if (hasDelivered) return;
             
-            Log.Message($"[LanternsDebug] EquipRing called for {targetPawn}");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message($"[LanternsDebug] EquipRing called for {targetPawn}");
+            }
             if (targetPawn == null || ringToGive == null) 
             {
                 Log.Error("[LanternsDebug] targetPawn or ringToGive is null");
@@ -111,7 +117,10 @@ namespace DrAke.LanternsFramework
             // Strict Check: Does pawn already have it?
             if (targetPawn.apparel.WornApparel.Any(a => a.def == ringToGive))
             {
-                Log.Message($"[LanternsDebug] Pawn {targetPawn} already has ring. Aborting delivery.");
+                if (LanternDebug.LoggingEnabled)
+                {
+                    Log.Message($"[LanternsDebug] Pawn {targetPawn} already has ring. Aborting delivery.");
+                }
                 hasDelivered = true;
                 return;
             }
@@ -125,12 +134,18 @@ namespace DrAke.LanternsFramework
                 return;
             }
             
-            Log.Message($"[LanternsDebug] Attempting to force wear {ring} on {targetPawn}...");
+            if (LanternDebug.LoggingEnabled)
+            {
+                Log.Message($"[LanternsDebug] Attempting to force wear {ring} on {targetPawn}...");
+            }
             targetPawn.apparel.Wear(ring as Apparel, true); // true = drop replaced
             
             if (targetPawn.apparel.WornApparel.Contains(ring as Apparel))
             {
-                 Log.Message($"[LanternsDebug] SUCCESS! {targetPawn} is now wearing {ring}");
+                 if (LanternDebug.LoggingEnabled)
+                 {
+                     Log.Message($"[LanternsDebug] SUCCESS! {targetPawn} is now wearing {ring}");
+                 }
                  Messages.Message($"{targetPawn.NameShortColored} has been chosen by the {ring.Label}!", targetPawn, MessageTypeDefOf.PositiveEvent);
             }
             else

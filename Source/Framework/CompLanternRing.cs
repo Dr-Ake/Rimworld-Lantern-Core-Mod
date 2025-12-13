@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -17,7 +18,15 @@ namespace DrAke.LanternsFramework
 
     public class CompLanternRing : ThingComp, IThingHolder
     {
-        public float charge = 1.0f; // 0.0 to 1.0
+        // Absolute stored energy. Most XML-facing APIs use fractions (0..1) of MaxCharge.
+        public float charge = 1.0f;
+
+        // Save format:
+        // v1: charge stored as 0..1 fraction
+        // v2: charge stored as 0..MaxCharge absolute
+        private int chargeSaveVersion = 0;
+
+        private int chargeModelTickAccumulator = 0;
 
         // Transformation Storage
         // Store original items that were replaced by the transformation.
@@ -27,6 +36,23 @@ namespace DrAke.LanternsFramework
         public LanternDefExtension Extension => parent.def.GetModExtension<LanternDefExtension>();
 
         private Pawn Wearer => (parent as Apparel)?.Wearer;
+
+        public float MaxCharge
+        {
+            get
+            {
+                float max = Extension?.maxCharge ?? 1f;
+                return Mathf.Max(0.001f, max);
+            }
+        }
+
+        public float ChargePercent => Mathf.Clamp01(charge / MaxCharge);
+
+        public float EffectiveCostMultiplier => Mathf.Max(0f, LanternCoreMod.Settings?.costMultiplier ?? 1f);
+        public float EffectiveRegenMultiplier => Mathf.Max(0f, LanternCoreMod.Settings?.regenMultiplier ?? 1f);
+        public float EffectiveDrainMultiplier => Mathf.Max(0f, LanternCoreMod.Settings?.drainMultiplier ?? 1f);
+
+        public float GetEffectiveCostFraction(float baseFraction) => Mathf.Max(0f, baseFraction) * EffectiveCostMultiplier;
 
         public bool IsActive
         {
@@ -65,6 +91,8 @@ namespace DrAke.LanternsFramework
             {
                 EnsureHediff(false);
             }
+
+            TickChargeModel();
         }
 
         public override void Initialize(CompProperties props)
@@ -73,6 +101,124 @@ namespace DrAke.LanternsFramework
             if (storedApparel == null)
             {
                 storedApparel = new ThingOwner<Apparel>(this, oneStackOnly: false);
+            }
+
+            // Default new rings to full charge.
+            if (chargeSaveVersion <= 0)
+            {
+                chargeSaveVersion = 2;
+                charge = MaxCharge;
+            }
+        }
+
+        private void TickChargeModel()
+        {
+            if (Extension == null) return;
+            if (!IsActive) return;
+            if (Wearer == null || Wearer.Dead) return;
+            if (Wearer.Map == null || !Wearer.Spawned) return;
+
+            chargeModelTickAccumulator++;
+            if (chargeModelTickAccumulator < 60) return; // once per second
+            int ticks = chargeModelTickAccumulator;
+            chargeModelTickAccumulator = 0;
+
+            float days = ticks / (float)GenDate.TicksPerDay;
+            float deltaPerDay =
+                Extension.passiveRegenPerDay * EffectiveRegenMultiplier -
+                Extension.passiveDrainPerDay * EffectiveDrainMultiplier;
+
+            if (Extension.regenFromMood && Wearer.needs?.mood != null)
+            {
+                float mood = Wearer.needs.mood.CurLevelPercentage; // 0..1
+                if (mood >= Extension.moodMin)
+                {
+                    float t = Extension.moodMin >= 1f ? 1f : Mathf.Clamp01((mood - Extension.moodMin) / (1f - Extension.moodMin));
+                    deltaPerDay += Extension.moodRegenPerDay * EffectiveRegenMultiplier * (Extension.moodRegenScale ? t : 1f);
+                }
+            }
+
+            if (Extension.regenFromPain && Wearer.health?.hediffSet != null)
+            {
+                float pain = Wearer.health.hediffSet.PainTotal; // 0..1
+                if (pain >= Extension.painMin)
+                {
+                    float t = Extension.painMin >= 1f ? 1f : Mathf.Clamp01((pain - Extension.painMin) / (1f - Extension.painMin));
+                    deltaPerDay += Extension.painRegenPerDay * EffectiveRegenMultiplier * (Extension.painRegenScale ? t : 1f);
+                }
+            }
+
+            if (Extension.regenFromSunlight && Wearer.Map?.glowGrid != null)
+            {
+                float glow = GetGlowAt(Wearer.Map, Wearer.Position);
+                if (glow >= Extension.sunlightMinGlow)
+                {
+                    float t = Extension.sunlightMinGlow >= 1f ? 1f : Mathf.Clamp01((glow - Extension.sunlightMinGlow) / (1f - Extension.sunlightMinGlow));
+                    deltaPerDay += Extension.sunlightRegenPerDay * EffectiveRegenMultiplier * (Extension.sunlightRegenScale ? t : 1f);
+                }
+            }
+
+            if (Extension.regenFromPsyfocus && Wearer.psychicEntropy != null)
+            {
+                float psyfocus = Wearer.psychicEntropy.CurrentPsyfocus;
+                if (psyfocus >= Extension.psyfocusMin)
+                {
+                    float t = Extension.psyfocusMin >= 1f ? 1f : Mathf.Clamp01((psyfocus - Extension.psyfocusMin) / (1f - Extension.psyfocusMin));
+                    deltaPerDay += Extension.psyfocusRegenPerDay * EffectiveRegenMultiplier * (Extension.psyfocusRegenScale ? t : 1f);
+                }
+            }
+
+            if (Extension.regenFromNearbyAllies && Extension.alliesRadius > 0 && Extension.alliesRegenPerDayEach > 0f)
+            {
+                int count = 0;
+                Map map = Wearer.Map;
+                foreach (IntVec3 cell in GenRadial.RadialCellsAround(Wearer.Position, Extension.alliesRadius, true))
+                {
+                    if (!cell.InBounds(map)) continue;
+                    List<Thing> things = cell.GetThingList(map);
+                    for (int i = 0; i < things.Count; i++)
+                    {
+                        if (things[i] is Pawn p && p != Wearer && !p.Dead && !p.Downed && p.Faction == Wearer.Faction)
+                        {
+                            count++;
+                            if (Extension.alliesMaxCount > 0 && count >= Extension.alliesMaxCount) break;
+                        }
+                    }
+                    if (Extension.alliesMaxCount > 0 && count >= Extension.alliesMaxCount) break;
+                }
+                deltaPerDay += Extension.alliesRegenPerDayEach * EffectiveRegenMultiplier * count;
+            }
+
+            if (deltaPerDay != 0f)
+            {
+                float deltaAbs = deltaPerDay * MaxCharge * days;
+                charge = Mathf.Clamp(charge + deltaAbs, 0f, MaxCharge);
+            }
+        }
+
+        private static MethodInfo cachedGlowMethod;
+        private static float GetGlowAt(Map map, IntVec3 cell)
+        {
+            if (map?.glowGrid == null) return 0f;
+            try
+            {
+                if (cachedGlowMethod == null)
+                {
+                    var t = map.glowGrid.GetType();
+                    cachedGlowMethod =
+                        t.GetMethod("GameGlowAt", new[] { typeof(IntVec3) }) ??
+                        t.GetMethod("GameGlowAtFast", new[] { typeof(IntVec3) }) ??
+                        t.GetMethod("GlowAt", new[] { typeof(IntVec3) }) ??
+                        t.GetMethod("GroundGlowAt", new[] { typeof(IntVec3) });
+                }
+
+                if (cachedGlowMethod == null) return 0f;
+                object val = cachedGlowMethod.Invoke(map.glowGrid, new object[] { cell });
+                return val is float f ? f : 0f;
+            }
+            catch
+            {
+                return 0f;
             }
         }
 
@@ -288,8 +434,22 @@ namespace DrAke.LanternsFramework
                     {
                         defaultLabel = labelKey.CanTranslate() ? labelKey.Translate() : "GL_Command_ManifestBattery".Translate(),
                         defaultDesc = descKey.CanTranslate() ? descKey.Translate() : "GL_Command_ManifestBatteryDesc".Translate(),
-                        icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Battery", true), 
+                        icon = TexCommand.DesirePower,
                         action = () => TryManifestBattery()
+                    };
+                }
+
+                if (LanternCoreMod.Settings?.showRingInspectorGizmo == true)
+                {
+                    yield return new Command_Action
+                    {
+                        defaultLabel = "Lantern_RingInfo_Title".Translate(),
+                        defaultDesc = "Lantern_RingInfo_Desc".Translate(),
+                        icon = TexCommand.DesirePower,
+                        action = () =>
+                        {
+                            Find.WindowStack.Add(new Dialog_MessageBox(BuildInspectorText()));
+                        }
                     };
                 }
 
@@ -299,14 +459,14 @@ namespace DrAke.LanternsFramework
                     {
                         defaultLabel = "Debug: Refill Charge",
                         defaultDesc = "Sets ring charge to 100%.",
-                        icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Battery", true),
-                        action = () => charge = 1f
+                        icon = TexCommand.DesirePower,
+                        action = () => charge = MaxCharge
                     };
                     yield return new Command_Action
                     {
                         defaultLabel = "Debug: Drain 10%",
                         defaultDesc = "Drains 10% charge.",
-                        icon = ContentFinder<Texture2D>.Get("LanternsLight/UI/Ability_Blast", true),
+                        icon = TexCommand.Attack,
                         action = () => Drain(0.10f)
                     };
                 }
@@ -339,13 +499,14 @@ namespace DrAke.LanternsFramework
                  }
              }
 
-             if (charge < cost)
+             float effective = GetEffectiveCostFraction(cost);
+             if (ChargePercent < effective)
              {
                  Messages.Message("Lantern_NotEnoughWillpower".Translate(), Wearer, MessageTypeDefOf.RejectInput);
                  return;
              }
 
-             charge -= cost;
+             if (!TryConsumeCharge(cost)) return;
              Thing battery = ThingMaker.MakeThing(Extension.batteryDef);
              Thing innerThing = battery;
              Thing spawnThing = battery;
@@ -363,9 +524,10 @@ namespace DrAke.LanternsFramework
         {
             if (!IsActive) return false;
             // Cheats: if (!LanternMod.settings.consumeEnergy) return true;
-            if (charge >= amount)
+            float absAmount = GetEffectiveCostFraction(amount) * MaxCharge;
+            if (charge >= absAmount)
             {
-                charge -= amount;
+                charge -= absAmount;
                 return true;
             }
             return false;
@@ -373,7 +535,68 @@ namespace DrAke.LanternsFramework
 
         public void Drain(float amount)
         {
-             charge = Mathf.Max(0f, charge - amount);
+             float mult = Mathf.Max(0f, LanternCoreMod.Settings?.drainMultiplier ?? 1f);
+             charge = Mathf.Max(0f, charge - Mathf.Max(0f, amount) * mult * MaxCharge);
+        }
+
+        private string BuildInspectorText()
+        {
+            var ext = Extension;
+            if (ext == null) return "Missing LanternDefExtension.";
+
+            string lines = $"Ring: {parent.def.defName}\n" +
+                           $"Charge: {ChargePercent:P0} ({charge:0.##} / {MaxCharge:0.##})\n" +
+                           $"Active: {IsActive}\n\n";
+
+            lines += "Charge model (per day, fractions of max):\n";
+            lines += $"- Passive regen: {ext.passiveRegenPerDay * EffectiveRegenMultiplier:0.###}\n";
+            lines += $"- Passive drain: {ext.passiveDrainPerDay * EffectiveDrainMultiplier:0.###}\n";
+
+            if (Wearer != null)
+            {
+                if (ext.regenFromMood && Wearer.needs?.mood != null)
+                {
+                    float mood = Wearer.needs.mood.CurLevelPercentage;
+                    lines += $"- Mood regen: {(mood >= ext.moodMin ? "ON" : "off")} (mood {mood:P0}, min {ext.moodMin:P0}, rate {ext.moodRegenPerDay * EffectiveRegenMultiplier:0.###})\n";
+                }
+                if (ext.regenFromPain && Wearer.health?.hediffSet != null)
+                {
+                    float pain = Wearer.health.hediffSet.PainTotal;
+                    lines += $"- Pain regen: {(pain >= ext.painMin ? "ON" : "off")} (pain {pain:P0}, min {ext.painMin:P0}, rate {ext.painRegenPerDay * EffectiveRegenMultiplier:0.###})\n";
+                }
+                if (ext.regenFromSunlight && Wearer.Map != null)
+                {
+                    float glow = GetGlowAt(Wearer.Map, Wearer.Position);
+                    lines += $"- Sunlight regen: {(glow >= ext.sunlightMinGlow ? "ON" : "off")} (glow {glow:0.##}, min {ext.sunlightMinGlow:0.##}, rate {ext.sunlightRegenPerDay * EffectiveRegenMultiplier:0.###})\n";
+                }
+                if (ext.regenFromPsyfocus && Wearer.psychicEntropy != null)
+                {
+                    float psy = Wearer.psychicEntropy.CurrentPsyfocus;
+                    lines += $"- Psyfocus regen: {(psy >= ext.psyfocusMin ? "ON" : "off")} (psy {psy:P0}, min {ext.psyfocusMin:P0}, rate {ext.psyfocusRegenPerDay * EffectiveRegenMultiplier:0.###})\n";
+                }
+                if (ext.regenFromNearbyAllies)
+                {
+                    lines += $"- Allies regen: radius {ext.alliesRadius}, each {ext.alliesRegenPerDayEach * EffectiveRegenMultiplier:0.###}, maxCount {(ext.alliesMaxCount <= 0 ? "unlimited" : ext.alliesMaxCount.ToString())}\n";
+                }
+            }
+
+            lines += $"\nBalance settings:\n- Cost mult: {EffectiveCostMultiplier:0.##}\n- Regen mult: {EffectiveRegenMultiplier:0.##}\n- Drain mult: {EffectiveDrainMultiplier:0.##}\n";
+
+            lines += "\nProtection:\n";
+            lines += $"- Block hediffs: {ext.blockEnvironmentalHediffs} (cost {GetEffectiveCostFraction(ext.blockEnvironmentalHediffsCost):0.###})\n";
+            lines += $"- Absorb env damage: {ext.absorbEnvironmentalDamage} (cost {GetEffectiveCostFraction(ext.absorbEnvironmentalDamageCost):0.###})\n";
+            lines += $"- Absorb combat damage: {ext.absorbCombatDamage} (cost {GetEffectiveCostFraction(ext.absorbCombatDamageCost):0.###})\n";
+
+            if (LanternCoreMod.Settings?.disableEnvironmentalProtectionGlobally == true)
+            {
+                lines += "- NOTE: Environmental protection is globally disabled in mod settings.\n";
+            }
+            if (LanternCoreMod.Settings?.disableCombatAbsorbGlobally == true)
+            {
+                lines += "- NOTE: Combat absorption is globally disabled in mod settings.\n";
+            }
+
+            return lines;
         }
 
         public int GetBlastDamage()
@@ -395,7 +618,18 @@ namespace DrAke.LanternsFramework
         public override void PostExposeData()
         {
             base.PostExposeData();
+            Scribe_Values.Look(ref chargeSaveVersion, "chargeSaveVersion", 1);
             Scribe_Values.Look(ref charge, "charge", 1.0f);
+            if (Scribe.mode == LoadSaveMode.LoadingVars && chargeSaveVersion <= 1)
+            {
+                charge = Mathf.Clamp01(charge) * MaxCharge;
+                chargeSaveVersion = 2;
+            }
+            if (Scribe.mode == LoadSaveMode.Saving)
+            {
+                chargeSaveVersion = 2;
+            }
+            charge = Mathf.Clamp(charge, 0f, MaxCharge);
             Scribe_Deep.Look(ref storedApparel, "storedApparel", this);
             if (storedApparel == null)
             {
@@ -434,12 +668,12 @@ namespace DrAke.LanternsFramework
                 lastColor = barColor;
                 cachedFillTex = SolidColorMaterials.NewSolidColorTexture(barColor);
             }
-            Widgets.FillableBar(barRect, ringComp.charge, cachedFillTex, EmptyBarTex, true);
+            Widgets.FillableBar(barRect, ringComp.ChargePercent, cachedFillTex, EmptyBarTex, true);
             
             Text.Font = GameFont.Small;
             Text.Anchor = TextAnchor.MiddleCenter;
             GUI.color = percentTextColor;
-            Widgets.Label(barRect, $"{ringComp.charge:P0}");
+            Widgets.Label(barRect, $"{ringComp.ChargePercent:P0}");
             
             Rect labelRect = new Rect(rect.x, rect.y + 5, rect.width, 20f);
             Text.Font = GameFont.Tiny;
