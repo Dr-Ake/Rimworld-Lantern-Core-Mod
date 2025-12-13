@@ -32,6 +32,7 @@
 
       <section class="panel panel--active" data-panel="mod">
         <h2>Mod Info</h2>
+        <p>Controls the add-on mod metadata. <code>PackageId</code> must be unique (use your name + mod name).</p>
         <div class="grid">
           <label class="field">
             <span>Mod name</span>
@@ -50,11 +51,25 @@
             <span>Description</span>
             <textarea id="modDesc" rows="4" placeholder="Adds custom hero gear powered by a resource..."></textarea>
           </label>
+          <label class="field field--wide">
+            <span>Auto-add dependencies (recommended)</span>
+            <label class="check">
+              <input id="autoAddDependencies" type="checkbox" />
+              <span>When you reference defs from other mods (via Import Defs), add those mods to the generated About.xml dependencies.</span>
+            </label>
+            <small class="muted">Works only for defs that were imported (the Builder cannot identify the source mod of a random typed defName).</small>
+          </label>
+          <label class="field field--wide">
+            <span>Extra dependencies (optional, one packageId per line)</span>
+            <textarea id="extraDependencies" rows="3" placeholder="some.author.modid&#10;another.modid"></textarea>
+            <small class="muted">Use this if you typed defNames manually (no import) or if a mod's About.xml could not be detected.</small>
+          </label>
         </div>
       </section>
 
       <section class="panel" data-panel="ring">
         <h2>Gear</h2>
+        <p>Defines the actual wearable item (ring/belt/suit/mask). This is the ThingDef that grants charge + abilities.</p>
         <div class="grid">
           <label class="field">
             <span>Gear template (ParentName)</span>
@@ -67,11 +82,20 @@
               <option value="custom">Custom...</option>
             </select>
             <small>Controls the generated ThingDef ParentName (slot/layers/etc.).</small>
+            <small id="gearParentDesc" class="muted"></small>
           </label>
           <label class="field">
             <span>Custom ParentName</span>
             <input id="gearParentCustom" type="text" placeholder="MyCustomApparelBase" />
             <small>Used only when Gear template is Custom.</small>
+          </label>
+          <label class="field">
+            <span>Gear graphic style</span>
+            <select id="gearGraphicClass">
+              <option value="Graphic_Single">Graphic_Single (1 texture)</option>
+              <option value="Graphic_Multi">Graphic_Multi (3 textures)</option>
+            </select>
+            <small id="gearGraphicDesc" class="muted"></small>
           </label>
           <label class="field">
             <span>Ring defName</span>
@@ -96,7 +120,7 @@
           <label class="field">
             <span>Item texPath (no extension)</span>
             <input id="ringTexPath" type="text" placeholder="MyHeroGear/Items/MyGear" />
-            <small>Points to `Textures/&lt;texPath&gt;.png`.</small>
+            <small id="gearTexHint">Texture paths depend on the graphic style.</small>
           </label>
           <label class="field">
             <span>Market value</span>
@@ -123,12 +147,46 @@
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
+            <small id="enableCostumeDesc" class="muted"></small>
           </label>
 
           <label class="field">
             <span>Associated Hediff while worn (optional)</span>
             <input id="associatedHediff" type="text" placeholder="MyHediff" list="defs_HediffDef" />
           </label>
+
+          <div class="field field--wide">
+            <h3>Who gets a costume? (optional)</h3>
+            <p>If a pawn fails these filters, the gear will still work but the transformation will not apply.</p>
+            <div class="row">
+              <label class="check">
+                <input id="transformationAllowMaleGender" type="checkbox" />
+                <span>Allow male</span>
+              </label>
+              <label class="check">
+                <input id="transformationAllowFemaleGender" type="checkbox" />
+                <span>Allow female</span>
+              </label>
+              <label class="check">
+                <input id="transformationAllowNoneGender" type="checkbox" />
+                <span>Allow gender none</span>
+              </label>
+            </div>
+            <div class="row">
+              <label class="check">
+                <input id="transformationDisallowBodyTypeThin" type="checkbox" />
+                <span>Disallow body type: Thin</span>
+              </label>
+              <label class="check">
+                <input id="transformationDisallowBodyTypeFat" type="checkbox" />
+                <span>Disallow body type: Fat</span>
+              </label>
+              <label class="check">
+                <input id="transformationDisallowBodyTypeHulk" type="checkbox" />
+                <span>Disallow body type: Hulk</span>
+              </label>
+            </div>
+          </div>
 
           <div class="field field--wide">
             <h3>Transformation conditions (optional)</h3>
@@ -143,6 +201,81 @@
               </label>
             </div>
             <small>If enabled, the costume can auto-apply/revert when drafting/undrafting.</small>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Missing texture behavior (optional)</h3>
+            <p>If the costume can't render for a pawn's body type, choose what to do.</p>
+            <div class="grid">
+              <label class="field">
+                <span>If missing worn graphic</span>
+                <select id="transformationMissingGraphicBehavior">
+                  <option value="none">Do nothing (may look wrong)</option>
+                  <option value="skip">Skip costume for that pawn</option>
+                  <option value="override">Force a body type while transformed</option>
+                </select>
+                <small id="transformationMissingGraphicBehaviorDesc" class="muted"></small>
+              </label>
+              <label class="field">
+                <span>Add a toggle gizmo</span>
+                <select id="transformationToggleGizmo">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+                <small id="transformationToggleGizmoDesc">Adds an in-game button to toggle the costume on/off without removing the gear.</small>
+              </label>
+              <label class="field">
+                <span>Toggle default state</span>
+                <select id="transformationToggleDefaultOn">
+                  <option value="yes">On</option>
+                  <option value="no">Off</option>
+                </select>
+                <small id="transformationToggleDefaultOnDesc">Default costume state when the item is first spawned/created.</small>
+              </label>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Body type override (optional)</h3>
+            <p>
+              If your costume textures only exist for one body type, you can temporarily force the wearer to that body type while transformed.
+              When the gear is removed (or transformation reverts), the pawn's original body type is restored.
+            </p>
+            <div class="grid">
+              <label class="field">
+                <span>Override body type while transformed</span>
+                <select id="transformationOverrideBodyType">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+                <small id="transformationOverrideBodyTypeDesc" class="muted"></small>
+              </label>
+              <label class="field">
+                <span>Only override if missing textures</span>
+                <select id="transformationOverrideBodyTypeOnlyIfMissing">
+                  <option value="yes">Yes (recommended)</option>
+                  <option value="no">No (always force)</option>
+                </select>
+                <small id="transformationOverrideBodyTypeOnlyIfMissingDesc">If enabled, the pawn keeps their original body type unless the costume cannot render.</small>
+              </label>
+              <label class="field">
+                <span>BodyTypeDef to use</span>
+                <select id="transformationBodyTypeOverride">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Thin">Thin</option>
+                  <option value="Fat">Fat</option>
+                  <option value="Hulk">Hulk</option>
+                  <option value="custom">Custom...</option>
+                </select>
+                <small id="transformationBodyTypeOverrideDesc" class="muted"></small>
+              </label>
+              <label class="field">
+                <span>Custom BodyTypeDef</span>
+                <input id="transformationBodyTypeOverrideCustom" type="text" placeholder="MyCustomBodyType" />
+                <small>Used only when BodyTypeDef is Custom.</small>
+              </label>
+            </div>
           </div>
 
           <div class="field field--wide">
@@ -257,25 +390,57 @@
       </section>
 
       <section class="panel" data-panel="charge">
-        <h2>Charge</h2>
+        <h2>Charge / Resource</h2>
+        <p>
+          Charge is the fuel your gear spends to cast abilities. Most values here are <strong>fractions per day</strong> of your Max charge.
+          Example: Max charge <code>2</code> and Passive regen per day <code>0.05</code> means <code>+0.10</code> charge per day.
+        </p>
+        <details class="help">
+          <summary>Quick examples</summary>
+          <ul class="muted">
+            <li><code>passiveDrainPerDay=0.10</code> means the bar loses 10% of Max charge per day.</li>
+            <li>An ability <code>cost=0.05</code> spends 5% of Max charge per cast.</li>
+            <li>If both regen and drain are set, they combine (regen - drain).</li>
+          </ul>
+        </details>
         <div class="grid">
           <label class="field">
             <span>Max charge</span>
-            <input id="maxCharge" type="number" min="0.01" step="0.01" />
+            <input
+              id="maxCharge"
+              type="number"
+              min="0.01"
+              step="0.01"
+              title="Capacity of the charge bar. Costs/regen/drain use fractions of this value."
+            />
+            <small>Capacity. Ability costs are fractions of this.</small>
           </label>
           <label class="field">
             <span>Passive regen per day</span>
-            <input id="passiveRegenPerDay" type="number" min="0" step="0.001" />
-            <small>Fraction of max charge per day.</small>
+            <input
+              id="passiveRegenPerDay"
+              type="number"
+              min="0"
+              step="0.001"
+              title="Adds charge over time. This is a fraction of Max charge per in-game day (e.g. 0.05 = +5%/day)."
+            />
+            <small>Fraction of Max charge per day (e.g. 0.05 = +5%/day).</small>
           </label>
           <label class="field">
             <span>Passive drain per day</span>
-            <input id="passiveDrainPerDay" type="number" min="0" step="0.001" />
-            <small>Fraction of max charge per day.</small>
+            <input
+              id="passiveDrainPerDay"
+              type="number"
+              min="0"
+              step="0.001"
+              title="Removes charge over time. This is a fraction of Max charge per in-game day (e.g. 0.10 = -10%/day)."
+            />
+            <small>Fraction of Max charge per day (e.g. 0.10 = -10%/day).</small>
           </label>
 
           <div class="field field--wide">
             <h3>Optional regen sources</h3>
+            <p>These add extra regen when their condition is true. Min values are 0..1 (percent).</p>
             <div class="row">
               <label class="check">
                 <input id="regenFromMood" type="checkbox" />
@@ -283,11 +448,17 @@
               </label>
               <label class="field">
                 <span>Mood min</span>
-                <input id="moodMin" type="number" min="0" max="1" step="0.01" />
+                <input id="moodMin" type="number" min="0" max="1" step="0.01" title="Only regen if mood is at/above this percent (0..1)." />
               </label>
               <label class="field">
                 <span>Mood regen per day</span>
-                <input id="moodRegenPerDay" type="number" min="0" step="0.001" />
+                <input
+                  id="moodRegenPerDay"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  title="Extra regen while mood condition is met (fraction of Max charge per day)."
+                />
               </label>
             </div>
 
@@ -298,11 +469,17 @@
               </label>
               <label class="field">
                 <span>Pain min</span>
-                <input id="painMin" type="number" min="0" max="1" step="0.01" />
+                <input id="painMin" type="number" min="0" max="1" step="0.01" title="Only regen if pain is at/above this percent (0..1)." />
               </label>
               <label class="field">
                 <span>Pain regen per day</span>
-                <input id="painRegenPerDay" type="number" min="0" step="0.001" />
+                <input
+                  id="painRegenPerDay"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  title="Extra regen while pain condition is met (fraction of Max charge per day)."
+                />
               </label>
             </div>
 
@@ -313,11 +490,17 @@
               </label>
               <label class="field">
                 <span>Min glow</span>
-                <input id="sunlightMinGlow" type="number" min="0" max="1" step="0.01" />
+                <input id="sunlightMinGlow" type="number" min="0" max="1" step="0.01" title="Only regen if current light level (glow) is at/above this (0..1)." />
               </label>
               <label class="field">
                 <span>Sunlight regen per day</span>
-                <input id="sunlightRegenPerDay" type="number" min="0" step="0.001" />
+                <input
+                  id="sunlightRegenPerDay"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  title="Extra regen while sunlight condition is met (fraction of Max charge per day)."
+                />
               </label>
             </div>
 
@@ -328,11 +511,17 @@
               </label>
               <label class="field">
                 <span>Psyfocus min</span>
-                <input id="psyfocusMin" type="number" min="0" max="1" step="0.01" />
+                <input id="psyfocusMin" type="number" min="0" max="1" step="0.01" title="Only regen if psyfocus is at/above this percent (0..1)." />
               </label>
               <label class="field">
                 <span>Psyfocus regen per day</span>
-                <input id="psyfocusRegenPerDay" type="number" min="0" step="0.001" />
+                <input
+                  id="psyfocusRegenPerDay"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  title="Extra regen while psyfocus condition is met (fraction of Max charge per day)."
+                />
               </label>
             </div>
 
@@ -343,15 +532,21 @@
               </label>
               <label class="field">
                 <span>Radius</span>
-                <input id="alliesRadius" type="number" min="0" step="1" />
+                <input id="alliesRadius" type="number" min="0" step="1" title="How far to search for allied pawns." />
               </label>
               <label class="field">
                 <span>Max count</span>
-                <input id="alliesMaxCount" type="number" min="0" step="1" />
+                <input id="alliesMaxCount" type="number" min="0" step="1" title="Caps how many allies contribute regen (0 means none)." />
               </label>
               <label class="field">
                 <span>Each per day</span>
-                <input id="alliesRegenPerDayEach" type="number" min="0" step="0.001" />
+                <input
+                  id="alliesRegenPerDayEach"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  title="Extra regen per nearby ally (fraction of Max charge per day)."
+                />
               </label>
             </div>
           </div>
@@ -409,6 +604,7 @@
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
+            <small id="enableSelectionDesc" class="muted"></small>
           </label>
           <label class="field">
             <span>Selection defName</span>
@@ -421,6 +617,7 @@
               <option value="onSpawn">On spawn on player home map</option>
               <option value="onMental">On any mental break</option>
             </select>
+            <small id="selectionTriggerDesc" class="muted"></small>
           </label>
           <label class="field">
             <span>Exclude if pawn already has a ring</span>
@@ -428,6 +625,7 @@
               <option value="true">True</option>
               <option value="false">False</option>
             </select>
+            <small id="excludeIfHasAnyLanternRingDesc" class="muted"></small>
           </label>
 
           <div class="field field--wide">
@@ -466,6 +664,7 @@
                   <option value="Thought">Thought</option>
                   <option value="Record">Record</option>
                 </select>
+                <small id="condTypeDesc" class="muted"></small>
               </label>
               <label class="field">
                 <span>Def (varies by type)</span>
@@ -490,10 +689,15 @@
 
       <section class="panel" data-panel="export">
         <h2>Export</h2>
+        <p>Preview what will be generated. The ZIP export does not include textures; use the checklist to add your own PNGs.</p>
         <div class="grid">
           <div class="field field--wide">
             <h3>Validation</h3>
             <pre id="validation" class="pre"></pre>
+          </div>
+          <div class="field field--wide">
+            <h3>Dependencies (auto + extra)</h3>
+            <pre id="dependencyChecklist" class="pre"></pre>
           </div>
           <div class="field field--wide">
             <h3>Textures you must add</h3>

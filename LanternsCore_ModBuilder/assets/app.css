@@ -129,6 +129,25 @@ p {
   color: var(--muted);
 }
 
+.help {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.help summary {
+  cursor: pointer;
+  color: var(--text);
+  user-select: none;
+}
+
+.help ul {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

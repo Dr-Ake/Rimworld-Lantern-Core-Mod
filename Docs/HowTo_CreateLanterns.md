@@ -5,6 +5,9 @@ Anything marked "optional" can be skipped without errors.
 
 The framework lives in `DrAke.LanternsCore` / `LanternsCore.dll`. Your mod should load after it.
 
+If you prefer a UI tool instead of writing XML by hand, use:
+- `LanternsCore_ModBuilder/index.html` (see `LanternsCore_ModBuilder/Guide.md` for detailed instructions)
+
 ---
 
 ## Folder Setup (minimal)
@@ -99,6 +102,12 @@ Optional:
 - `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
 - `transformationOnlyWhenDrafted` - only apply the transformation while drafted (auto-reverts when undrafted).
 - `transformationSkipConflictingApparel` - don't strip conflicting apparel; skip any transformation piece that would require stripping.
+- `transformationAllowMaleGender` / `transformationAllowFemaleGender` / `transformationAllowNoneGender` - filters for which pawn genders may transform.
+- `transformationAllowedBodyTypes` / `transformationDisallowedBodyTypes` - optional allow/deny lists for `BodyTypeDef`.
+- `transformationSkipIfMissingWornGraphic` - if true (and no override), skip transforming if any costume piece can't resolve a worn graphic for the pawn's current body type.
+- `transformationToggleGizmo` / `transformationToggleDefaultOn` - optional gizmo to toggle the transformation on/off without removing the gear.
+- `transformationOverrideBodyType` / `transformationBodyTypeOverride` - optionally force a pawn body type while transformed (restored on revert/unequip).
+- `transformationOverrideBodyTypeOnlyIfMissing` - if true, only forces body type when the costume cannot resolve a worn graphic for the current body type.
 - `blockEnvironmentalHediffs` / `blockEnvironmentalHediffsCost` - opt-in protection against environmental hediffs.
 - `blockedHediffs` / `blockedHediffDefNameKeywords` - optional lists to control what counts as "environmental".
 - `absorbEnvironmentalDamage` / `absorbEnvironmentalDamageCost` - opt-in protection against environmental damage.

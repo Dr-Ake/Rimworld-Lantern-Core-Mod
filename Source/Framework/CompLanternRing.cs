@@ -35,8 +35,16 @@ namespace DrAke.LanternsFramework
         private ThingOwner<Apparel> storedApparel;
 
         private bool transformationApplied = false;
+        private bool bodyTypeOverridden = false;
+        private BodyTypeDef originalBodyType;
+        private bool transformationManualEnabled = true;
+        private bool transformationManualInitialized = false;
 
         private Dictionary<string, AbilityCastTracker> abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
+
+        private int wornGraphicCheckTick = -999999;
+        private BodyTypeDef wornGraphicCheckBodyType;
+        private bool wornGraphicCheckOk = true;
 
         public LanternDefExtension Extension => parent.def.GetModExtension<LanternDefExtension>();
 
@@ -108,6 +116,12 @@ namespace DrAke.LanternsFramework
             if (storedApparel == null)
             {
                 storedApparel = new ThingOwner<Apparel>(this, oneStackOnly: false);
+            }
+
+            if (!transformationManualInitialized)
+            {
+                transformationManualInitialized = true;
+                transformationManualEnabled = Extension?.transformationToggleDefaultOn ?? true;
             }
 
             // Default new rings to full charge.
@@ -339,6 +353,7 @@ namespace DrAke.LanternsFramework
         private void DoTransformation(Pawn pawn)
         {
             if (pawn.apparel == null) return;
+            TryApplyBodyTypeOverride(pawn);
 
             // 1. Identify items to add
             foreach (ThingDef uniformDef in Extension.transformationApparel)
@@ -409,6 +424,9 @@ namespace DrAke.LanternsFramework
                 }
             }
 
+            // Restore body type before we put original apparel back on.
+            TryRestoreBodyTypeOverride(pawn);
+
             // 2. Restore Stored Items
             if (storedApparel != null && pawn.apparel != null)
             {
@@ -438,6 +456,16 @@ namespace DrAke.LanternsFramework
             if (Extension == null) return;
             if (Extension.transformationApparel.NullOrEmpty()) return;
 
+            if (Extension.transformationToggleGizmo && !transformationManualEnabled)
+            {
+                if (transformationApplied)
+                {
+                    RevertTransformation(Wearer);
+                    transformationApplied = false;
+                }
+                return;
+            }
+
             bool should = ShouldApplyTransformation(Wearer);
             if (should && !transformationApplied)
             {
@@ -457,12 +485,142 @@ namespace DrAke.LanternsFramework
             if (pawn.Dead) return false;
             if (pawn.apparel == null) return false;
 
+            if (Extension != null)
+            {
+                // Gender filter
+                if (pawn.gender == Gender.Male && !Extension.transformationAllowMaleGender) return false;
+                if (pawn.gender == Gender.Female && !Extension.transformationAllowFemaleGender) return false;
+                if (pawn.gender == Gender.None && !Extension.transformationAllowNoneGender) return false;
+
+                // Body type filters
+                var bt = pawn.story?.bodyType;
+                if (bt != null)
+                {
+                    if (!Extension.transformationAllowedBodyTypes.NullOrEmpty() && !Extension.transformationAllowedBodyTypes.Contains(bt)) return false;
+                    if (!Extension.transformationDisallowedBodyTypes.NullOrEmpty() && Extension.transformationDisallowedBodyTypes.Contains(bt)) return false;
+                }
+
+                // If the add-on wants to avoid "missing worn graphic" visuals and is NOT using the body type override, skip transforming.
+                if (!Extension.transformationOverrideBodyType && Extension.transformationSkipIfMissingWornGraphic)
+                {
+                    if (bt != null && !CachedTransformationGraphicsWorkForBodyType(pawn, bt))
+                    {
+                        return false;
+                    }
+                }
+            }
+
             if (Extension != null && Extension.transformationOnlyWhenDrafted)
             {
                 if (pawn.drafter == null) return false;
                 if (!pawn.drafter.Drafted) return false;
             }
             return true;
+        }
+
+        private bool CachedTransformationGraphicsWorkForBodyType(Pawn pawn, BodyTypeDef bodyType)
+        {
+            int now = Find.TickManager?.TicksGame ?? 0;
+            if (wornGraphicCheckBodyType == bodyType && now - wornGraphicCheckTick < 600)
+            {
+                return wornGraphicCheckOk;
+            }
+
+            wornGraphicCheckTick = now;
+            wornGraphicCheckBodyType = bodyType;
+            wornGraphicCheckOk = TransformationGraphicsWorkForBodyType(pawn, bodyType);
+            return wornGraphicCheckOk;
+        }
+
+        private void TryApplyBodyTypeOverride(Pawn pawn)
+        {
+            if (pawn?.story == null) return;
+            if (Extension == null) return;
+            if (!Extension.transformationOverrideBodyType) return;
+            if (Extension.transformationBodyTypeOverride == null) return;
+
+            if (Extension.transformationOverrideBodyTypeOnlyIfMissing)
+            {
+                var current = pawn.story.bodyType;
+                if (current != null && TransformationGraphicsWorkForBodyType(pawn, current))
+                {
+                    return;
+                }
+            }
+
+            if (!bodyTypeOverridden)
+            {
+                originalBodyType = pawn.story.bodyType;
+                bodyTypeOverridden = true;
+            }
+
+            if (pawn.story.bodyType != Extension.transformationBodyTypeOverride)
+            {
+                pawn.story.bodyType = Extension.transformationBodyTypeOverride;
+                pawn.Drawer?.renderer?.SetAllGraphicsDirty();
+            }
+        }
+
+        private bool TransformationGraphicsWorkForBodyType(Pawn pawn, BodyTypeDef bodyType)
+        {
+            if (pawn == null || bodyType == null) return true;
+            if (Extension == null) return true;
+            if (Extension.transformationApparel.NullOrEmpty()) return true;
+
+            foreach (var def in Extension.transformationApparel)
+            {
+                if (def == null) continue;
+                if (!ApparelHasGraphicForBodyType(pawn, def, bodyType))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static bool ApparelHasGraphicForBodyType(Pawn pawn, ThingDef apparelDef, BodyTypeDef bodyType)
+        {
+            if (pawn == null || apparelDef == null || bodyType == null) return true;
+            if (apparelDef.thingClass == null || !typeof(Apparel).IsAssignableFrom(apparelDef.thingClass)) return true;
+
+            ThingDef stuff = null;
+            if (apparelDef.MadeFromStuff)
+            {
+                stuff = GenStuff.DefaultStuffFor(apparelDef);
+            }
+
+            Apparel apparel = null;
+            try
+            {
+                apparel = ThingMaker.MakeThing(apparelDef, stuff) as Apparel;
+                if (apparel == null) return true;
+                ApparelGraphicRecord rec;
+                return ApparelGraphicRecordGetter.TryGetGraphicApparel(apparel, bodyType, true, out rec);
+            }
+            catch
+            {
+                // If graphics probing fails for any reason, do not block transformation.
+                return true;
+            }
+            finally
+            {
+                apparel?.Destroy();
+            }
+        }
+
+        private void TryRestoreBodyTypeOverride(Pawn pawn)
+        {
+            if (!bodyTypeOverridden) return;
+            if (pawn?.story == null) return;
+
+            if (originalBodyType != null && pawn.story.bodyType != originalBodyType)
+            {
+                pawn.story.bodyType = originalBodyType;
+                pawn.Drawer?.renderer?.SetAllGraphicsDirty();
+            }
+
+            bodyTypeOverridden = false;
+            originalBodyType = null;
         }
 
         public ThingOwner GetDirectlyHeldThings()
@@ -514,6 +672,37 @@ namespace DrAke.LanternsFramework
                         defaultDesc = descKey.CanTranslate() ? descKey.Translate() : "GL_Command_ManifestBatteryDesc".Translate(),
                         icon = TexCommand.DesirePower,
                         action = () => TryManifestBattery()
+                    };
+                }
+
+                if (Extension.transformationToggleGizmo && !Extension.transformationApparel.NullOrEmpty())
+                {
+                    yield return new Command_Toggle
+                    {
+                        defaultLabel = "Lantern_Command_ToggleTransformation".Translate(),
+                        defaultDesc = "Lantern_Command_ToggleTransformationDesc".Translate(),
+                        icon = TexCommand.DesirePower,
+                        isActive = () => transformationManualEnabled,
+                        toggleAction = () =>
+                        {
+                            transformationManualEnabled = !transformationManualEnabled;
+                            if (!transformationManualEnabled)
+                            {
+                                if (transformationApplied)
+                                {
+                                    RevertTransformation(Wearer);
+                                    transformationApplied = false;
+                                }
+                            }
+                            else
+                            {
+                                if (ShouldApplyTransformation(Wearer) && !transformationApplied)
+                                {
+                                    DoTransformation(Wearer);
+                                    transformationApplied = true;
+                                }
+                            }
+                        }
                     };
                 }
 
@@ -700,6 +889,10 @@ namespace DrAke.LanternsFramework
             Scribe_Values.Look(ref charge, "charge", 1.0f);
             Scribe_Values.Look(ref chargeModelTickAccumulator, "chargeModelTickAccumulator", 0);
             Scribe_Values.Look(ref transformationApplied, "transformationApplied", false);
+            Scribe_Values.Look(ref bodyTypeOverridden, "bodyTypeOverridden", false);
+            Scribe_Defs.Look(ref originalBodyType, "originalBodyType");
+            Scribe_Values.Look(ref transformationManualEnabled, "transformationManualEnabled", true);
+            Scribe_Values.Look(ref transformationManualInitialized, "transformationManualInitialized", false);
             Scribe_Collections.Look(ref abilityCastRecords, "abilityCastRecords", LookMode.Value, LookMode.Deep);
             if (Scribe.mode == LoadSaveMode.LoadingVars && chargeSaveVersion <= 1)
             {

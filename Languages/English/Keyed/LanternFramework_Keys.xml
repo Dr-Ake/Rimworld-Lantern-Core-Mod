@@ -27,6 +27,8 @@
   <Lantern_Command_Recharge>Recharge Ring</Lantern_Command_Recharge>
   <Lantern_Command_ManifestBattery>Manifest Battery</Lantern_Command_ManifestBattery>
   <Lantern_Command_ManifestBatteryDesc>Manifest a portable power battery using ring energy.</Lantern_Command_ManifestBatteryDesc>
+  <Lantern_Command_ToggleTransformation>Toggle Costume</Lantern_Command_ToggleTransformation>
+  <Lantern_Command_ToggleTransformationDesc>Turns the transformation (costume/body swap) on or off without removing the gear.</Lantern_Command_ToggleTransformationDesc>
 
   <!-- Manifest limits -->
   <Lantern_ManifestBattery_LimitGlobal>Cannot manifest more than {0} batteries total.</Lantern_ManifestBattery_LimitGlobal>

@@ -1,0 +1,444 @@
+# Hero Gear Builder Guide (LanternsCore)
+
+This is a no-install HTML tool that generates a complete RimWorld mod ZIP that depends on LanternsCore.
+You do NOT need C# to use it. You WILL need to provide your own textures.
+
+If you want the underlying framework documentation (what the XML fields mean and what is possible), read:
+- `Docs/HowTo_CreateLanterns.md`
+
+This guide explains how to do the same things using the Builder UI, and how each UI field maps to the generated XML.
+
+## What the Builder can and cannot do
+
+The Builder CAN:
+- Create the gear item (ring/belt/suit/mask) as a `ThingDef`.
+- Configure charge/resource behavior (capacity, regen/drain).
+- Generate common abilities (blast, heal, barrier, stun, aura, construct, summon, teleport, displace, flight).
+- Add optional targeting rules and cast limits to abilities.
+- Configure costume transformation (equip apparel while worn) including drafted-only and "skip conflicts".
+- Generate new costume apparel defs (so you do not have to hand-write those defs).
+- Generate a stat-buff HediffDef and apply it while worn.
+- Optionally generate a selection def (auto-delivery) and scoring conditions.
+- Export a ZIP with all XML and folders laid out correctly.
+
+The Builder CANNOT (yet):
+- Create art/PNG files for you (no placeholders).
+- Automatically detect or merge complex mod dependencies for you.
+- Expose every single LanternsCore feature in the UI (you can always edit the exported XML).
+
+## Requirements
+
+- Windows
+- Edge or Chrome (needed for folder import)
+- RimWorld 1.6
+- Lantern Core Framework (LanternsCore) enabled in your mod list
+
+Open the app:
+- `LanternsCore_ModBuilder/index.html`
+
+UI tips:
+- Most dropdowns show an explanation line directly under the field.
+- The Builder also adds hover tooltips for the currently selected dropdown option (browsers do not reliably show per-option tooltips inside the opened dropdown list).
+
+## Recommended workflow (best for beginners)
+
+1) Start in the Builder and fill the tabs left-to-right:
+   - Mod
+   - Gear
+   - Costume (optional)
+   - Import Defs (optional but recommended)
+   - Charge
+   - Abilities
+   - Selection (optional)
+   - Export
+2) Export ZIP.
+3) Unzip into your RimWorld `Mods/` folder.
+4) Add your textures to the exact paths listed in the Export tab checklist.
+5) Enable your generated mod and LanternsCore (LanternsCore must load first).
+
+## Tab: Mod
+
+This controls `About/About.xml` for the generated mod.
+
+Fields:
+- Mod name: the visible name in the mod list.
+- Author: your name.
+- PackageId: MUST be unique. Use lowercase letters/numbers/dots, like `yourname.myherogear`.
+- Description: shown in the mod list.
+- Auto-add dependencies: if you imported defs, the Builder can detect which mod a referenced defName came from and automatically add that mod to `About/About.xml`.
+- Extra dependencies: manual packageIds to add (one per line). Use this if you typed defNames manually (no import) or if a mod's About.xml couldn't be detected.
+
+Generated XML:
+- `About/About.xml`
+  - `<name>`, `<author>`, `<packageId>`, `<description>`
+  - Adds dependency on `DrAke.LanternsCore` and any auto/extra dependencies
+
+Common mistakes:
+- PackageId has capitals or spaces (RimWorld will still load sometimes, but it is not recommended).
+- PackageId collides with another mod.
+
+## Tab: Gear
+
+This creates the wearable item (a `ThingDef`) that grants charge and abilities.
+Think of this as the hero item: ring, utility belt, suit, mask, etc.
+
+### Gear template (ParentName)
+
+This sets the generated ThingDef `ParentName`.
+
+Options:
+- `Lantern_RingBase`: classic ring behavior (belt slot).
+- `Lantern_GearBeltBase`: utility belt template (Waist/Belt).
+- `Lantern_GearSuitBase`: suit template (Torso/Shell).
+- `Lantern_GearMaskBase`: mask template (FullHead/Overhead).
+- `Lantern_GearApparelBase`: generic powered apparel base.
+- Custom: advanced. Only use if you already have a custom base def in your own mod.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<ThingDef ParentName="...">`
+
+### Gear graphic style
+
+This controls how RimWorld loads textures for the gear item.
+
+- `Graphic_Single`: 1 texture file.
+  - Required texture: `Textures/<texPath>.png`
+- `Graphic_Multi`: directional textures, with mirroring support.
+  - Required textures (when `allowFlip=true`):
+    - `Textures/<texPath>_north.png`
+    - `Textures/<texPath>_south.png`
+    - `Textures/<texPath>_east.png`
+  - West texture is optional because the game can mirror east to west when `allowFlip=true`.
+
+The Export tab will list the exact required paths.
+
+### Ring defName / label / description
+
+Even though the UI says "Ring", these are just the gear's identity fields:
+- `defName`: internal name used by RimWorld and other defs (must be valid).
+- `label`: in-game label.
+- `description`: in-game description.
+
+### Ring color (RGBA) and resource label
+
+These drive the charge gizmo and some visuals:
+- Ring color: the charge bar color and default tint.
+- Resource label: text shown on the charge bar (Willpower, Rage, Focus, etc.).
+
+### Item texPath (no extension)
+
+This is the texture path WITHOUT file extension.
+Example:
+- texPath: `MyHeroGear/Items/MyGear`
+- file(s): `Textures/MyHeroGear/Items/MyGear.png` (or the 4-direction variant if Graphic_Multi)
+
+### Market value and mass
+
+These are standard RimWorld stats:
+- MarketValue: how valuable it is.
+- Mass: weight.
+
+## Tab: Costume (optional)
+
+This is how you do "suit up" behavior.
+When the gear is worn, it can equip additional apparel (mask/suit/etc) and restore the original outfit on removal.
+
+### Enable costume transformation
+
+- No: no transformation happens.
+- Yes: the Builder will add `transformationApparel` in the extension.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<transformationApparel>...</transformationApparel>`
+
+### Associated Hediff while worn (optional)
+
+This is a passive effect applied while the gear is worn.
+Examples:
+- A constant glow hediff
+- Pain suppression hediff
+- Stat boosts (though stat boosts are easier with the "Stat buffs while worn" section)
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<associatedHediff>SomeHediffDef</associatedHediff>`
+
+### Transformation conditions (optional)
+
+- Only transform while drafted:
+  - If enabled: costume applies only while drafted and auto-reverts when undrafted.
+- Skip pieces that would force stripping:
+  - If enabled: the system will not strip conflicting apparel. It will skip costume pieces that cannot be worn.
+  - This is good for "partial suits" that should not rip off armor/helmets.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<transformationOnlyWhenDrafted>true</transformationOnlyWhenDrafted>`
+  - `<transformationSkipConflictingApparel>true</transformationSkipConflictingApparel>`
+
+### Body type override (optional)
+
+This is an advanced "safety valve" for art.
+
+If your costume textures only exist for one body type (for example you only drew the Male body type),
+you can temporarily force the pawn's body type while transformed so the costume still renders.
+
+Behavior:
+- When the costume applies: the pawn's body type is changed to your chosen `BodyTypeDef`.
+- When the costume reverts or the gear is removed: the pawn's original body type is restored.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<transformationOverrideBodyType>true</transformationOverrideBodyType>`
+  - `<transformationBodyTypeOverride>Male</transformationBodyTypeOverride>`
+
+Notes:
+- This does not create textures for you. It only changes which body type the pawn is using.
+- Use this only if you understand the visual tradeoff (the pawn's silhouette changes while transformed).
+- If you enable "Only override if missing textures", the pawn keeps their original body type unless the costume fails to resolve a worn graphic for that body type.
+
+### Who gets a costume? (filters)
+
+If you want a costume to apply only to certain pawns, use the filters:
+- Allow male / Allow female / Allow gender none
+- Disallow body types: Thin/Fat/Hulk
+
+Examples:
+- "Only apply the costume to male pawns": Allow male = yes, Allow female = no.
+- "Never apply costume to Fat body type": Disallow Fat = yes.
+
+This does not affect the gear's charge/abilities - only the transformation.
+
+### Missing texture behavior
+
+If the costume can't resolve a worn graphic for a pawn's current body type, you can choose:
+- Do nothing: force the transformation anyway (may look wrong).
+- Skip costume for that pawn: the gear still works, but the pawn won't transform.
+- Force a body type while transformed: uses the Body type override settings above.
+
+### Toggle gizmo (optional)
+
+If you want roleplay control (powers on, costume off), enable the toggle gizmo.
+
+Behavior:
+- Adds an in-game button on the gear that toggles the transformation on/off.
+- Abilities and charge behavior stay active either way.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<transformationToggleGizmo>true</transformationToggleGizmo>`
+  - `<transformationToggleDefaultOn>false</transformationToggleDefaultOn>` (optional)
+
+### Battery manifest (optional)
+
+Adds a gizmo to manifest a battery item (consumes charge).
+This is useful for Lantern-style constructs that create batteries/power sources.
+
+Fields:
+- Enable manifest battery gizmo: on/off
+- Battery ThingDef: the ThingDef to spawn (autocomplete after importing defs)
+- Manifest cost: fraction of max charge spent to manifest
+
+Generated XML:
+- `<allowBatteryManifest>true</allowBatteryManifest>`
+- `<batteryDef>Battery</batteryDef>`
+- `<batteryManifestCost>0.5</batteryManifestCost>`
+
+### Stat buffs while worn (optional)
+
+This generates a new HediffDef automatically (inside your generated XML) and applies it while worn.
+
+Use this for "superhero stats" without writing your own hediff XML by hand.
+
+Example buffs:
+- `MoveSpeed` +0.20
+- `MeleeHitChance` +0.10
+- `ArmorRating_Sharp` +0.30
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - Adds a new `<HediffDef>` with `<stages><li><statOffsets>...</statOffsets></li></stages>`
+  - Adds `<hediffsWhileWorn><li>YourAutoHediff</li></hediffsWhileWorn>` to the gear extension
+
+Notes:
+- StatDef names are exact defNames (import defs to autocomplete).
+- Offsets are direct numbers. A lot of stats are additive, but not all are intuitive.
+- You can always edit the exported XML later for more complex hediff behavior.
+
+### Use existing apparel defs
+
+If you already have apparel defs (vanilla or other mods), you can reference them by defName.
+Be careful:
+- If you reference apparel from another mod, your generated mod will require that mod too (dependency is not auto-added by the Builder).
+
+### Generate new costume apparel defs
+
+This is the "no XML required" way to make a suit/mask/etc.
+
+Fields:
+- Apparel defName: must be a valid defName (letters/numbers/_).
+- Label: shown in-game.
+- TexPath: texture path (no extension).
+- Layers: comma-separated (examples: `Shell`, `Middle`, `Overhead`).
+- Body part groups: comma-separated (examples: `Torso`, `Legs`, `FullHead`).
+
+Important texture note:
+- Generated costume apparel uses `Graphic_Multi`, which needs 3 textures:
+  - `Textures/<texPath>_north.png`
+  - `Textures/<texPath>_south.png`
+  - `Textures/<texPath>_east.png`
+  - (West is commonly mirrored from east if not provided.)
+
+The Export tab checklist includes these paths.
+
+## Tab: Import Defs (optional but recommended)
+
+This improves the Builder by loading defNames from your RimWorld install and your mods.
+It enables autocomplete (dropdown suggestions) for fields like ThingDef, StatDef, HediffDef, TraitDef, etc.
+
+How to import:
+- Click "Import from folder..."
+- Pick one of these:
+  - RimWorld `Data/` folder for vanilla + DLC defs
+  - Your RimWorld `Mods/` folder to include modded defs
+  - A single mod folder to include only that mod
+
+Privacy:
+- This runs locally. It does not upload anything.
+- It reads XML files only.
+
+Limits:
+- Huge mod folders can exceed browser storage. The Builder will still work, but persistence may be truncated.
+- Some def types are not indexed (yet). You can still type any defName manually.
+
+## Tab: Charge / Resource
+
+This controls how the gear gains/loses charge over time.
+Most values are fractions of Max charge per day.
+
+Key concepts:
+- Max charge: capacity of the bar.
+- Ability costs: fractions of Max charge per cast.
+- Passive regen/drain: fractions of Max charge per in-game day.
+
+Examples:
+- Max charge = 2
+- Passive regen per day = 0.05
+  - means +0.10 charge/day
+- Passive drain per day = 0.10
+  - means -0.20 charge/day
+
+Optional regen sources:
+- Mood: regen when mood is above a threshold
+- Pain: regen when pain is above a threshold
+- Sunlight: regen when standing in bright light
+- Psyfocus: regen when psyfocus is high
+- Nearby allies: regen scales with nearby friendly pawns
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<maxCharge>`, `<passiveRegenPerDay>`, `<passiveDrainPerDay>`
+  - `<regenFromMood>`, `<moodMin>`, `<moodRegenPerDay>`, etc.
+
+## Tab: Abilities
+
+This generates AbilityDefs and adds them to your gear.
+
+How it works:
+- You pick which base abilities you want.
+- For each enabled ability, the Builder generates an `AbilityDef` that inherits one of LanternsCore's abstract base AbilityDefs.
+- The gear gets a list of abilities to grant while worn.
+
+Required:
+- Each ability needs an iconPath. You provide the texture file at:
+  - `Textures/<iconPath>.png`
+
+Common fields per ability:
+- Ability defName: the defName of the generated AbilityDef
+- Ability label: displayed in-game
+- Icon path: texture path (no extension)
+- Cost (0..1): fraction of Max charge to spend per cast
+
+Optional controls:
+- Extra cooldown ticks: blocks rapid recasting (0 = none)
+- Max casts per day: daily limiter (0 = unlimited)
+- Targeting rule: additional faction-based restriction (Any/Hostiles only/Allies only/etc.)
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<AbilityDef ParentName="Lantern_Ability_...Base">...</AbilityDef>`
+  - Adds:
+    - `CompProperties_LanternCost`
+    - `CompProperties_LanternCastLimits` (if configured)
+    - `CompProperties_LanternTargetRules` (if configured)
+
+## Tab: Selection (optional)
+
+Selection generates a `RingSelectionDef` which can automatically deliver gear to a pawn.
+If you do not want auto-delivery, keep this disabled.
+
+Candidate filters:
+- Choose what pawn types are eligible (colonists, prisoners, animals, etc).
+
+Conditions (scoring):
+- Add scoring rules that make certain pawns more likely to be selected.
+  - Trait, Stat, Skill, Mood, Need, Thought, Record
+- Params field is a simple key=value list.
+  - Example: `scoreBonus=10`
+  - Example: `minLevel=6,scoreMultiplier=2`
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<DrAke.LanternsFramework.RingSelectionDef>...</DrAke.LanternsFramework.RingSelectionDef>`
+
+## Tab: Export
+
+This is where you confirm:
+- Validation: problems you must fix before exporting
+- Texture checklist: the exact PNG files you must create
+- XML preview: the final XML that will be written into the mod ZIP
+
+Export rules:
+- The Builder downloads a ZIP to your Downloads folder (browsers cannot write directly to arbitrary folders).
+- Unzip it into `RimWorld/Mods/`.
+- Enable LanternsCore and your generated mod in RimWorld.
+
+## Advanced: editing the exported XML (optional)
+
+If you want features that are not in the UI:
+1) Export the mod ZIP.
+2) Open `Defs/Generated_Gear.xml` in a text editor.
+3) Add or adjust fields under:
+   - The gear `<ThingDef>` and its `<modExtensions>` block
+   - The generated `<AbilityDef>` blocks
+
+When in doubt, cross-reference:
+- `Docs/HowTo_CreateLanterns.md`
+
+## Troubleshooting
+
+### The Builder "Import from folder..." button does nothing
+
+- Use Edge or Chrome.
+- Make sure you opened the file directly (not inside a restricted viewer).
+- Some browsers block folder access if the file is opened in unusual ways. Try: right-click `index.html` and "Open with" Edge.
+
+### My exported mod has red errors
+
+- Open the Export tab and fix all Validation issues.
+- Make sure every required texture exists at the listed paths.
+- Confirm `PackageId` is unique.
+- Confirm LanternsCore is enabled and loaded before your mod.
+
+### My gear is invisible
+
+- Usually missing textures or wrong graphic style.
+- Check the Export tab texture checklist.
+- If using `Graphic_Multi`, provide at least north/south/east. (West is commonly mirrored from east if not provided.)
+
+### I referenced defs from another mod and it does not work
+
+- The Builder does not automatically add modDependencies for third-party mods.
+- You must add dependencies manually in your generated mod's `About/About.xml` if needed.

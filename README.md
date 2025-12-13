@@ -10,6 +10,7 @@ It provides generic abilities (constructs, summons, barriers, heals, auras, blas
 - `Docs/SmokeTest.md` - quick manual verification steps.
 - `Docs/CommunityTestPlan.md` - checklist for playtesters/bug reports.
 - `Docs/BugReportTemplate.md` - copy/paste issue template.
+- `LanternsCore_ModBuilder/Guide.md` - excruciatingly detailed Builder guide.
 - `CHANGELOG.md` - release notes.
 
 **Example add-on:** see `Docs/Example_Addon_YellowLantern.xml`.

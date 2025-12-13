@@ -2,6 +2,9 @@
 
 This folder is a standalone, no-install HTML app for generating a hero gear add-on mod that depends on LanternsCore.
 
+For the full, detailed instructions, read:
+- `LanternsCore_ModBuilder/Guide.md`
+
 ## How to use (Windows)
 
 1) Open `LanternsCore_ModBuilder/index.html` in Edge or Chrome.
@@ -16,4 +19,5 @@ This folder is a standalone, no-install HTML app for generating a hero gear add-
 - This runs entirely offline from a folder on disk.
 - Browsers cannot write files anywhere automatically; the app downloads a ZIP to your Downloads folder.
 - The **Gear template** selector lets you output belts/suits/masks (not just rings) using LanternsCore's built-in templates.
+- If you use **Import Defs**, the Builder can auto-add mod dependencies to the generated `About/About.xml` when you reference defs from other mods.
 - ZIP export uses JSZip (MIT license) - see `LanternsCore_ModBuilder/vendor/JSZIP_LICENSE.txt`.

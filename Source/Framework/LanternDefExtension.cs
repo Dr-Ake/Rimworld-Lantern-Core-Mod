@@ -76,6 +76,30 @@ namespace DrAke.LanternsFramework
         // If true, the transformation will not remove conflicting apparel; instead it skips any piece it can't wear.
         // This lets add-ons do "partial" transformations without forcibly stripping hats/armor/etc.
         public bool transformationSkipConflictingApparel = false;
+        // If true, adds a gizmo to toggle the transformation (costume/body swap) on/off without removing the gear.
+        public bool transformationToggleGizmo = false;
+        // Default state for the toggle when the gear is first created/spawned.
+        public bool transformationToggleDefaultOn = true;
+        // If true, the transformation is skipped entirely if any transformation apparel cannot resolve a worn graphic
+        // for the pawn's current body type (prevents "invisible body" visuals). Does not apply if body type override is enabled.
+        public bool transformationSkipIfMissingWornGraphic = false;
+
+        // Optional filters for who may receive the transformation.
+        public bool transformationAllowMaleGender = true;
+        public bool transformationAllowFemaleGender = true;
+        public bool transformationAllowNoneGender = true;
+        // If non-empty, only these body types may transform.
+        public List<BodyTypeDef> transformationAllowedBodyTypes = new List<BodyTypeDef>();
+        // If non-empty, these body types will never transform.
+        public List<BodyTypeDef> transformationDisallowedBodyTypes = new List<BodyTypeDef>();
+        // Optional body type override while transformed.
+        // Useful when the add-on only provides worn textures for a single body type (e.g. Male) and wants to "force" that shape during the costume.
+        // On revert/unequip, the pawn's original body type is restored.
+        public bool transformationOverrideBodyType = false;
+        // If true, the override is only applied if the transformation apparel cannot resolve a worn graphic for the pawn's current body type.
+        // If false, the body type is always forced while transformed.
+        public bool transformationOverrideBodyTypeOnlyIfMissing = true;
+        public BodyTypeDef transformationBodyTypeOverride;
 
         // Generic Abilities
         public List<AbilityDef> abilities = new List<AbilityDef>();

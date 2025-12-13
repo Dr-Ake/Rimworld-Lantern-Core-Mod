@@ -3,6 +3,8 @@
 const STORAGE_KEY = "hero_gear_builder_v1";
 const DEF_INDEX_KEY = "lanternscore_defindex_v1";
 
+let DEF_INDEX_MEM = null;
+
 function byId(id) {
   const el = document.getElementById(id);
   if (!el) throw new Error(`Missing element #${id}`);
@@ -28,6 +30,10 @@ function isValidDefName(value) {
 
 function isValidPackageId(value) {
   return /^[a-z0-9][a-z0-9.]*[a-z0-9]$/.test(value);
+}
+
+function isValidDependencyPackageId(value) {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(String(value || "").trim());
 }
 
 function normalizeRgba(text) {
@@ -100,6 +106,7 @@ function buildAbilityEditor(abilityKey) {
           <option value="NonHostilesOnly">Non-hostiles only</option>
           <option value="SelfOnly">Self only</option>
         </select>
+        <small data-hint="targetRule"></small>
       </label>
       ${abilityExtraFieldsHtml(abilityKey)}
       <label class="field field--wide">
@@ -108,6 +115,24 @@ function buildAbilityEditor(abilityKey) {
       </label>
     </div>
   `;
+
+  const targetRuleEl = wrap.querySelector('select[data-field="targetRule"]');
+  const targetRuleHint = wrap.querySelector('[data-hint="targetRule"]');
+  if (targetRuleEl && targetRuleHint) {
+    const apply = () => {
+      const v = targetRuleEl.value;
+      const map = {
+        Any: "No extra restrictions (uses RimWorld targeting rules).",
+        HostilesOnly: "Blocks allies/neutrals and only allows hostile targets.",
+        AlliesOnly: "Blocks hostiles and only allows your faction.",
+        NonHostilesOnly: "Blocks hostiles and allows self/allies/neutrals.",
+        SelfOnly: "Only allows casting on the caster.",
+      };
+      targetRuleHint.textContent = map[v] || "";
+    };
+    targetRuleEl.addEventListener("change", apply);
+    apply();
+  }
 
   return wrap;
 }
@@ -348,6 +373,7 @@ function saveDefIndex(index) {
 
 function clearDefIndex() {
   localStorage.removeItem(DEF_INDEX_KEY);
+  DEF_INDEX_MEM = null;
 }
 
 function setImportStatus(text) {
@@ -356,13 +382,24 @@ function setImportStatus(text) {
 }
 
 function getOrCreateIndex() {
-  return (
-    loadDefIndex() || {
-      importedAt: null,
-      sources: [],
-      byType: {},
-    }
-  );
+  if (DEF_INDEX_MEM) return DEF_INDEX_MEM;
+
+  const loaded = loadDefIndex();
+  if (loaded) {
+    DEF_INDEX_MEM = loaded;
+    return loaded;
+  }
+
+  DEF_INDEX_MEM = {
+    importedAt: null,
+    sources: [],
+    byType: {},
+    // defOrigins[type][defName] -> packageId
+    defOrigins: {},
+    // packageMeta[packageId] -> { displayName }
+    packageMeta: {},
+  };
+  return DEF_INDEX_MEM;
 }
 
 function ensureType(index, type) {
@@ -486,7 +523,35 @@ function classifyDefTag(tagName) {
   return null;
 }
 
-function collectDefsFromXmlText(xmlText, index) {
+function shouldIgnorePackageIdForDependency(packageId) {
+  if (!packageId) return true;
+  const p = String(packageId).trim();
+  if (!p) return true;
+  if (p === "DrAke.LanternsCore") return true;
+
+  // Vanilla/DLC packageIds (skip auto-deps; these aren't workshop mods).
+  const lower = p.toLowerCase();
+  if (lower === "ludeon.rimworld") return true;
+  if (lower === "ludeon.rimworld.royalty") return true;
+  if (lower === "ludeon.rimworld.ideology") return true;
+  if (lower === "ludeon.rimworld.biotech") return true;
+  if (lower === "ludeon.rimworld.anomaly") return true;
+  return false;
+}
+
+function ensureOriginType(index, type) {
+  if (!index.defOrigins) index.defOrigins = {};
+  if (!index.defOrigins[type]) index.defOrigins[type] = {};
+  return index.defOrigins[type];
+}
+
+function registerDefOrigin(index, type, defName, packageId) {
+  if (!packageId || shouldIgnorePackageIdForDependency(packageId)) return;
+  const map = ensureOriginType(index, type);
+  if (!(defName in map)) map[defName] = packageId;
+}
+
+function collectDefsFromXmlText(xmlText, index, source = null) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) return;
@@ -503,16 +568,21 @@ function collectDefsFromXmlText(xmlText, index) {
     const defName = defNameEl?.textContent?.trim();
     if (!defName) continue;
     ensureType(index, type).push(defName);
+    registerDefOrigin(index, type, defName, source?.packageId);
 
     if (type === "ThingDef") {
       const isApparel = !!child.querySelector("apparel");
-      if (isApparel) ensureType(index, "ApparelDef").push(defName);
+      if (isApparel) {
+        ensureType(index, "ApparelDef").push(defName);
+        registerDefOrigin(index, "ApparelDef", defName, source?.packageId);
+      }
     }
   }
 }
 
 function safePersistDefIndex(index) {
   try {
+    DEF_INDEX_MEM = index;
     saveDefIndex(index);
   } catch (e) {
     // localStorage can be too small if importing a large Mods folder.
@@ -548,6 +618,51 @@ function safePersistDefIndex(index) {
   }
 }
 
+async function tryReadAboutXmlFromDir(dirHandle) {
+  try {
+    const aboutDir = await dirHandle.getDirectoryHandle("About");
+    const aboutFileHandle = await aboutDir.getFileHandle("About.xml");
+    const file = await aboutFileHandle.getFile();
+    const text = await file.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "application/xml");
+    if (doc.getElementsByTagName("parsererror").length) return null;
+    const root = doc.documentElement;
+    if (!root) return null;
+    const packageId = root.querySelector("packageId")?.textContent?.trim() || "";
+    const displayName = root.querySelector("name")?.textContent?.trim() || "";
+    if (!packageId) return null;
+    return { packageId, displayName: displayName || packageId };
+  } catch {
+    return null;
+  }
+}
+
+async function resolveSourceForPath(rootHandle, isSingleModFolder, path) {
+  const index = getOrCreateIndex();
+  if (!index.packageMeta) index.packageMeta = {};
+  index._modKeyCache = index._modKeyCache || {};
+
+  const parts = String(path || "").split("/").filter(Boolean);
+  const modKey = isSingleModFolder ? "" : parts[0] || "";
+  if (modKey in index._modKeyCache) return index._modKeyCache[modKey];
+
+  try {
+    const dirHandle = isSingleModFolder ? rootHandle : await rootHandle.getDirectoryHandle(modKey);
+    const meta = await tryReadAboutXmlFromDir(dirHandle);
+    if (meta && meta.packageId) {
+      index.packageMeta[meta.packageId] = { displayName: meta.displayName || meta.packageId };
+      index._modKeyCache[modKey] = meta;
+      return meta;
+    }
+  } catch {
+    // ignore
+  }
+
+  index._modKeyCache[modKey] = null;
+  return null;
+}
+
 async function importFromFolder() {
   const handle = await chooseFolderHandle();
   if (!handle) return;
@@ -560,6 +675,8 @@ async function importFromFolder() {
   let xmlFiles = 0;
   let parsed = 0;
   let skipped = 0;
+
+  const isSingleModFolder = (await tryReadAboutXmlFromDir(handle)) != null;
 
   setImportStatus("Importing...");
 
@@ -576,7 +693,8 @@ async function importFromFolder() {
         continue;
       }
       const text = await file.text();
-      collectDefsFromXmlText(text, index);
+      const source = await resolveSourceForPath(handle, isSingleModFolder, path);
+      collectDefsFromXmlText(text, index, source);
       parsed++;
     } catch {
       skipped++;
@@ -611,9 +729,12 @@ function getState() {
     modAuthor: byId("modAuthor").value.trim(),
     packageId: byId("packageId").value.trim(),
     modDesc: byId("modDesc").value.trim(),
+    autoAddDependencies: byId("autoAddDependencies")?.checked ?? true,
+    extraDependencies: (byId("extraDependencies")?.value || "").trim(),
 
     gearParent: byId("gearParent")?.value || "Lantern_RingBase",
     gearParentCustom: byId("gearParentCustom")?.value.trim() || "",
+    gearGraphicClass: byId("gearGraphicClass")?.value || "Graphic_Single",
 
     ringDefName: byId("ringDefName").value.trim(),
     ringLabel: byId("ringLabel").value.trim(),
@@ -626,8 +747,26 @@ function getState() {
 
     enableCostume: byId("enableCostume")?.value === "yes",
     associatedHediff: byId("associatedHediff")?.value.trim() || "",
+
+    transformationAllowMaleGender: byId("transformationAllowMaleGender")?.checked ?? true,
+    transformationAllowFemaleGender: byId("transformationAllowFemaleGender")?.checked ?? true,
+    transformationAllowNoneGender: byId("transformationAllowNoneGender")?.checked ?? true,
+    transformationDisallowBodyTypeThin: byId("transformationDisallowBodyTypeThin")?.checked || false,
+    transformationDisallowBodyTypeFat: byId("transformationDisallowBodyTypeFat")?.checked || false,
+    transformationDisallowBodyTypeHulk: byId("transformationDisallowBodyTypeHulk")?.checked || false,
+
     transformationOnlyWhenDrafted: byId("transformationOnlyWhenDrafted")?.checked || false,
     transformationSkipConflictingApparel: byId("transformationSkipConflictingApparel")?.checked || false,
+    transformationMissingGraphicBehavior: byId("transformationMissingGraphicBehavior")?.value || "none",
+    transformationToggleGizmo: byId("transformationToggleGizmo")?.value === "yes",
+    transformationToggleDefaultOn: byId("transformationToggleDefaultOn")?.value !== "no",
+
+    transformationOverrideBodyType: byId("transformationOverrideBodyType")?.value === "yes",
+    transformationOverrideBodyTypeOnlyIfMissing: byId("transformationOverrideBodyTypeOnlyIfMissing")?.value !== "no",
+    transformationBodyTypeOverride:
+      byId("transformationBodyTypeOverride")?.value === "custom"
+        ? (byId("transformationBodyTypeOverrideCustom")?.value.trim() || "")
+        : (byId("transformationBodyTypeOverride")?.value || "Male"),
     allowBatteryManifest: byId("allowBatteryManifest")?.checked || false,
     batteryDef: byId("batteryDef")?.value.trim() || "",
     batteryManifestCost: toNum(byId("batteryManifestCost")?.value, 0.5),
@@ -934,10 +1073,13 @@ function setDefaults() {
   byId("modAuthor").value = "";
   byId("packageId").value = "yourname.myherogear";
   byId("modDesc").value = "Adds custom hero gear powered by a resource.";
+  if (document.getElementById("autoAddDependencies")) byId("autoAddDependencies").checked = true;
+  if (document.getElementById("extraDependencies")) byId("extraDependencies").value = "";
 
   if (document.getElementById("gearParent")) {
     byId("gearParent").value = "Lantern_RingBase";
     byId("gearParentCustom").value = "";
+    if (document.getElementById("gearGraphicClass")) byId("gearGraphicClass").value = "Graphic_Single";
   }
 
   byId("ringDefName").value = "MyHeroGear_Ring";
@@ -952,8 +1094,23 @@ function setDefaults() {
   if (document.getElementById("enableCostume")) {
     byId("enableCostume").value = "no";
     byId("associatedHediff").value = "";
+
+    if (document.getElementById("transformationAllowMaleGender")) byId("transformationAllowMaleGender").checked = true;
+    if (document.getElementById("transformationAllowFemaleGender")) byId("transformationAllowFemaleGender").checked = true;
+    if (document.getElementById("transformationAllowNoneGender")) byId("transformationAllowNoneGender").checked = true;
+    if (document.getElementById("transformationDisallowBodyTypeThin")) byId("transformationDisallowBodyTypeThin").checked = false;
+    if (document.getElementById("transformationDisallowBodyTypeFat")) byId("transformationDisallowBodyTypeFat").checked = false;
+    if (document.getElementById("transformationDisallowBodyTypeHulk")) byId("transformationDisallowBodyTypeHulk").checked = false;
+
     byId("transformationOnlyWhenDrafted").checked = false;
     byId("transformationSkipConflictingApparel").checked = false;
+    if (document.getElementById("transformationMissingGraphicBehavior")) byId("transformationMissingGraphicBehavior").value = "none";
+    if (document.getElementById("transformationToggleGizmo")) byId("transformationToggleGizmo").value = "no";
+    if (document.getElementById("transformationToggleDefaultOn")) byId("transformationToggleDefaultOn").value = "yes";
+    if (document.getElementById("transformationOverrideBodyType")) byId("transformationOverrideBodyType").value = "no";
+    if (document.getElementById("transformationOverrideBodyTypeOnlyIfMissing")) byId("transformationOverrideBodyTypeOnlyIfMissing").value = "yes";
+    if (document.getElementById("transformationBodyTypeOverride")) byId("transformationBodyTypeOverride").value = "Male";
+    if (document.getElementById("transformationBodyTypeOverrideCustom")) byId("transformationBodyTypeOverrideCustom").value = "";
     byId("allowBatteryManifest").checked = false;
     byId("batteryDef").value = "";
     byId("batteryManifestCost").value = "0.5";
@@ -1017,10 +1174,12 @@ function loadState() {
   try {
     const s = JSON.parse(raw);
     for (const [id, val] of Object.entries(s)) {
-      if (id === "abilities" || id === "enableSelection") continue;
+      if (id === "abilities" || id === "enableSelection" || id === "autoAddDependencies") continue;
       const el = document.getElementById(id);
       if (el && "value" in el) el.value = val ?? "";
     }
+
+    if (document.getElementById("autoAddDependencies")) byId("autoAddDependencies").checked = s.autoAddDependencies ?? true;
 
     byId("regenFromMood").checked = !!s.regenFromMood;
     byId("regenFromPain").checked = !!s.regenFromPain;
@@ -1048,8 +1207,30 @@ function loadState() {
     if (document.getElementById("enableCostume")) {
       byId("enableCostume").value = s.enableCostume ? "yes" : "no";
       byId("associatedHediff").value = s.associatedHediff ?? "";
+
+      if (document.getElementById("transformationAllowMaleGender")) byId("transformationAllowMaleGender").checked = s.transformationAllowMaleGender ?? true;
+      if (document.getElementById("transformationAllowFemaleGender")) byId("transformationAllowFemaleGender").checked = s.transformationAllowFemaleGender ?? true;
+      if (document.getElementById("transformationAllowNoneGender")) byId("transformationAllowNoneGender").checked = s.transformationAllowNoneGender ?? true;
+      if (document.getElementById("transformationDisallowBodyTypeThin")) byId("transformationDisallowBodyTypeThin").checked = !!s.transformationDisallowBodyTypeThin;
+      if (document.getElementById("transformationDisallowBodyTypeFat")) byId("transformationDisallowBodyTypeFat").checked = !!s.transformationDisallowBodyTypeFat;
+      if (document.getElementById("transformationDisallowBodyTypeHulk")) byId("transformationDisallowBodyTypeHulk").checked = !!s.transformationDisallowBodyTypeHulk;
+
       byId("transformationOnlyWhenDrafted").checked = !!s.transformationOnlyWhenDrafted;
       byId("transformationSkipConflictingApparel").checked = !!s.transformationSkipConflictingApparel;
+      if (document.getElementById("transformationMissingGraphicBehavior"))
+        byId("transformationMissingGraphicBehavior").value = s.transformationMissingGraphicBehavior ?? "none";
+      if (document.getElementById("transformationToggleGizmo")) byId("transformationToggleGizmo").value = s.transformationToggleGizmo ? "yes" : "no";
+      if (document.getElementById("transformationToggleDefaultOn"))
+        byId("transformationToggleDefaultOn").value = s.transformationToggleDefaultOn === false ? "no" : "yes";
+      if (document.getElementById("transformationOverrideBodyType")) byId("transformationOverrideBodyType").value = s.transformationOverrideBodyType ? "yes" : "no";
+      if (document.getElementById("transformationOverrideBodyTypeOnlyIfMissing"))
+        byId("transformationOverrideBodyTypeOnlyIfMissing").value = s.transformationOverrideBodyTypeOnlyIfMissing === false ? "no" : "yes";
+      if (document.getElementById("transformationBodyTypeOverride")) {
+        const builtin = ["Male", "Female", "Thin", "Fat", "Hulk"];
+        const v = String(s.transformationBodyTypeOverride ?? "Male");
+        byId("transformationBodyTypeOverride").value = builtin.includes(v) ? v : "custom";
+        if (document.getElementById("transformationBodyTypeOverrideCustom")) byId("transformationBodyTypeOverrideCustom").value = builtin.includes(v) ? "" : v;
+      }
       byId("allowBatteryManifest").checked = !!s.allowBatteryManifest;
       byId("batteryDef").value = s.batteryDef ?? "";
       byId("batteryManifestCost").value = String(s.batteryManifestCost ?? "0.5");
@@ -1143,6 +1324,10 @@ function validate(state) {
   if (!state.packageId) issues.push("PackageId is required.");
   if (state.packageId && !isValidPackageId(state.packageId)) issues.push("PackageId should be lowercase letters/numbers/dots (e.g. yourname.myherogear).");
 
+  for (const p of parseExtraDependencies(state.extraDependencies)) {
+    if (!isValidDependencyPackageId(p)) issues.push(`Extra dependency packageId is invalid: ${p}`);
+  }
+
   if (!state.ringDefName) issues.push("Ring defName is required.");
   if (state.ringDefName && !isValidDefName(state.ringDefName)) issues.push("Ring defName must be a valid RimWorld defName (letters/numbers/_ and must start with a letter).");
   if (!state.ringLabel) issues.push("Ring label is required.");
@@ -1188,6 +1373,16 @@ function validate(state) {
     if (!Number.isFinite(Number(sb.offset))) issues.push(`Stat buff ${sb?.stat || "(missing StatDef)"}: offset must be a number.`);
   }
 
+  if (state.transformationOverrideBodyType) {
+    if (!state.transformationBodyTypeOverride || !isValidDefName(state.transformationBodyTypeOverride)) {
+      issues.push("Body type override enabled: BodyTypeDef must be a valid defName.");
+    }
+  }
+
+  if (!state.enableCostume && state.transformationToggleGizmo) {
+    issues.push("Transformation toggle gizmo requires costume transformation to be enabled.");
+  }
+
   if (state.enableCostume) {
     const allCostume = collectTransformationApparel(state);
     if (allCostume.length === 0) issues.push("Costume enabled: add at least one apparel defName (existing or generated).");
@@ -1205,19 +1400,131 @@ function validate(state) {
 
 function buildTextureChecklist(state) {
   const required = [];
-  required.push(`Textures/${state.ringTexPath}.png`);
+
+  const gearClass = state.gearGraphicClass || "Graphic_Single";
+  if (gearClass === "Graphic_Multi") {
+    required.push(`Textures/${state.ringTexPath}_north.png`);
+    required.push(`Textures/${state.ringTexPath}_south.png`);
+    required.push(`Textures/${state.ringTexPath}_east.png`);
+  } else {
+    required.push(`Textures/${state.ringTexPath}.png`);
+  }
   for (const a of state.abilities) {
     required.push(`Textures/${a.iconPath}.png`);
   }
   for (const app of state.costume_generatedApparel || []) {
-    if (app?.texPath) required.push(`Textures/${app.texPath}.png`);
+    if (!app?.texPath) continue;
+    required.push(`Textures/${app.texPath}_north.png`);
+    required.push(`Textures/${app.texPath}_south.png`);
+    required.push(`Textures/${app.texPath}_east.png`);
   }
   // De-dup
   return Array.from(new Set(required)).sort();
 }
 
+function parseExtraDependencies(text) {
+  const raw = String(text || "");
+  const lines = raw
+    .split(/\r?\n/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return uniqueSorted(lines);
+}
+
+function resolveDependencyDisplayName(packageId) {
+  const index = getOrCreateIndex();
+  const name = index?.packageMeta?.[packageId]?.displayName;
+  return name || packageId;
+}
+
+function referencedDefsForDependencies(state) {
+  const refs = [];
+
+  if (state.allowBatteryManifest && state.batteryDef) refs.push({ type: "ThingDef", defName: state.batteryDef });
+  if (state.associatedHediff) refs.push({ type: "HediffDef", defName: state.associatedHediff });
+
+  for (const a of state.abilities || []) {
+    if (a?.key === "Summon" && a.pawnKind) refs.push({ type: "PawnKindDef", defName: a.pawnKind });
+    if (a?.key === "Construct" && a.thingDef) refs.push({ type: "ThingDef", defName: a.thingDef });
+  }
+
+  for (const defName of state.costume_existingApparel || []) {
+    if (defName) refs.push({ type: "ApparelDef", defName });
+  }
+
+  for (const c of state.sel_conditions || []) {
+    const t = c?.type;
+    const d = c?.def;
+    if (!d) continue;
+    if (t === "Trait") refs.push({ type: "TraitDef", defName: d });
+    if (t === "Stat") refs.push({ type: "StatDef", defName: d });
+    if (t === "Skill") refs.push({ type: "SkillDef", defName: d });
+    if (t === "Need") refs.push({ type: "NeedDef", defName: d });
+    if (t === "Thought") refs.push({ type: "ThoughtDef", defName: d });
+    if (t === "Record") refs.push({ type: "RecordDef", defName: d });
+  }
+
+  return refs;
+}
+
+function computeDependencies(state) {
+  const deps = new Map();
+
+  // Always depend on LanternsCore.
+  deps.set("DrAke.LanternsCore", "Lantern Core Framework");
+
+  // Manual overrides.
+  for (const p of parseExtraDependencies(state.extraDependencies)) {
+    if (p === "DrAke.LanternsCore") continue;
+    if (!isValidDependencyPackageId(p)) continue;
+    deps.set(p, resolveDependencyDisplayName(p));
+  }
+
+  if (!state.autoAddDependencies) {
+    return Array.from(deps.entries())
+      .map(([packageId, displayName]) => ({ packageId, displayName }))
+      .sort((a, b) => a.packageId.localeCompare(b.packageId));
+  }
+
+  const index = getOrCreateIndex();
+  const origins = index?.defOrigins || {};
+
+  for (const r of referencedDefsForDependencies(state)) {
+    const pkg = origins?.[r.type]?.[r.defName];
+    if (pkg && !shouldIgnorePackageIdForDependency(pkg) && pkg !== state.packageId) {
+      deps.set(pkg, resolveDependencyDisplayName(pkg));
+      continue;
+    }
+
+    // Costume defs are often ThingDefs with <apparel/>; allow fallback lookup.
+    if (r.type === "ApparelDef") {
+      const pkg2 = origins?.ThingDef?.[r.defName];
+      if (pkg2 && !shouldIgnorePackageIdForDependency(pkg2) && pkg2 !== state.packageId) deps.set(pkg2, resolveDependencyDisplayName(pkg2));
+    }
+  }
+
+  return Array.from(deps.entries())
+    .map(([packageId, displayName]) => ({ packageId, displayName }))
+    .sort((a, b) => a.packageId.localeCompare(b.packageId));
+}
+
 function buildAboutXml(state) {
   const desc = state.modDesc || "";
+  const deps = computeDependencies(state);
+  const depXml =
+    deps
+      .map(
+        (d) =>
+          `    <li>\n` +
+          `      <packageId>${escapeXml(d.packageId)}</packageId>\n` +
+          `      <displayName>${escapeXml(d.displayName || d.packageId)}</displayName>\n` +
+          `    </li>\n`
+      )
+      .join("") || "";
+
+  const loadAfterXml =
+    deps.map((d) => `    <li>${escapeXml(d.packageId)}</li>\n`).join("") || "";
+
   return `<?xml version="1.0" encoding="utf-8"?>\n` +
     `<ModMetaData>\n` +
     `  <name>${escapeXml(state.modName)}</name>\n` +
@@ -1228,13 +1535,10 @@ function buildAboutXml(state) {
     `  </supportedVersions>\n` +
     `  <description>${escapeXml(desc)}</description>\n` +
     `  <modDependencies>\n` +
-    `    <li>\n` +
-    `      <packageId>DrAke.LanternsCore</packageId>\n` +
-    `      <displayName>Lantern Core Framework</displayName>\n` +
-    `    </li>\n` +
+    depXml +
     `  </modDependencies>\n` +
     `  <loadAfter>\n` +
-    `    <li>DrAke.LanternsCore</li>\n` +
+    loadAfterXml +
     `  </loadAfter>\n` +
     `</ModMetaData>\n`;
 }
@@ -1310,11 +1614,57 @@ function buildDefsXml(state) {
     if (state.transformationOnlyWhenDrafted) extLines.push(`      <transformationOnlyWhenDrafted>true</transformationOnlyWhenDrafted>`);
     if (state.transformationSkipConflictingApparel)
       extLines.push(`      <transformationSkipConflictingApparel>true</transformationSkipConflictingApparel>`);
+
+    if (state.transformationAllowMaleGender === false) extLines.push(`      <transformationAllowMaleGender>false</transformationAllowMaleGender>`);
+    if (state.transformationAllowFemaleGender === false) extLines.push(`      <transformationAllowFemaleGender>false</transformationAllowFemaleGender>`);
+    if (state.transformationAllowNoneGender === false) extLines.push(`      <transformationAllowNoneGender>false</transformationAllowNoneGender>`);
+
+    const disallowed = [];
+    if (state.transformationDisallowBodyTypeThin) disallowed.push("Thin");
+    if (state.transformationDisallowBodyTypeFat) disallowed.push("Fat");
+    if (state.transformationDisallowBodyTypeHulk) disallowed.push("Hulk");
+    if (disallowed.length) {
+      extLines.push(`      <transformationDisallowedBodyTypes>`);
+      for (const b of disallowed) extLines.push(`        <li>${b}</li>`);
+      extLines.push(`      </transformationDisallowedBodyTypes>`);
+    }
+
+    const missingBehavior = state.transformationMissingGraphicBehavior || "none";
+    if (missingBehavior === "skip") {
+      extLines.push(`      <transformationSkipIfMissingWornGraphic>true</transformationSkipIfMissingWornGraphic>`);
+    }
+
+    if (state.transformationToggleGizmo) {
+      extLines.push(`      <transformationToggleGizmo>true</transformationToggleGizmo>`);
+      if (state.transformationToggleDefaultOn === false) {
+        extLines.push(`      <transformationToggleDefaultOn>false</transformationToggleDefaultOn>`);
+      }
+    }
+
+    if (missingBehavior === "override" && state.transformationBodyTypeOverride) {
+      extLines.push(`      <transformationOverrideBodyType>true</transformationOverrideBodyType>`);
+      if (state.transformationOverrideBodyTypeOnlyIfMissing) {
+        extLines.push(`      <transformationOverrideBodyTypeOnlyIfMissing>true</transformationOverrideBodyTypeOnlyIfMissing>`);
+      } else {
+        extLines.push(`      <transformationOverrideBodyTypeOnlyIfMissing>false</transformationOverrideBodyTypeOnlyIfMissing>`);
+      }
+      extLines.push(`      <transformationBodyTypeOverride>${escapeXml(state.transformationBodyTypeOverride)}</transformationBodyTypeOverride>`);
+    } else if (state.transformationOverrideBodyType && state.transformationBodyTypeOverride) {
+      // Backward compatibility if user toggled the legacy override switches directly.
+      extLines.push(`      <transformationOverrideBodyType>true</transformationOverrideBodyType>`);
+      if (state.transformationOverrideBodyTypeOnlyIfMissing) {
+        extLines.push(`      <transformationOverrideBodyTypeOnlyIfMissing>true</transformationOverrideBodyTypeOnlyIfMissing>`);
+      } else {
+        extLines.push(`      <transformationOverrideBodyTypeOnlyIfMissing>false</transformationOverrideBodyTypeOnlyIfMissing>`);
+      }
+      extLines.push(`      <transformationBodyTypeOverride>${escapeXml(state.transformationBodyTypeOverride)}</transformationBodyTypeOverride>`);
+    }
   }
 
   const gearParent =
     state.gearParent === "custom" ? (state.gearParentCustom || "").trim() : (state.gearParent || "").trim();
   const parentName = gearParent || "Lantern_RingBase";
+  const gearGraphicClass = (state.gearGraphicClass || "Graphic_Single").trim() || "Graphic_Single";
 
   const ringXml =
     `  <ThingDef ParentName="${escapeXml(parentName)}">\n` +
@@ -1323,7 +1673,8 @@ function buildDefsXml(state) {
     `    <description>${escapeXml(state.ringDesc || "")}</description>\n` +
     `    <graphicData>\n` +
     `      <texPath>${escapeXml(state.ringTexPath)}</texPath>\n` +
-    `      <graphicClass>Graphic_Single</graphicClass>\n` +
+    `      <graphicClass>${escapeXml(gearGraphicClass)}</graphicClass>\n` +
+    (gearGraphicClass === "Graphic_Multi" ? `      <allowFlip>true</allowFlip>\n` : "") +
     `      <color>${escapeXml(state.ringColor)}</color>\n` +
     `    </graphicData>\n` +
     `    <statBases>\n` +
@@ -1378,10 +1729,12 @@ function buildGeneratedApparelDefXml(it) {
     `    <apparel>\n` +
     `      <layers>\n${layers.map((x) => `        <li>${escapeXml(x)}</li>`).join("\n")}\n      </layers>\n` +
     `      <bodyPartGroups>\n${bodyParts.map((x) => `        <li>${escapeXml(x)}</li>`).join("\n")}\n      </bodyPartGroups>\n` +
+    `      <wornGraphicPath>${escapeXml(it.texPath)}</wornGraphicPath>\n` +
     `    </apparel>\n` +
     `    <graphicData>\n` +
     `      <texPath>${escapeXml(it.texPath)}</texPath>\n` +
     `      <graphicClass>Graphic_Multi</graphicClass>\n` +
+    `      <allowFlip>true</allowFlip>\n` +
     `    </graphicData>\n` +
     `  </ThingDef>\n`
   );
@@ -1658,6 +2011,11 @@ function buildSelectionConditionsXml(items) {
 }
 
 function buildReadme(state, textureChecklist) {
+  const multiNote =
+    state.gearGraphicClass === "Graphic_Multi" || (state.costume_generatedApparel || []).length
+      ? `\nNotes:\n- For Graphic_Multi textures, RimWorld commonly mirrors east to west if you don't provide a west texture.\n`
+      : "";
+
   return `# ${state.modName}\n\n` +
     `This mod was generated by Hero Gear Builder and depends on Lantern Core Framework (LanternsCore).\n\n` +
     `## Install\n\n` +
@@ -1665,13 +2023,21 @@ function buildReadme(state, textureChecklist) {
     `- Ensure Lantern Core Framework is enabled and loaded before this mod.\n\n` +
     `## Textures required\n\n` +
     textureChecklist.map((p) => `- \`${p}\``).join("\n") +
-    `\n`;
+    `\n` +
+    multiNote;
 }
 
 function renderExportPanel() {
   const state = getState();
   const issues = validate(state);
   byId("validation").textContent = issues.length ? issues.map((x) => `- ${x}`).join("\n") : "No issues detected.";
+
+  const deps = computeDependencies(state);
+  const depText = deps.length
+    ? deps.map((d) => `- ${d.packageId}${d.displayName && d.displayName !== d.packageId ? ` (${d.displayName})` : ""}`).join("\n")
+    : "(none)";
+  const depEl = document.getElementById("dependencyChecklist");
+  if (depEl) depEl.textContent = depText;
 
   const textures = buildTextureChecklist(state);
   byId("textureChecklist").textContent = textures.map((p) => `- ${p}`).join("\n");
@@ -1913,6 +2279,8 @@ function init() {
   // Init imported defs
   applyDefIndexToDatalists(getOrCreateIndex());
   wireGearParentUi();
+  wireSelectHelpText();
+  wireCostumeEnableUi();
 
   // Init costume UI lists
   if (document.getElementById("existingApparelList")) {
@@ -1930,23 +2298,270 @@ function init() {
   }
 
   wireConditionDefAutocomplete();
+  wireBodyTypeOverrideUi();
+  wireMissingGraphicBehaviorUi();
+  wireTransformationToggleUi();
+  refreshSelectHelpText();
 }
 
 init();
 
+function wireCostumeEnableUi() {
+  const enable = document.getElementById("enableCostume");
+  const toggle = document.getElementById("transformationToggleGizmo");
+  const defOn = document.getElementById("transformationToggleDefaultOn");
+  if (!enable || !toggle || !defOn) return;
+
+  const apply = () => {
+    const on = enable.value === "yes";
+    toggle.disabled = !on;
+    defOn.disabled = !on || toggle.value !== "yes";
+    if (!on) {
+      toggle.value = "no";
+      defOn.value = "yes";
+    }
+    refreshSelectHelpText();
+  };
+
+  enable.addEventListener("change", () => {
+    apply();
+    saveState();
+    renderExportPanel();
+  });
+
+  apply();
+}
+
+function applySelectHelp(selectId, descId, helpByValue) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const desc = descId ? document.getElementById(descId) : null;
+
+  for (const opt of Array.from(sel.options || [])) {
+    const t = helpByValue?.[opt.value];
+    if (t) opt.title = t;
+  }
+
+  const help = helpByValue?.[sel.value] || "";
+  if (help) sel.title = help;
+  if (desc) desc.textContent = help;
+}
+
+function refreshSelectHelpText() {
+  applySelectHelp("enableCostume", "enableCostumeDesc", {
+    no: "No costume is auto-equipped. Gear still grants charge + abilities.",
+    yes: "Auto-equip listed apparel while worn, then restore the previous outfit when removed.",
+  });
+
+  applySelectHelp("transformationMissingGraphicBehavior", "transformationMissingGraphicBehaviorDesc", {
+    none: "Do nothing if a worn graphic can't be resolved for the pawn's body type (may look wrong).",
+    skip: "If any costume piece can't render, skip costume for that pawn (powers still work).",
+    override: "Temporarily force a body type while transformed so the costume can render.",
+  });
+
+  applySelectHelp("transformationToggleGizmo", null, {
+    no: "No in-game toggle; transformation follows the usual wear/draft rules.",
+    yes: "Adds an in-game button to toggle the costume/body swap on/off without removing the gear.",
+  });
+
+  applySelectHelp("transformationToggleDefaultOn", null, {
+    yes: "Transformation starts enabled when the item is first created/spawned.",
+    no: "Transformation starts disabled until manually toggled on.",
+  });
+
+  applySelectHelp("transformationOverrideBodyType", "transformationOverrideBodyTypeDesc", {
+    no: "Never force body type (costume uses the pawn's current body type).",
+    yes: "Temporarily force the chosen body type while transformed; restores original on revert/unequip.",
+  });
+
+  applySelectHelp("transformationOverrideBodyTypeOnlyIfMissing", null, {
+    yes: "Only force body type if the costume cannot render for the pawn's current body type.",
+    no: "Always force body type while transformed (even if the costume could render).",
+  });
+
+  applySelectHelp("transformationBodyTypeOverride", "transformationBodyTypeOverrideDesc", {
+    Male: "Use the vanilla Male body type while transformed.",
+    Female: "Use the vanilla Female body type while transformed.",
+    Thin: "Use the vanilla Thin body type while transformed.",
+    Fat: "Use the vanilla Fat body type while transformed.",
+    Hulk: "Use the vanilla Hulk body type while transformed.",
+    custom: "Type your own BodyTypeDef name (advanced).",
+  });
+
+  applySelectHelp("enableSelection", "enableSelectionDesc", {
+    no: "No selection def generated.",
+    yes: "Generates a RingSelectionDef (auto-delivery) using your trigger + conditions.",
+  });
+
+  applySelectHelp("selectionTrigger", "selectionTriggerDesc", {
+    onJoin: "Runs selection when a pawn joins the player faction.",
+    onSpawn: "Runs selection when a pawn spawns on a player home map.",
+    onMental: "Runs selection when a pawn enters any mental state.",
+  });
+
+  applySelectHelp("excludeIfHasAnyLanternRing", "excludeIfHasAnyLanternRingDesc", {
+    true: "Skips pawns who already have any LanternsCore gear.",
+    false: "Allows pawns even if they already have LanternsCore gear.",
+  });
+
+  applySelectHelp("condType", "condTypeDesc", {
+    Trait: "Scores candidates based on having (or not having) a TraitDef.",
+    Stat: "Scores candidates based on a StatDef value (e.g. MeleeHitChance).",
+    Skill: "Scores candidates based on a SkillDef level.",
+    Mood: "Scores candidates based on current mood percent.",
+    Need: "Scores candidates based on a NeedDef value (e.g. Rest).",
+    Thought: "Scores candidates based on having a ThoughtDef active.",
+    Record: "Scores candidates based on a RecordDef (history).",
+  });
+}
+
+function wireSelectHelpText() {
+  qsa("select").forEach((el) => el.addEventListener("change", refreshSelectHelpText));
+  refreshSelectHelpText();
+}
+
 function wireGearParentUi() {
   const sel = document.getElementById("gearParent");
   const custom = document.getElementById("gearParentCustom");
+  const desc = document.getElementById("gearParentDesc");
+  const gearGraphic = document.getElementById("gearGraphicClass");
+  const gearGraphicDesc = document.getElementById("gearGraphicDesc");
+  const gearTexHint = document.getElementById("gearTexHint");
   if (!sel || !custom) return;
+
+  const applyGraphicHelp = () => {
+    if (!gearGraphic) return;
+    const v = gearGraphic.value;
+    for (const opt of Array.from(gearGraphic.options || [])) {
+      if (opt.value === "Graphic_Multi") opt.title = "Directional textures: _north/_south/_east (west is usually optional).";
+      if (opt.value === "Graphic_Single") opt.title = "Single texture: .png";
+    }
+    if (gearGraphicDesc) {
+      gearGraphicDesc.textContent =
+        v === "Graphic_Multi"
+          ? "Requires 3 directional textures: _north/_south/_east. (West is usually mirrored from east.)"
+          : "Requires 1 texture: .png";
+    }
+    gearGraphic.title = gearGraphicDesc?.textContent || gearGraphic.title || "";
+    if (gearTexHint) {
+      gearTexHint.textContent =
+        v === "Graphic_Multi"
+          ? "Points to Textures/<texPath>_north.png, _south.png, _east.png (west is optional)."
+          : "Points to Textures/<texPath>.png";
+    }
+  };
 
   const apply = () => {
     const isCustom = sel.value === "custom";
     custom.disabled = !isCustom;
     if (!isCustom) custom.value = "";
+
+    if (desc) {
+      const map = {
+        Lantern_RingBase: "Waist/Belt slot ring template (classic Lantern ring behavior).",
+        Lantern_GearBeltBase: "Utility belt template (Waist/Belt).",
+        Lantern_GearSuitBase: "Suit template (Torso/Shell).",
+        Lantern_GearMaskBase: "Mask template (FullHead/Overhead).",
+        Lantern_GearApparelBase: "Generic powered apparel base (you can override layers/body parts in XML later).",
+        custom: "Uses your custom ParentName. Good for advanced modders with their own base apparel defs.",
+      };
+      for (const opt of Array.from(sel.options || [])) {
+        const t = map[opt.value];
+        if (t) opt.title = t;
+      }
+      desc.textContent = map[sel.value] || "";
+      sel.title = desc.textContent || sel.title || "";
+    }
+
+    // Sensible defaults: suits/masks are usually multi-directional; rings/belts can be single.
+    if (gearGraphic) {
+      if (sel.value === "Lantern_GearSuitBase" || sel.value === "Lantern_GearMaskBase" || sel.value === "Lantern_GearApparelBase") {
+        gearGraphic.value = "Graphic_Multi";
+      } else {
+        gearGraphic.value = "Graphic_Single";
+      }
+    }
+    applyGraphicHelp();
   };
 
   sel.addEventListener("change", apply);
+  if (gearGraphic) gearGraphic.addEventListener("change", applyGraphicHelp);
   apply();
+}
+
+function wireBodyTypeOverrideUi() {
+  const enabled = document.getElementById("transformationOverrideBodyType");
+  const onlyIfMissing = document.getElementById("transformationOverrideBodyTypeOnlyIfMissing");
+  const mode = document.getElementById("transformationBodyTypeOverride");
+  const custom = document.getElementById("transformationBodyTypeOverrideCustom");
+  const behavior = document.getElementById("transformationMissingGraphicBehavior");
+  if (!enabled || !onlyIfMissing || !mode || !custom) return;
+
+  const apply = () => {
+    const on = enabled.value === "yes";
+    onlyIfMissing.disabled = !on;
+    mode.disabled = !on;
+    custom.disabled = !on || mode.value !== "custom";
+    if (!on) {
+      onlyIfMissing.value = "yes";
+      mode.value = "Male";
+      custom.value = "";
+      if (behavior && behavior.value === "override") behavior.value = "none";
+    } else if (mode.value !== "custom") {
+      custom.value = "";
+    }
+  };
+
+  enabled.addEventListener("change", apply);
+  onlyIfMissing.addEventListener("change", apply);
+  mode.addEventListener("change", apply);
+  apply();
+  refreshSelectHelpText();
+}
+
+function wireMissingGraphicBehaviorUi() {
+  const behavior = document.getElementById("transformationMissingGraphicBehavior");
+  const overrideEnabled = document.getElementById("transformationOverrideBodyType");
+  if (!behavior || !overrideEnabled) return;
+
+  const apply = () => {
+    if (behavior.value === "override") {
+      overrideEnabled.value = "yes";
+    } else if (behavior.value === "skip" || behavior.value === "none") {
+      overrideEnabled.value = "no";
+    }
+  };
+
+  behavior.addEventListener("change", () => {
+    apply();
+    wireBodyTypeOverrideUi();
+    refreshSelectHelpText();
+    saveState();
+    renderExportPanel();
+  });
+  apply();
+  refreshSelectHelpText();
+}
+
+function wireTransformationToggleUi() {
+  const on = document.getElementById("transformationToggleGizmo");
+  const defOn = document.getElementById("transformationToggleDefaultOn");
+  if (!on || !defOn) return;
+
+  const apply = () => {
+    const enabled = on.value === "yes";
+    defOn.disabled = !enabled;
+    if (!enabled) defOn.value = "yes";
+  };
+
+  on.addEventListener("change", () => {
+    apply();
+    refreshSelectHelpText();
+    saveState();
+    renderExportPanel();
+  });
+  apply();
+  refreshSelectHelpText();
 }
 
 function wireConditionDefAutocomplete() {
@@ -1982,4 +2597,5 @@ function wireConditionDefAutocomplete() {
 
   typeEl.addEventListener("change", apply);
   apply();
+  refreshSelectHelpText();
 }
