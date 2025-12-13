@@ -6,7 +6,7 @@
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <description>Core framework for Lantern Corps mods. Provides generic handling for Power Rings, specific resource management (Willpower, Rage, etc.), transformation/costume logic, and flexible ring selection triggers.</description>
+  <description>Core framework for Lantern rings and "hero gear" style mods. Provides generic handling for powered gear, resource management (Willpower, Rage, etc.), transformation/costume logic, and flexible selection triggers.</description>
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>

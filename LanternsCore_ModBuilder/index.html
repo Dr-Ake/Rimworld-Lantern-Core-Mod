@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hero Gear Builder (LanternsCore)</title>
+    <link rel="stylesheet" href="./assets/app.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header__title">
+        <h1>Hero Gear Builder</h1>
+        <p>Offline, no-install mod generator (exports a ZIP). Powered by LanternsCore.</p>
+      </div>
+      <div class="header__actions">
+        <button id="btnExport" class="btn btn--primary">Export ZIP</button>
+        <button id="btnReset" class="btn btn--danger">Reset</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <nav class="tabs" aria-label="Builder tabs">
+        <button class="tab tab--active" data-tab="mod">Mod</button>
+        <button class="tab" data-tab="ring">Gear</button>
+        <button class="tab" data-tab="costume">Costume</button>
+        <button class="tab" data-tab="import">Import Defs</button>
+        <button class="tab" data-tab="charge">Charge</button>
+        <button class="tab" data-tab="abilities">Abilities</button>
+        <button class="tab" data-tab="selection">Selection</button>
+        <button class="tab" data-tab="export">Export</button>
+      </nav>
+
+      <section class="panel panel--active" data-panel="mod">
+        <h2>Mod Info</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Mod name</span>
+            <input id="modName" type="text" placeholder="My Hero Gear Mod" />
+          </label>
+          <label class="field">
+            <span>Author</span>
+            <input id="modAuthor" type="text" placeholder="YourName" />
+          </label>
+          <label class="field">
+            <span>PackageId</span>
+            <input id="packageId" type="text" placeholder="yourname.myherogear" />
+            <small>Must be unique; letters/numbers/dots recommended.</small>
+          </label>
+          <label class="field field--wide">
+            <span>Description</span>
+            <textarea id="modDesc" rows="4" placeholder="Adds custom hero gear powered by a resource..."></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="ring">
+        <h2>Gear</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Gear template (ParentName)</span>
+            <select id="gearParent">
+              <option value="Lantern_RingBase">Lantern_RingBase (ring)</option>
+              <option value="Lantern_GearBeltBase">Lantern_GearBeltBase (belt)</option>
+              <option value="Lantern_GearSuitBase">Lantern_GearSuitBase (suit)</option>
+              <option value="Lantern_GearMaskBase">Lantern_GearMaskBase (mask)</option>
+              <option value="Lantern_GearApparelBase">Lantern_GearApparelBase (generic apparel)</option>
+              <option value="custom">Custom...</option>
+            </select>
+            <small>Controls the generated ThingDef ParentName (slot/layers/etc.).</small>
+          </label>
+          <label class="field">
+            <span>Custom ParentName</span>
+            <input id="gearParentCustom" type="text" placeholder="MyCustomApparelBase" />
+            <small>Used only when Gear template is Custom.</small>
+          </label>
+          <label class="field">
+            <span>Ring defName</span>
+            <input id="ringDefName" type="text" placeholder="MyHeroGear_Ring" />
+          </label>
+          <label class="field">
+            <span>Ring label</span>
+            <input id="ringLabel" type="text" placeholder="my hero gear" />
+          </label>
+          <label class="field field--wide">
+            <span>Ring description</span>
+            <textarea id="ringDesc" rows="3" placeholder="A piece of gear fueled by ..."></textarea>
+          </label>
+          <label class="field">
+            <span>Ring color (RGBA)</span>
+            <input id="ringColor" type="text" placeholder="(1, 0, 0, 1)" />
+          </label>
+          <label class="field">
+            <span>Resource label (charge bar text)</span>
+            <input id="resourceLabel" type="text" placeholder="Willpower" />
+          </label>
+          <label class="field">
+            <span>Item texPath (no extension)</span>
+            <input id="ringTexPath" type="text" placeholder="MyHeroGear/Items/MyGear" />
+            <small>Points to `Textures/&lt;texPath&gt;.png`.</small>
+          </label>
+          <label class="field">
+            <span>Market value</span>
+            <input id="marketValue" type="number" min="0" step="1" />
+          </label>
+          <label class="field">
+            <span>Mass</span>
+            <input id="mass" type="number" min="0" step="0.01" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="costume">
+        <h2>Costume / Outfit (optional)</h2>
+        <p>
+          This is the "superhero suit" feature: when the gear is worn, it can auto-equip apparel (mask/suit/etc.) and restore the original outfit when removed.
+          You can either reference existing apparel defs (vanilla/modded) or generate new apparel defs here.
+        </p>
+
+        <div class="grid">
+          <label class="field">
+            <span>Enable costume transformation</span>
+            <select id="enableCostume">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Associated Hediff while worn (optional)</span>
+            <input id="associatedHediff" type="text" placeholder="MyHediff" list="defs_HediffDef" />
+          </label>
+
+          <div class="field field--wide">
+            <h3>Transformation conditions (optional)</h3>
+            <div class="row">
+              <label class="check">
+                <input id="transformationOnlyWhenDrafted" type="checkbox" />
+                <span>Only transform while drafted</span>
+              </label>
+              <label class="check">
+                <input id="transformationSkipConflictingApparel" type="checkbox" />
+                <span>Skip pieces that would force stripping</span>
+              </label>
+            </div>
+            <small>If enabled, the costume can auto-apply/revert when drafting/undrafting.</small>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Battery manifest (optional)</h3>
+            <div class="row">
+              <label class="check">
+                <input id="allowBatteryManifest" type="checkbox" />
+                <span>Enable manifest battery gizmo</span>
+              </label>
+              <label class="field">
+                <span>Battery ThingDef</span>
+                <input id="batteryDef" type="text" placeholder="Battery" list="defs_ThingDef" />
+              </label>
+              <label class="field">
+                <span>Manifest cost (0..1)</span>
+                <input id="batteryManifestCost" type="number" min="0" max="1" step="0.01" />
+              </label>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Stat buffs while worn (optional)</h3>
+            <p class="muted">Generates a HediffDef with statOffsets and applies it via <code>hediffsWhileWorn</code>.</p>
+            <div class="grid">
+              <label class="field">
+                <span>StatDef</span>
+                <input id="statBuffStat" type="text" placeholder="MoveSpeed" list="defs_StatDef" />
+              </label>
+              <label class="field">
+                <span>Offset</span>
+                <input id="statBuffOffset" type="number" step="0.01" placeholder="0.20" />
+              </label>
+              <div class="field">
+                <span>Action</span>
+                <button id="btnAddStatBuff" class="btn btn--primary">Add stat buff</button>
+              </div>
+            </div>
+            <div id="statBuffList" class="cardList"></div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Use existing apparel defs</h3>
+            <div class="row row--actions">
+              <label class="field">
+                <span>Add apparel defName</span>
+                <input id="existingApparelInput" type="text" placeholder="Apparel_PowerArmor" list="defs_ApparelDef" />
+              </label>
+              <button id="btnAddExistingApparel" class="btn btn--primary">Add</button>
+              <div></div>
+            </div>
+            <div id="existingApparelList" class="pillList"></div>
+            <small>These will be listed in <code>transformationApparel</code>. If you reference defs from another mod, your mod will still require that mod.</small>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Generate new costume apparel defs (optional)</h3>
+            <div class="grid">
+              <label class="field">
+                <span>Apparel defName</span>
+                <input id="genApparelDefName" type="text" placeholder="MyHero_Suit" />
+              </label>
+              <label class="field">
+                <span>Label</span>
+                <input id="genApparelLabel" type="text" placeholder="hero suit" />
+              </label>
+              <label class="field">
+                <span>TexPath (no extension)</span>
+                <input id="genApparelTexPath" type="text" placeholder="MyHero/Apparel/Suit" />
+              </label>
+              <label class="field">
+                <span>Layers (comma separated)</span>
+                <input id="genApparelLayers" type="text" placeholder="Middle" />
+              </label>
+              <label class="field">
+                <span>Body part groups (comma separated)</span>
+                <input id="genApparelBodyParts" type="text" placeholder="Torso, Legs" />
+              </label>
+              <div class="field">
+                <span>Action</span>
+                <button id="btnAddGeneratedApparel" class="btn btn--primary">Add generated apparel</button>
+                <small>Generated apparel is added to transformation automatically.</small>
+              </div>
+            </div>
+            <div id="generatedApparelList" class="cardList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="import">
+        <h2>Import Defs (optional)</h2>
+        <p>
+          This lets the builder offer real autocomplete choices (ThingDefs, PawnKinds, etc.) based on your installed RimWorld and mods.
+          It runs offline and only reads XML.
+        </p>
+
+        <div class="grid">
+          <div class="field field--wide">
+            <div class="row row--actions">
+              <button id="btnImportFolder" class="btn btn--primary">Import from folder...</button>
+              <button id="btnClearImport" class="btn btn--danger">Clear imported defs</button>
+            </div>
+            <small>
+              Tip: choose your RimWorld `Data` folder to import vanilla + DLC defs, or choose your `Mods` folder (or a single mod folder) to include modded defs.
+            </small>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Status</h3>
+            <pre id="importStatus" class="pre"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="charge">
+        <h2>Charge</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Max charge</span>
+            <input id="maxCharge" type="number" min="0.01" step="0.01" />
+          </label>
+          <label class="field">
+            <span>Passive regen per day</span>
+            <input id="passiveRegenPerDay" type="number" min="0" step="0.001" />
+            <small>Fraction of max charge per day.</small>
+          </label>
+          <label class="field">
+            <span>Passive drain per day</span>
+            <input id="passiveDrainPerDay" type="number" min="0" step="0.001" />
+            <small>Fraction of max charge per day.</small>
+          </label>
+
+          <div class="field field--wide">
+            <h3>Optional regen sources</h3>
+            <div class="row">
+              <label class="check">
+                <input id="regenFromMood" type="checkbox" />
+                <span>Regen from mood</span>
+              </label>
+              <label class="field">
+                <span>Mood min</span>
+                <input id="moodMin" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Mood regen per day</span>
+                <input id="moodRegenPerDay" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input id="regenFromPain" type="checkbox" />
+                <span>Regen from pain</span>
+              </label>
+              <label class="field">
+                <span>Pain min</span>
+                <input id="painMin" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Pain regen per day</span>
+                <input id="painRegenPerDay" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input id="regenFromSunlight" type="checkbox" />
+                <span>Regen from sunlight</span>
+              </label>
+              <label class="field">
+                <span>Min glow</span>
+                <input id="sunlightMinGlow" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Sunlight regen per day</span>
+                <input id="sunlightRegenPerDay" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input id="regenFromPsyfocus" type="checkbox" />
+                <span>Regen from psyfocus</span>
+              </label>
+              <label class="field">
+                <span>Psyfocus min</span>
+                <input id="psyfocusMin" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Psyfocus regen per day</span>
+                <input id="psyfocusRegenPerDay" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input id="regenFromNearbyAllies" type="checkbox" />
+                <span>Regen from nearby allies</span>
+              </label>
+              <label class="field">
+                <span>Radius</span>
+                <input id="alliesRadius" type="number" min="0" step="1" />
+              </label>
+              <label class="field">
+                <span>Max count</span>
+                <input id="alliesMaxCount" type="number" min="0" step="1" />
+              </label>
+              <label class="field">
+                <span>Each per day</span>
+                <input id="alliesRegenPerDayEach" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="abilities">
+        <h2>Abilities</h2>
+        <p>Select which built-in Lantern ability bases to generate. Each ability needs an icon path (you provide the texture).</p>
+
+        <!-- Autocomplete lists (populated by Import Defs) -->
+        <datalist id="defs_ThingDef"></datalist>
+        <datalist id="defs_ApparelDef"></datalist>
+        <datalist id="defs_PawnKindDef"></datalist>
+        <datalist id="defs_HediffDef"></datalist>
+        <datalist id="defs_TraitDef"></datalist>
+        <datalist id="defs_NeedDef"></datalist>
+        <datalist id="defs_StatDef"></datalist>
+        <datalist id="defs_SkillDef"></datalist>
+        <datalist id="defs_ThoughtDef"></datalist>
+        <datalist id="defs_MentalStateDef"></datalist>
+        <datalist id="defs_DamageDef"></datalist>
+        <datalist id="defs_RecordDef"></datalist>
+        <datalist id="defs_MemeDef"></datalist>
+        <datalist id="defs_PreceptDef"></datalist>
+        <datalist id="defs_GeneDef"></datalist>
+
+        <div class="abilities">
+          <div class="abilities__pick">
+            <label class="check"><input type="checkbox" data-ability="Blast" /> Blast</label>
+            <label class="check"><input type="checkbox" data-ability="Heal" /> Heal</label>
+            <label class="check"><input type="checkbox" data-ability="Stun" /> Stun/Bind</label>
+            <label class="check"><input type="checkbox" data-ability="Barrier" /> Barrier (shield)</label>
+            <label class="check"><input type="checkbox" data-ability="Construct" /> Construct spawn</label>
+            <label class="check"><input type="checkbox" data-ability="Summon" /> Summon</label>
+            <label class="check"><input type="checkbox" data-ability="Aura" /> Aura</label>
+            <label class="check"><input type="checkbox" data-ability="Flight" /> Flight</label>
+            <label class="check"><input type="checkbox" data-ability="Teleport" /> Teleport</label>
+            <label class="check"><input type="checkbox" data-ability="Displace" /> Displace (push/pull)</label>
+          </div>
+
+          <div class="abilities__editor">
+            <div id="abilityEditors" class="stack"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="selection">
+        <h2>Selection (optional)</h2>
+        <p>Generates a <code>RingSelectionDef</code> (auto-delivery) and optional scoring conditions.</p>
+        <div class="grid">
+          <label class="field">
+            <span>Enable selection def</span>
+            <select id="enableSelection">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Selection defName</span>
+            <input id="selectionDefName" type="text" placeholder="MyLantern_Selection" />
+          </label>
+          <label class="field">
+            <span>Trigger</span>
+            <select id="selectionTrigger">
+              <option value="onJoin">On join player faction</option>
+              <option value="onSpawn">On spawn on player home map</option>
+              <option value="onMental">On any mental break</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Exclude if pawn already has a ring</span>
+            <select id="excludeIfHasAnyLanternRing">
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </label>
+
+          <div class="field field--wide">
+            <h3>Candidate filters</h3>
+            <div class="row">
+              <label class="check"><input id="sel_allowColonists" type="checkbox" /> <span>Colonists</span></label>
+              <label class="check"><input id="sel_allowPrisoners" type="checkbox" /> <span>Prisoners</span></label>
+              <label class="check"><input id="sel_allowSlaves" type="checkbox" /> <span>Slaves</span></label>
+            </div>
+            <div class="row">
+              <label class="check"><input id="sel_allowGuests" type="checkbox" /> <span>Guests</span></label>
+              <label class="check"><input id="sel_allowAnimals" type="checkbox" /> <span>Animals</span></label>
+              <label class="check"><input id="sel_allowMechs" type="checkbox" /> <span>Mechs</span></label>
+            </div>
+            <div class="row">
+              <label class="check"><input id="sel_allowHostiles" type="checkbox" /> <span>Hostiles</span></label>
+              <label class="check"><input id="sel_allowDowned" type="checkbox" /> <span>Downed</span></label>
+              <label class="check"><input id="sel_allowDead" type="checkbox" /> <span>Dead</span></label>
+            </div>
+            <div class="row">
+              <label class="check"><input id="sel_requireViolenceCapable" type="checkbox" /> <span>Require violence capable</span></label>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Conditions (scoring)</h3>
+            <div class="grid">
+              <label class="field">
+                <span>Condition type</span>
+                <select id="condType">
+                  <option value="Trait">Trait</option>
+                  <option value="Stat">Stat</option>
+                  <option value="Skill">Skill</option>
+                  <option value="Mood">Mood</option>
+                  <option value="Need">Need</option>
+                  <option value="Thought">Thought</option>
+                  <option value="Record">Record</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Def (varies by type)</span>
+                <input id="condDef" type="text" placeholder="TraitDef / StatDef / NeedDef / ..." />
+                <small>After importing defs, this field will autocomplete.</small>
+              </label>
+              <label class="field">
+                <span>Params (simple)</span>
+                <input id="condParamA" type="text" placeholder="e.g. scoreBonus=10" />
+                <small>Examples: <code>scoreBonus=10</code>, <code>minLevel=6</code>, <code>lowerIsBetter=true</code></small>
+              </label>
+              <div class="field">
+                <span>Action</span>
+                <button id="btnAddCondition" class="btn btn--primary">Add condition</button>
+                <small>Advanced params can be edited later in XML.</small>
+              </div>
+            </div>
+            <div id="conditionList" class="cardList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="export">
+        <h2>Export</h2>
+        <div class="grid">
+          <div class="field field--wide">
+            <h3>Validation</h3>
+            <pre id="validation" class="pre"></pre>
+          </div>
+          <div class="field field--wide">
+            <h3>Textures you must add</h3>
+            <pre id="textureChecklist" class="pre"></pre>
+          </div>
+          <div class="field field--wide">
+            <h3>Preview: Generated XML</h3>
+            <pre id="xmlPreview" class="pre"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Hero Gear Builder (offline)</span>
+      <span class="muted">Exports a ZIP; you add textures yourself.</span>
+    </footer>
+
+    <script src="./vendor/jszip.min.js"></script>
+    <script src="./assets/app.js"></script>
+  </body>
+</html>

@@ -6,10 +6,13 @@ LanternsCore is meant to be a dependency/framework. This document describes what
 
 - XML `DefModExtension`: `DrAke.LanternsFramework.LanternDefExtension`
 - XML ring comp: `DrAke.LanternsFramework.CompProperties_LanternRing`
+- XML gear comp alias: `DrAke.LanternsFramework.CompProperties_LanternGear`
 - XML selection def: `DrAke.LanternsFramework.RingSelectionDef`
 - XML selection conditions in `Source/Framework/RingSelectionDef.cs`
 - Generic ability comps in `DrAke.LanternsFramework.Abilities`:
   - `CompProperties_LanternCost` (+ legacy `CompProperties_RingCost`)
+  - `CompProperties_LanternCastLimits`
+  - `CompProperties_LanternTargetRules`
   - `CompProperties_LanternHeal`
   - `CompProperties_LanternStun`
   - `CompProperties_LanternShieldAbility`
@@ -33,4 +36,3 @@ LanternsCore is meant to be a dependency/framework. This document describes what
 - Fields/classes may be **added** freely.
 - Existing XML class names and field names should not be removed.
 - If something must be replaced, it will be kept as a legacy alias for at least one major RimWorld version cycle and documented in `Docs/HowTo_CreateLanterns.md`.
-

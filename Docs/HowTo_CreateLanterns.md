@@ -28,6 +28,15 @@ No C# required unless you want brand-new logic.
 - includes the required `CompProperties_LanternRing`,
 - tags it as a Lantern ring.
 
+If you want to build more general "hero gear" (utility belts, suits, masks), the core also ships optional apparel templates:
+
+- `Lantern_GearBeltBase` (Waist/Belt)
+- `Lantern_GearSuitBase` (Torso/Shell)
+- `Lantern_GearMaskBase` (FullHead/Overhead)
+- `Lantern_GearApparelBase` (generic: you fill in layers/bodyPartGroups)
+
+These templates use `CompProperties_LanternGear` (an alias of the same comp) so you don't have to think in terms of "ring" when authoring a suit/belt/etc.
+
 ```xml
 <ThingDef ParentName="Lantern_RingBase">
   <defName>MyLantern_Ring</defName>
@@ -73,7 +82,8 @@ Required:
 
 Optional:
 - `blastDamage` / `blastDamageType` - defaults used by blast abilities.
-- `associatedHediff` - hediff to add while worn (for passive effects).
+- `associatedHediff` - hediff to add while worn (legacy single-slot).
+- `hediffsWhileWorn` - additional hediffs to add while worn (stackable with `associatedHediff`).
 - `maxCharge` - ring capacity (default `1.0`). Most costs/regen are fractions of this.
 - `passiveRegenPerDay` / `passiveDrainPerDay` - passive charge change per day (fractions of `maxCharge`).
 - `regenFromMood` / `moodMin` / `moodRegenPerDay` - optional regen while mood is above a threshold.
@@ -87,6 +97,8 @@ Optional:
 - `batteryManifestMaxGlobal` - max manifested batteries total across all maps for this ring's `batteryDef` (0 = unlimited).
 - `batteryManifestMaxPerMap` - max manifested batteries per map for this ring's `batteryDef` (0 = unlimited).
 - `transformationApparel` - costume/uniform pieces to auto-equip while worn (restores original apparel on unequip).
+- `transformationOnlyWhenDrafted` - only apply the transformation while drafted (auto-reverts when undrafted).
+- `transformationSkipConflictingApparel` - don't strip conflicting apparel; skip any transformation piece that would require stripping.
 - `blockEnvironmentalHediffs` / `blockEnvironmentalHediffsCost` - opt-in protection against environmental hediffs.
 - `blockedHediffs` / `blockedHediffDefNameKeywords` - optional lists to control what counts as "environmental".
 - `absorbEnvironmentalDamage` / `absorbEnvironmentalDamageCost` - opt-in protection against environmental damage.
@@ -179,6 +191,31 @@ If you want an ability to be usable only when the ring is above some charge %, a
 ```xml
 <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternChargeRequirement">
   <minChargePercent>0.25</minChargePercent> <!-- 25% -->
+</li>
+```
+
+### Optional: extra cooldown / per-day cast limits
+
+RimWorld abilities already support cooldowns, but LanternsCore also provides a simple "no code" limiter that is tracked on the gear itself (so it survives saves).
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternCastLimits">
+  <cooldownTicks>600</cooldownTicks> <!-- 10 seconds -->
+  <maxCastsPerDay>8</maxCastsPerDay> <!-- 0 = unlimited -->
+</li>
+```
+
+### Optional: faction-based target rules
+
+This prevents casting on invalid targets (so cost comps don't fire on a rejected cast).
+
+```xml
+<li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternTargetRules">
+  <allowSelf>true</allowSelf>
+  <allowAllies>true</allowAllies>
+  <allowNeutral>false</allowNeutral>
+  <allowHostiles>true</allowHostiles>
+  <allowNoFaction>true</allowNoFaction>
 </li>
 ```
 

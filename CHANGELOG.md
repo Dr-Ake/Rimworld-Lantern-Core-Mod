@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1
+
+- Added generic hero gear templates: `Lantern_GearBeltBase`, `Lantern_GearSuitBase`, `Lantern_GearMaskBase`, `Lantern_GearApparelBase`.
+- Added `CompProperties_LanternGear` alias for add-ons that aren't "rings".
+- Transformation controls: `transformationOnlyWhenDrafted` and `transformationSkipConflictingApparel`.
+- Added `hediffsWhileWorn` (stackable passive hediffs while worn).
+- New ability comps: `CompProperties_LanternCastLimits` (cooldown/max per day) and `CompProperties_LanternTargetRules` (faction-based targeting).
+- Builder updates: gear templates, stat buffs generator, target rules, cast limits, and better XML emission for passive features.
+
 ## 1.0.0
 
 - Framework validation at startup (warns about bad defs).

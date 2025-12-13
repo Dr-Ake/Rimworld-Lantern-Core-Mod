@@ -5,6 +5,7 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 using DrAke.LanternsFramework.Recharge;
+using DrAke.LanternsFramework.Abilities;
 
 namespace DrAke.LanternsFramework
 {
@@ -32,6 +33,10 @@ namespace DrAke.LanternsFramework
         // Store original items that were replaced by the transformation.
         // Kept in a ThingOwner so it is saved/loaded safely.
         private ThingOwner<Apparel> storedApparel;
+
+        private bool transformationApplied = false;
+
+        private Dictionary<string, AbilityCastTracker> abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
 
         public LanternDefExtension Extension => parent.def.GetModExtension<LanternDefExtension>();
 
@@ -93,6 +98,8 @@ namespace DrAke.LanternsFramework
             }
 
             TickChargeModel();
+
+            TickTransformationConditions();
         }
 
         public override void Initialize(CompProperties props)
@@ -224,16 +231,35 @@ namespace DrAke.LanternsFramework
 
         private void EnsureHediff(bool present)
         {
-            if (Extension == null || Extension.associatedHediff == null) return;
+            if (Extension == null) return;
+            if (Wearer?.health?.hediffSet == null) return;
 
-            var hediff = Wearer.health.hediffSet.GetFirstHediffOfDef(Extension.associatedHediff);
-            if (present && hediff == null)
+            IEnumerable<HediffDef> defs = GetWornHediffs();
+            foreach (var def in defs)
             {
-                Wearer.health.AddHediff(Extension.associatedHediff);
+                if (def == null) continue;
+                var hediff = Wearer.health.hediffSet.GetFirstHediffOfDef(def);
+                if (present && hediff == null)
+                {
+                    Wearer.health.AddHediff(def);
+                }
+                else if (!present && hediff != null)
+                {
+                    Wearer.health.RemoveHediff(hediff);
+                }
             }
-            else if (!present && hediff != null)
+        }
+
+        private IEnumerable<HediffDef> GetWornHediffs()
+        {
+            if (Extension == null) yield break;
+            if (Extension.associatedHediff != null) yield return Extension.associatedHediff;
+            if (!Extension.hediffsWhileWorn.NullOrEmpty())
             {
-                Wearer.health.RemoveHediff(hediff);
+                foreach (var h in Extension.hediffsWhileWorn)
+                {
+                    if (h != null) yield return h;
+                }
             }
         }
 
@@ -246,7 +272,11 @@ namespace DrAke.LanternsFramework
             {
                 if (!Extension.transformationApparel.NullOrEmpty())
                 {
-                    DoTransformation(pawn);
+                    if (ShouldApplyTransformation(pawn))
+                    {
+                        DoTransformation(pawn);
+                        transformationApplied = true;
+                    }
                 }
                 
                 // Grant Abilities
@@ -268,14 +298,19 @@ namespace DrAke.LanternsFramework
             base.Notify_Unequipped(pawn);
             // Revert transformation
             RevertTransformation(pawn);
+            transformationApplied = false;
             
             // Remove Hediff immediately
             if (Extension != null)
             {
-                if (Extension.associatedHediff != null)
+                if (pawn.health?.hediffSet != null)
                 {
-                    var hediff = pawn.health.hediffSet.GetFirstHediffOfDef(Extension.associatedHediff);
-                    if (hediff != null) pawn.health.RemoveHediff(hediff);
+                    foreach (var def in GetWornHediffs())
+                    {
+                        if (def == null) continue;
+                        var hediff = pawn.health.hediffSet.GetFirstHediffOfDef(def);
+                        if (hediff != null) pawn.health.RemoveHediff(hediff);
+                    }
                 }
 
                 // Remove Abilities
@@ -308,6 +343,16 @@ namespace DrAke.LanternsFramework
             // 1. Identify items to add
             foreach (ThingDef uniformDef in Extension.transformationApparel)
             {
+                if (uniformDef == null) continue;
+
+                if (Extension.transformationSkipConflictingApparel)
+                {
+                    if (!pawn.apparel.CanWearWithoutDroppingAnything(uniformDef))
+                    {
+                        continue;
+                    }
+                }
+
                 // Check if we need to remove anything in that slot
                 // Find conflicting apparel
                 // We assume the uniform takes up specific layers/parts.
@@ -321,7 +366,7 @@ namespace DrAke.LanternsFramework
                  foreach (Apparel worn in pawn.apparel.WornApparel)
                  {
                      if (worn == parent) continue; // Don't remove the ring itself!
-                     if (!ApparelUtility.CanWearTogether(uniformDef, worn.def, pawn.RaceProps.body))
+                     if (!Extension.transformationSkipConflictingApparel && !ApparelUtility.CanWearTogether(uniformDef, worn.def, pawn.RaceProps.body))
                      {
                          conflicts.Add(worn);
                      }
@@ -385,6 +430,39 @@ namespace DrAke.LanternsFramework
                     }
                 }
             }
+        }
+
+        private void TickTransformationConditions()
+        {
+            if (Wearer == null) return;
+            if (Extension == null) return;
+            if (Extension.transformationApparel.NullOrEmpty()) return;
+
+            bool should = ShouldApplyTransformation(Wearer);
+            if (should && !transformationApplied)
+            {
+                DoTransformation(Wearer);
+                transformationApplied = true;
+            }
+            else if (!should && transformationApplied)
+            {
+                RevertTransformation(Wearer);
+                transformationApplied = false;
+            }
+        }
+
+        private bool ShouldApplyTransformation(Pawn pawn)
+        {
+            if (pawn == null) return false;
+            if (pawn.Dead) return false;
+            if (pawn.apparel == null) return false;
+
+            if (Extension != null && Extension.transformationOnlyWhenDrafted)
+            {
+                if (pawn.drafter == null) return false;
+                if (!pawn.drafter.Drafted) return false;
+            }
+            return true;
         }
 
         public ThingOwner GetDirectlyHeldThings()
@@ -620,6 +698,9 @@ namespace DrAke.LanternsFramework
             base.PostExposeData();
             Scribe_Values.Look(ref chargeSaveVersion, "chargeSaveVersion", 1);
             Scribe_Values.Look(ref charge, "charge", 1.0f);
+            Scribe_Values.Look(ref chargeModelTickAccumulator, "chargeModelTickAccumulator", 0);
+            Scribe_Values.Look(ref transformationApplied, "transformationApplied", false);
+            Scribe_Collections.Look(ref abilityCastRecords, "abilityCastRecords", LookMode.Value, LookMode.Deep);
             if (Scribe.mode == LoadSaveMode.LoadingVars && chargeSaveVersion <= 1)
             {
                 charge = Mathf.Clamp01(charge) * MaxCharge;
@@ -635,6 +716,72 @@ namespace DrAke.LanternsFramework
             {
                 storedApparel = new ThingOwner<Apparel>(this, oneStackOnly: false);
             }
+            if (abilityCastRecords == null)
+            {
+                abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
+            }
+        }
+
+        public bool CanCastWithLimits(AbilityDef abilityDef, int cooldownTicks, int maxCastsPerDay, out string reason)
+        {
+            reason = null;
+            if (abilityDef == null) return true;
+            if (cooldownTicks <= 0 && maxCastsPerDay <= 0) return true;
+
+            int now = Find.TickManager?.TicksGame ?? 0;
+            int day = GenDate.DayOfYear(Find.TickManager?.TicksAbs ?? 0L, 0f);
+
+            AbilityCastTracker tr = GetOrCreateTracker(abilityDef.defName);
+            tr.ResetIfNewDay(day);
+
+            if (cooldownTicks > 0 && now < tr.nextAllowedTick)
+            {
+                int ticksLeft = tr.nextAllowedTick - now;
+                float seconds = ticksLeft / 60f;
+                reason = $"On cooldown ({seconds:0.#}s).";
+                return false;
+            }
+
+            if (maxCastsPerDay > 0 && tr.castsToday >= maxCastsPerDay)
+            {
+                reason = "Daily cast limit reached.";
+                return false;
+            }
+
+            return true;
+        }
+
+        public void RecordCast(AbilityDef abilityDef, int cooldownTicks, int maxCastsPerDay)
+        {
+            if (abilityDef == null) return;
+            if (cooldownTicks <= 0 && maxCastsPerDay <= 0) return;
+
+            int now = Find.TickManager?.TicksGame ?? 0;
+            int day = GenDate.DayOfYear(Find.TickManager?.TicksAbs ?? 0L, 0f);
+
+            AbilityCastTracker tr = GetOrCreateTracker(abilityDef.defName);
+            tr.ResetIfNewDay(day);
+
+            if (maxCastsPerDay > 0)
+            {
+                tr.castsToday++;
+            }
+            if (cooldownTicks > 0)
+            {
+                tr.nextAllowedTick = now + cooldownTicks;
+            }
+        }
+
+        private AbilityCastTracker GetOrCreateTracker(string abilityDefName)
+        {
+            if (abilityCastRecords == null) abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
+            if (abilityDefName.NullOrEmpty()) abilityDefName = "UnknownAbility";
+            if (!abilityCastRecords.TryGetValue(abilityDefName, out var tr) || tr == null)
+            {
+                tr = new AbilityCastTracker();
+                abilityCastRecords[abilityDefName] = tr;
+            }
+            return tr;
         }
     }
     

@@ -54,6 +54,8 @@ namespace DrAke.LanternsFramework
 
         // Mechanics
         public HediffDef associatedHediff;
+        // Optional additional hediffs to apply while worn (stackable with associatedHediff).
+        public List<HediffDef> hediffsWhileWorn = new List<HediffDef>();
         public bool allowBatteryManifest = false;
         public ThingDef batteryDef;
         // Manifested battery settings (optional).
@@ -67,6 +69,13 @@ namespace DrAke.LanternsFramework
         // If set, these items are equipped when the ring is worn.
         // Conflicting items are stored inside the ring comp and restored upon unequip.
         public List<ThingDef> transformationApparel = new List<ThingDef>();
+
+        // Transformation conditions (optional).
+        // If true, the transformation only applies while the pawn is drafted (and reverts when undrafted).
+        public bool transformationOnlyWhenDrafted = false;
+        // If true, the transformation will not remove conflicting apparel; instead it skips any piece it can't wear.
+        // This lets add-ons do "partial" transformations without forcibly stripping hats/armor/etc.
+        public bool transformationSkipConflictingApparel = false;
 
         // Generic Abilities
         public List<AbilityDef> abilities = new List<AbilityDef>();

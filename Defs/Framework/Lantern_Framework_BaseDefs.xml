@@ -31,6 +31,88 @@
     </comps>
   </ThingDef>
 
+  <!-- ===================================================== -->
+  <!-- Generic "Hero Gear" templates (still use the same comp) -->
+  <!-- ===================================================== -->
+
+  <!-- Generic powered gear apparel base (choose your own slot/layers). -->
+  <ThingDef ParentName="ApparelNoQualityBase" Abstract="True" Name="Lantern_GearApparelBase">
+    <defName>Lantern_GearApparelBase</defName>
+    <label>powered gear</label>
+    <description>Base def for powered hero gear (utility belts, suits, masks, artifacts). Inherit and override apparel layers/bodyPartGroups/tags.</description>
+    <tickerType>Normal</tickerType>
+    <comps>
+      <!-- Alias name so add-on authors aren't forced to think in terms of "ring". -->
+      <li Class="DrAke.LanternsFramework.CompProperties_LanternGear" />
+    </comps>
+  </ThingDef>
+
+  <!-- Utility belt template (Waist/Belt). -->
+  <ThingDef ParentName="Lantern_GearApparelBase" Abstract="True" Name="Lantern_GearBeltBase">
+    <defName>Lantern_GearBeltBase</defName>
+    <label>utility belt</label>
+    <thingCategories>
+      <li>ApparelUtility</li>
+    </thingCategories>
+    <statBases>
+      <MarketValue>1000</MarketValue>
+      <Mass>0.2</Mass>
+      <EquipDelay>0.1</EquipDelay>
+    </statBases>
+    <apparel>
+      <careIfWornByCorpse>false</careIfWornByCorpse>
+      <bodyPartGroups><li>Waist</li></bodyPartGroups>
+      <layers><li>Belt</li></layers>
+      <tags>
+        <li>LanternGear</li>
+      </tags>
+    </apparel>
+  </ThingDef>
+
+  <!-- Suit template (Torso/Shell). -->
+  <ThingDef ParentName="Lantern_GearApparelBase" Abstract="True" Name="Lantern_GearSuitBase">
+    <defName>Lantern_GearSuitBase</defName>
+    <label>hero suit</label>
+    <thingCategories>
+      <li>Apparel</li>
+    </thingCategories>
+    <statBases>
+      <MarketValue>1500</MarketValue>
+      <Mass>1.0</Mass>
+      <EquipDelay>0.4</EquipDelay>
+    </statBases>
+    <apparel>
+      <careIfWornByCorpse>false</careIfWornByCorpse>
+      <bodyPartGroups><li>Torso</li></bodyPartGroups>
+      <layers><li>Shell</li></layers>
+      <tags>
+        <li>LanternGear</li>
+      </tags>
+    </apparel>
+  </ThingDef>
+
+  <!-- Mask template (FullHead/Overhead). -->
+  <ThingDef ParentName="Lantern_GearApparelBase" Abstract="True" Name="Lantern_GearMaskBase">
+    <defName>Lantern_GearMaskBase</defName>
+    <label>mask</label>
+    <thingCategories>
+      <li>Apparel</li>
+    </thingCategories>
+    <statBases>
+      <MarketValue>800</MarketValue>
+      <Mass>0.3</Mass>
+      <EquipDelay>0.2</EquipDelay>
+    </statBases>
+    <apparel>
+      <careIfWornByCorpse>false</careIfWornByCorpse>
+      <bodyPartGroups><li>FullHead</li></bodyPartGroups>
+      <layers><li>Overhead</li></layers>
+      <tags>
+        <li>LanternGear</li>
+      </tags>
+    </apparel>
+  </ThingDef>
+
   <!-- Base blast ability: uses Verb_LanternBlast and drains charge -->
   <AbilityDef Abstract="True" Name="Lantern_Ability_BlastBase">
     <defName>Lantern_Ability_BlastBase</defName>
