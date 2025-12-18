@@ -108,6 +108,19 @@ function buildAbilityEditor(abilityKey) {
         </select>
         <small data-hint="targetRule"></small>
       </label>
+      <label class="field">
+        <span>Range override (optional)</span>
+        <input type="number" min="0" step="0.1" data-field="range" />
+        <small>Blank = use parent ability range.</small>
+      </label>
+      <label class="field">
+        <span>Pause on click</span>
+        <select data-field="pauseOnClick">
+          <option value="false">False</option>
+          <option value="true">True</option>
+        </select>
+        <small>Pauses the game when you click the ability gizmo.</small>
+      </label>
       ${abilityExtraFieldsHtml(abilityKey)}
       <label class="field field--wide">
         <span>Description (optional)</span>
@@ -240,6 +253,71 @@ function abilityExtraFieldsHtml(key) {
             <option value="true">True</option>
           </select>
         </label>
+        <label class="field">
+          <span>Spawn gas at origin</span>
+          <select data-field="spawnGasAtOrigin">
+            <option value="false">False</option>
+            <option value="true">True</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Spawn gas at destination</span>
+          <select data-field="spawnGasAtDestination">
+            <option value="false">False</option>
+            <option value="true">True</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Gas type</span>
+          <input type="text" data-field="gasType" placeholder="BlindSmoke" />
+        </label>
+        <label class="field">
+          <span>Gas radius</span>
+          <input type="number" min="0" step="0.1" data-field="gasRadius" />
+        </label>
+        <label class="field">
+          <span>Gas amount</span>
+          <input type="number" min="0" step="1" data-field="gasAmount" />
+        </label>
+        <label class="field">
+          <span>Gas duration ticks (0 = vanilla)</span>
+          <input type="number" min="0" step="1" data-field="gasDurationTicks" />
+        </label>
+      `;
+    case "Conditional":
+      return `
+        <label class="field">
+          <span>Flesh outcome</span>
+          <select data-field="fleshOutcome">
+            <option value="Down">Down</option>
+            <option value="Kill">Kill</option>
+            <option value="None">None</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Mech outcome</span>
+          <select data-field="mechOutcome">
+            <option value="Kill">Kill</option>
+            <option value="Down">Down</option>
+            <option value="None">None</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Anomaly outcome</span>
+          <select data-field="anomalyOutcome">
+            <option value="Kill">Kill</option>
+            <option value="Down">Down</option>
+            <option value="None">None</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Other outcome</span>
+          <select data-field="otherOutcome">
+            <option value="None">None</option>
+            <option value="Down">Down</option>
+            <option value="Kill">Kill</option>
+          </select>
+        </label>
       `;
     case "Displace":
       return `
@@ -348,6 +426,14 @@ function abilityBaseInfo(key) {
         defaultDefName: "MyHeroGear_Ability_Displace",
         defaultLabel: "displace",
         defaultIconPath: "MyHeroGear/UI/Displace",
+      };
+    case "Conditional":
+      return {
+        label: "Conditional down/kill",
+        parent: "Lantern_Ability_PawnEffectBase",
+        defaultDefName: "MyHeroGear_Ability_Conditional",
+        defaultLabel: "conditional",
+        defaultIconPath: "MyHeroGear/UI/Conditional",
       };
     default:
       throw new Error(`Unknown ability key: ${key}`);
@@ -770,6 +856,17 @@ function getState() {
     allowBatteryManifest: byId("allowBatteryManifest")?.checked || false,
     batteryDef: byId("batteryDef")?.value.trim() || "",
     batteryManifestCost: toNum(byId("batteryManifestCost")?.value, 0.5),
+
+    reactiveEvadeProjectiles: byId("reactiveEvadeProjectiles")?.value === "true",
+    reactiveEvadeProjectilesCost: toNum(byId("reactiveEvadeProjectilesCost")?.value, 0.02),
+    reactiveEvadeProjectilesCooldownTicks: toNum(byId("reactiveEvadeProjectilesCooldownTicks")?.value, 60),
+    reactiveEvadeAllowExplosiveProjectiles: byId("reactiveEvadeAllowExplosiveProjectiles")?.value === "true",
+    reactiveEvadeToggleGizmo: byId("reactiveEvadeToggleGizmo")?.value === "true",
+    reactiveEvadeDefaultEnabled: byId("reactiveEvadeDefaultEnabled")?.value !== "false",
+    reactiveEvadeGasType: (byId("reactiveEvadeGasType")?.value || "").trim() || "BlindSmoke",
+    reactiveEvadeGasRadius: toNum(byId("reactiveEvadeGasRadius")?.value, 2.4),
+    reactiveEvadeGasAmount: toNum(byId("reactiveEvadeGasAmount")?.value, 60),
+
     costume_existingApparel: readExistingCostumeList(),
     costume_generatedApparel: readGeneratedCostumeList(),
     statBuffs: readStatBuffs(),
@@ -1032,6 +1129,12 @@ function readAbilityEditors() {
 
     const out = { key, parent: base.parent, defName, label, iconPath, cost, description, cooldownTicks, maxCastsPerDay, targetRule };
 
+    const rangeText = String(fields.range ?? "").trim();
+    const range = rangeText ? toNum(rangeText, 0) : 0;
+    if (range > 0) out.range = range;
+
+    out.pauseOnClick = (fields.pauseOnClick ?? "false") === "true";
+
     // Ability-specific parameters (minimal set).
     if (key === "Heal") {
       out.healAmount = toNum(fields.healAmount, 10);
@@ -1058,6 +1161,17 @@ function readAbilityEditors() {
     } else if (key === "Teleport") {
       out.allowRoofed = (fields.allowRoofed ?? "true") === "true";
       out.allowOccupied = (fields.allowOccupied ?? "false") === "true";
+      out.spawnGasAtOrigin = (fields.spawnGasAtOrigin ?? "false") === "true";
+      out.spawnGasAtDestination = (fields.spawnGasAtDestination ?? "false") === "true";
+      out.gasType = (fields.gasType ?? "").trim() || "BlindSmoke";
+      out.gasRadius = toNum(fields.gasRadius, 2.4);
+      out.gasAmount = Math.max(0, Math.floor(toNum(fields.gasAmount, 60)));
+      out.gasDurationTicks = Math.max(0, Math.floor(toNum(fields.gasDurationTicks, 0)));
+    } else if (key === "Conditional") {
+      out.fleshOutcome = (fields.fleshOutcome ?? "Down").trim() || "Down";
+      out.mechOutcome = (fields.mechOutcome ?? "Kill").trim() || "Kill";
+      out.anomalyOutcome = (fields.anomalyOutcome ?? "Kill").trim() || "Kill";
+      out.otherOutcome = (fields.otherOutcome ?? "None").trim() || "None";
     } else if (key === "Displace") {
       out.distance = Math.max(0, Math.floor(toNum(fields.distance, 4)));
       out.pullTowardsCaster = (fields.pullTowardsCaster ?? "false") === "true";
@@ -1114,6 +1228,15 @@ function setDefaults() {
     byId("allowBatteryManifest").checked = false;
     byId("batteryDef").value = "";
     byId("batteryManifestCost").value = "0.5";
+    if (document.getElementById("reactiveEvadeProjectiles")) byId("reactiveEvadeProjectiles").value = "false";
+    if (document.getElementById("reactiveEvadeProjectilesCost")) byId("reactiveEvadeProjectilesCost").value = "0.02";
+    if (document.getElementById("reactiveEvadeProjectilesCooldownTicks")) byId("reactiveEvadeProjectilesCooldownTicks").value = "60";
+    if (document.getElementById("reactiveEvadeAllowExplosiveProjectiles")) byId("reactiveEvadeAllowExplosiveProjectiles").value = "false";
+    if (document.getElementById("reactiveEvadeToggleGizmo")) byId("reactiveEvadeToggleGizmo").value = "false";
+    if (document.getElementById("reactiveEvadeDefaultEnabled")) byId("reactiveEvadeDefaultEnabled").value = "true";
+    if (document.getElementById("reactiveEvadeGasType")) byId("reactiveEvadeGasType").value = "BlindSmoke";
+    if (document.getElementById("reactiveEvadeGasRadius")) byId("reactiveEvadeGasRadius").value = "2.4";
+    if (document.getElementById("reactiveEvadeGasAmount")) byId("reactiveEvadeGasAmount").value = "60";
     writeExistingCostumeList([]);
     writeGeneratedCostumeList([]);
     if (document.getElementById("statBuffList")) writeStatBuffs([]);
@@ -1269,6 +1392,10 @@ function rebuildAbilityEditors(existing = []) {
       });
     } else {
       editor.querySelector('[data-field="cost"]').value = "0.05";
+      const pause = editor.querySelector('[data-field="pauseOnClick"]');
+      if (pause) pause.value = "false";
+      const range = editor.querySelector('[data-field="range"]');
+      if (range) range.value = "";
       const cd = editor.querySelector('[data-field="cooldownTicks"]');
       if (cd) cd.value = "0";
       const lim = editor.querySelector('[data-field="maxCastsPerDay"]');
@@ -1306,6 +1433,21 @@ function rebuildAbilityEditors(existing = []) {
       if (key === "Teleport") {
         editor.querySelector('[data-field="allowRoofed"]').value = "true";
         editor.querySelector('[data-field="allowOccupied"]').value = "false";
+        editor.querySelector('[data-field="spawnGasAtOrigin"]').value = "false";
+        editor.querySelector('[data-field="spawnGasAtDestination"]').value = "false";
+        editor.querySelector('[data-field="gasType"]').value = "BlindSmoke";
+        editor.querySelector('[data-field="gasRadius"]').value = "2.4";
+        editor.querySelector('[data-field="gasAmount"]').value = "60";
+        editor.querySelector('[data-field="gasDurationTicks"]').value = "0";
+      }
+      if (key === "Conditional") {
+        editor.querySelector('[data-field="fleshOutcome"]').value = "Down";
+        editor.querySelector('[data-field="mechOutcome"]').value = "Kill";
+        editor.querySelector('[data-field="anomalyOutcome"]').value = "Kill";
+        editor.querySelector('[data-field="otherOutcome"]').value = "None";
+        // This ability is typically melee-range.
+        const r = editor.querySelector('[data-field="range"]');
+        if (r) r.value = "1.9";
       }
       if (key === "Displace") {
         editor.querySelector('[data-field="distance"]').value = "4";
@@ -1595,6 +1737,21 @@ function buildDefsXml(state) {
     extLines.push(`      <batteryManifestCost>${toNum(state.batteryManifestCost, 0.5)}</batteryManifestCost>`);
   }
 
+  if (state.reactiveEvadeProjectiles) {
+    extLines.push(`      <reactiveEvadeProjectiles>true</reactiveEvadeProjectiles>`);
+    extLines.push(`      <reactiveEvadeProjectilesCost>${toNum(state.reactiveEvadeProjectilesCost, 0.02)}</reactiveEvadeProjectilesCost>`);
+    extLines.push(
+      `      <reactiveEvadeProjectilesCooldownTicks>${Math.max(0, Math.floor(toNum(state.reactiveEvadeProjectilesCooldownTicks, 60)))}</reactiveEvadeProjectilesCooldownTicks>`
+    );
+    if (state.reactiveEvadeAllowExplosiveProjectiles)
+      extLines.push(`      <reactiveEvadeAllowExplosiveProjectiles>true</reactiveEvadeAllowExplosiveProjectiles>`);
+    if (state.reactiveEvadeToggleGizmo) extLines.push(`      <reactiveEvadeToggleGizmo>true</reactiveEvadeToggleGizmo>`);
+    if (state.reactiveEvadeDefaultEnabled === false) extLines.push(`      <reactiveEvadeDefaultEnabled>false</reactiveEvadeDefaultEnabled>`);
+    if (state.reactiveEvadeGasType) extLines.push(`      <reactiveEvadeGasType>${escapeXml(state.reactiveEvadeGasType)}</reactiveEvadeGasType>`);
+    extLines.push(`      <reactiveEvadeGasRadius>${toNum(state.reactiveEvadeGasRadius, 2.4)}</reactiveEvadeGasRadius>`);
+    extLines.push(`      <reactiveEvadeGasAmount>${Math.max(0, Math.floor(toNum(state.reactiveEvadeGasAmount, 60)))}</reactiveEvadeGasAmount>`);
+  }
+
   if ((state.statBuffs || []).length) {
     const statHediff = derivedDefName(state.ringDefName, "Hediff_GearBuffs");
     extraDefs.push(buildStatBuffHediffDefXml(statHediff, state.ringLabel, state.statBuffs));
@@ -1796,6 +1953,19 @@ function buildAbilityDefXml(state, a, extraDefsOut) {
     lines.push(`      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternTeleport">`);
     lines.push(`        <allowRoofed>${a.allowRoofed ? "true" : "false"}</allowRoofed>`);
     lines.push(`        <allowOccupied>${a.allowOccupied ? "true" : "false"}</allowOccupied>`);
+    if (a.spawnGasAtOrigin) lines.push(`        <spawnGasAtOrigin>true</spawnGasAtOrigin>`);
+    if (a.spawnGasAtDestination) lines.push(`        <spawnGasAtDestination>true</spawnGasAtDestination>`);
+    if (a.gasType) lines.push(`        <gasType>${escapeXml(a.gasType)}</gasType>`);
+    if ((a.gasRadius ?? 0) > 0) lines.push(`        <gasRadius>${a.gasRadius}</gasRadius>`);
+    if ((a.gasAmount ?? 0) > 0) lines.push(`        <gasAmount>${Math.floor(a.gasAmount)}</gasAmount>`);
+    if ((a.gasDurationTicks ?? 0) > 0) lines.push(`        <gasDurationTicks>${Math.floor(a.gasDurationTicks)}</gasDurationTicks>`);
+    lines.push(`      </li>`);
+  } else if (a.key === "Conditional") {
+    lines.push(`      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternConditionalPawnOutcome">`);
+    lines.push(`        <fleshOutcome>${escapeXml(a.fleshOutcome || "Down")}</fleshOutcome>`);
+    lines.push(`        <mechOutcome>${escapeXml(a.mechOutcome || "Kill")}</mechOutcome>`);
+    lines.push(`        <anomalyOutcome>${escapeXml(a.anomalyOutcome || "Kill")}</anomalyOutcome>`);
+    lines.push(`        <otherOutcome>${escapeXml(a.otherOutcome || "None")}</otherOutcome>`);
     lines.push(`      </li>`);
   } else if (a.key === "Displace") {
     lines.push(`      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternDisplace">`);
@@ -1807,6 +1977,12 @@ function buildAbilityDefXml(state, a, extraDefsOut) {
     // No effect comp; base verb handles it.
   } else if (a.key === "Flight") {
     // Cost is handled by the flight system.
+  }
+
+  if (a.pauseOnClick) {
+    lines.push(`      <li Class="DrAke.LanternsFramework.Abilities.CompProperties_LanternPauseOnInput">`);
+    lines.push(`        <pause>true</pause>`);
+    lines.push(`      </li>`);
   }
 
   if (includeCostComp) {
@@ -1838,12 +2014,15 @@ function buildAbilityDefXml(state, a, extraDefsOut) {
     ? `    <comps Inherit="False">\n${lines.join("\n")}\n    </comps>\n`
     : "";
 
+  const verbOverride = (a.range || 0) > 0 ? `    <verbProperties>\n      <range>${a.range}</range>\n    </verbProperties>\n` : "";
+
   return (
     `  <AbilityDef ParentName="${escapeXml(a.parent)}">\n` +
     `    <defName>${escapeXml(a.defName)}</defName>\n` +
     `    <label>${escapeXml(a.label)}</label>\n` +
     descLine +
     `    <iconPath>${escapeXml(a.iconPath)}</iconPath>\n` +
+    verbOverride +
     compsBlock +
     `  </AbilityDef>\n`
   );
@@ -2331,6 +2510,7 @@ function abilityParentToKey(parentName) {
     Lantern_Ability_FlightBase: "Flight",
     Lantern_Ability_TeleportBase: "Teleport",
     Lantern_Ability_DisplaceBase: "Displace",
+    Lantern_Ability_PawnEffectBase: "Conditional",
   };
   return map[parentName] || null;
 }
@@ -2491,6 +2671,16 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   out.batteryDef = xmlText(ext, "batteryDef", "");
   out.batteryManifestCost = xmlNum(ext, "batteryManifestCost", 0.5);
 
+  out.reactiveEvadeProjectiles = xmlBool(ext, "reactiveEvadeProjectiles", false);
+  out.reactiveEvadeProjectilesCost = xmlNum(ext, "reactiveEvadeProjectilesCost", 0.02);
+  out.reactiveEvadeProjectilesCooldownTicks = Math.max(0, Math.floor(xmlNum(ext, "reactiveEvadeProjectilesCooldownTicks", 60)));
+  out.reactiveEvadeAllowExplosiveProjectiles = xmlBool(ext, "reactiveEvadeAllowExplosiveProjectiles", false);
+  out.reactiveEvadeToggleGizmo = xmlBool(ext, "reactiveEvadeToggleGizmo", false);
+  out.reactiveEvadeDefaultEnabled = xmlBool(ext, "reactiveEvadeDefaultEnabled", true);
+  out.reactiveEvadeGasType = xmlText(ext, "reactiveEvadeGasType", "BlindSmoke");
+  out.reactiveEvadeGasRadius = xmlNum(ext, "reactiveEvadeGasRadius", 2.4);
+  out.reactiveEvadeGasAmount = Math.max(0, Math.floor(xmlNum(ext, "reactiveEvadeGasAmount", 60)));
+
   // Costume/transformation
   const apparel = Array.from(ext.querySelectorAll("transformationApparel > li"))
     .map((x) => x.textContent?.trim())
@@ -2593,10 +2783,17 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
       cooldownTicks: 0,
       maxCastsPerDay: 0,
       targetRule: "Any",
+      pauseOnClick: false,
     };
+
+    a.range = xmlNum(ad, "verbProperties > range", 0);
+    if (!(a.range > 0)) delete a.range;
 
     const comps = Array.from(ad.querySelectorAll("comps > li"));
     const getComp = (cls) => comps.find((c) => c.getAttribute("Class") === cls) || null;
+
+    const pause = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternPauseOnInput");
+    if (pause) a.pauseOnClick = xmlBool(pause, "pause", true);
 
     const costComp = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternCost");
     if (costComp) a.cost = xmlNum(costComp, "cost", 0.05);
@@ -2658,6 +2855,20 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
     if (tp) {
       a.allowRoofed = xmlBool(tp, "allowRoofed", true);
       a.allowOccupied = xmlBool(tp, "allowOccupied", false);
+      a.spawnGasAtOrigin = xmlBool(tp, "spawnGasAtOrigin", false);
+      a.spawnGasAtDestination = xmlBool(tp, "spawnGasAtDestination", false);
+      a.gasType = xmlText(tp, "gasType", "BlindSmoke");
+      a.gasRadius = xmlNum(tp, "gasRadius", 2.4);
+      a.gasAmount = Math.max(0, Math.floor(xmlNum(tp, "gasAmount", 60)));
+      a.gasDurationTicks = Math.max(0, Math.floor(xmlNum(tp, "gasDurationTicks", 0)));
+    }
+
+    const conditional = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternConditionalPawnOutcome");
+    if (conditional) {
+      a.fleshOutcome = xmlText(conditional, "fleshOutcome", "Down");
+      a.mechOutcome = xmlText(conditional, "mechOutcome", "Kill");
+      a.anomalyOutcome = xmlText(conditional, "anomalyOutcome", "Kill");
+      a.otherOutcome = xmlText(conditional, "otherOutcome", "None");
     }
 
     const disp = getComp("DrAke.LanternsFramework.Abilities.CompProperties_LanternDisplace");
@@ -2833,6 +3044,15 @@ function applyImportedStateToUi(s) {
   setCheckedIfPresent("allowBatteryManifest", !!s.allowBatteryManifest);
   setValueIfPresent("batteryDef", s.batteryDef || "");
   setValueIfPresent("batteryManifestCost", s.batteryManifestCost ?? 0.5);
+  setValueIfPresent("reactiveEvadeProjectiles", s.reactiveEvadeProjectiles ? "true" : "false");
+  setValueIfPresent("reactiveEvadeProjectilesCost", s.reactiveEvadeProjectilesCost ?? 0.02);
+  setValueIfPresent("reactiveEvadeProjectilesCooldownTicks", s.reactiveEvadeProjectilesCooldownTicks ?? 60);
+  setValueIfPresent("reactiveEvadeAllowExplosiveProjectiles", s.reactiveEvadeAllowExplosiveProjectiles ? "true" : "false");
+  setValueIfPresent("reactiveEvadeToggleGizmo", s.reactiveEvadeToggleGizmo ? "true" : "false");
+  setValueIfPresent("reactiveEvadeDefaultEnabled", s.reactiveEvadeDefaultEnabled === false ? "false" : "true");
+  setValueIfPresent("reactiveEvadeGasType", s.reactiveEvadeGasType || "BlindSmoke");
+  setValueIfPresent("reactiveEvadeGasRadius", s.reactiveEvadeGasRadius ?? 2.4);
+  setValueIfPresent("reactiveEvadeGasAmount", s.reactiveEvadeGasAmount ?? 60);
 
   // Lists
   if (document.getElementById("existingApparelList")) writeExistingCostumeList(s.costume_existingApparel || []);

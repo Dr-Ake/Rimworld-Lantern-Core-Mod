@@ -40,6 +40,10 @@ namespace DrAke.LanternsFramework
         private bool transformationManualEnabled = true;
         private bool transformationManualInitialized = false;
 
+        private bool reactiveEvadeEnabled = true;
+        private bool reactiveEvadeInitialized = false;
+        private int lastReactiveEvadeTick = -999999;
+
         private Dictionary<string, AbilityCastTracker> abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
 
         private int wornGraphicCheckTick = -999999;
@@ -122,6 +126,12 @@ namespace DrAke.LanternsFramework
             {
                 transformationManualInitialized = true;
                 transformationManualEnabled = Extension?.transformationToggleDefaultOn ?? true;
+            }
+
+            if (!reactiveEvadeInitialized)
+            {
+                reactiveEvadeInitialized = true;
+                reactiveEvadeEnabled = Extension?.reactiveEvadeDefaultEnabled ?? true;
             }
 
             // Default new rings to full charge.
@@ -706,6 +716,18 @@ namespace DrAke.LanternsFramework
                     };
                 }
 
+                if (Extension.reactiveEvadeToggleGizmo && Extension.reactiveEvadeProjectiles)
+                {
+                    yield return new Command_Toggle
+                    {
+                        defaultLabel = "Lantern_Command_ToggleReactiveEvade".Translate(),
+                        defaultDesc = "Lantern_Command_ToggleReactiveEvadeDesc".Translate(),
+                        icon = TexCommand.DesirePower,
+                        isActive = () => reactiveEvadeEnabled,
+                        toggleAction = () => reactiveEvadeEnabled = !reactiveEvadeEnabled
+                    };
+                }
+
                 if (LanternCoreMod.Settings?.showRingInspectorGizmo == true)
                 {
                     yield return new Command_Action
@@ -913,6 +935,9 @@ namespace DrAke.LanternsFramework
             {
                 abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
             }
+            Scribe_Values.Look(ref reactiveEvadeEnabled, "reactiveEvadeEnabled", true);
+            Scribe_Values.Look(ref reactiveEvadeInitialized, "reactiveEvadeInitialized", false);
+            Scribe_Values.Look(ref lastReactiveEvadeTick, "lastReactiveEvadeTick", -999999);
         }
 
         public bool CanCastWithLimits(AbilityDef abilityDef, int cooldownTicks, int maxCastsPerDay, out string reason)
@@ -975,6 +1000,53 @@ namespace DrAke.LanternsFramework
                 abilityCastRecords[abilityDefName] = tr;
             }
             return tr;
+        }
+
+        public bool TryReactiveEvadeProjectile(Projectile projectile, Pawn hitPawn)
+        {
+            if (hitPawn == null || hitPawn.Dead) return false;
+            if (Wearer != hitPawn) return false;
+            if (!IsActive) return false;
+
+            var ext = Extension;
+            if (ext == null || !ext.reactiveEvadeProjectiles) return false;
+            if (ext.reactiveEvadeToggleGizmo && !reactiveEvadeEnabled) return false;
+
+            if (projectile?.def?.projectile != null)
+            {
+                if (!ext.reactiveEvadeAllowExplosiveProjectiles && projectile.def.projectile.explosionRadius > 0f)
+                {
+                    return false;
+                }
+            }
+
+            int now = Find.TickManager?.TicksGame ?? 0;
+            int cooldown = Mathf.Max(0, ext.reactiveEvadeProjectilesCooldownTicks);
+            if (cooldown > 0 && now < lastReactiveEvadeTick + cooldown) return false;
+
+            float cost = Mathf.Max(0f, ext.reactiveEvadeProjectilesCost);
+            if (cost > 0f && !TryConsumeCharge(cost)) return false;
+
+            lastReactiveEvadeTick = now;
+
+            if (Wearer?.Map != null)
+            {
+                float radius = Mathf.Max(0f, ext.reactiveEvadeGasRadius);
+                int amount = Mathf.Clamp(ext.reactiveEvadeGasAmount, 0, 1000);
+                if (radius > 0f && amount > 0)
+                {
+                    GenExplosion.DoExplosion(
+                        Wearer.Position,
+                        Wearer.Map,
+                        radius,
+                        DamageDefOf.Smoke,
+                        Wearer,
+                        postExplosionGasType: ext.reactiveEvadeGasType,
+                        postExplosionGasAmount: amount);
+                }
+            }
+
+            return true;
         }
     }
     

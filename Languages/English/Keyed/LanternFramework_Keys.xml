@@ -29,6 +29,8 @@
   <Lantern_Command_ManifestBatteryDesc>Manifest a portable power battery using ring energy.</Lantern_Command_ManifestBatteryDesc>
   <Lantern_Command_ToggleTransformation>Toggle Costume</Lantern_Command_ToggleTransformation>
   <Lantern_Command_ToggleTransformationDesc>Turns the transformation (costume/body swap) on or off without removing the gear.</Lantern_Command_ToggleTransformationDesc>
+  <Lantern_Command_ToggleReactiveEvade>Toggle Reactive Evasion</Lantern_Command_ToggleReactiveEvade>
+  <Lantern_Command_ToggleReactiveEvadeDesc>Turns reactive projectile evasion on or off without removing the gear.</Lantern_Command_ToggleReactiveEvadeDesc>
 
   <!-- Manifest limits -->
   <Lantern_ManifestBattery_LimitGlobal>Cannot manifest more than {0} batteries total.</Lantern_ManifestBattery_LimitGlobal>

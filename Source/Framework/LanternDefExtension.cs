@@ -136,5 +136,25 @@ namespace DrAke.LanternsFramework
         public float absorbCombatDamageCost = 0.02f;
         // Optional allowlist of combat damage defs to absorb. If empty, any non-environmental damage may be absorbed.
         public List<DamageDef> combatDamageDefs = new List<DamageDef>();
+
+        // Reactive Defense (opt-in)
+        // Cancels incoming non-explosive projectiles by consuming charge and spawning a gas cloud (e.g. BlindSmoke).
+        public bool reactiveEvadeProjectiles = false;
+        // Charge fraction consumed each time an evade triggers.
+        public float reactiveEvadeProjectilesCost = 0.02f;
+        // Minimum time between evades (ticks). 0 = no cooldown.
+        public int reactiveEvadeProjectilesCooldownTicks = 60;
+        // If true, can also cancel explosive projectiles (default false because it prevents explosions).
+        public bool reactiveEvadeAllowExplosiveProjectiles = false;
+
+        // Optional toggle gizmo (on/off) without removing the gear.
+        public bool reactiveEvadeToggleGizmo = false;
+        public bool reactiveEvadeDefaultEnabled = true;
+
+        // Gas spawned when evasion triggers.
+        public GasType reactiveEvadeGasType = GasType.BlindSmoke;
+        public float reactiveEvadeGasRadius = 2.4f;
+        // Lower values dissipate faster; higher values last longer.
+        public int reactiveEvadeGasAmount = 60;
     }
 }

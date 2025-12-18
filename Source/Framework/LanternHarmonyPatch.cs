@@ -270,6 +270,53 @@ namespace DrAke.LanternsFramework.HarmonyPatches
             Current.Game?.GetComponent<RingSelectionManager>()?.Notify_PawnKilled(killer, __instance);
         }
     }
+
+    // Optional: pause the game when certain ability gizmos are clicked.
+    [HarmonyPatch(typeof(Command_Ability), "ProcessInput", new Type[] { typeof(Event) })]
+    public static class Patch_CommandAbility_PauseOnInput
+    {
+        static void Prefix(Command_Ability __instance)
+        {
+            Ability ability = __instance?.Ability;
+            if (ability?.def?.comps == null) return;
+
+            for (int i = 0; i < ability.def.comps.Count; i++)
+            {
+                if (ability.def.comps[i] is CompProperties_LanternPauseOnInput pause && pause.pause)
+                {
+                    if (Find.TickManager?.Paused != true)
+                    {
+                        Find.TickManager?.Pause();
+                        LanternPauseOnInputRegistry.RecordPaused(ability);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    // Reactive projectile evasion: cancels the impact and consumes charge if enabled on the worn gear.
+    [HarmonyPatch(typeof(Projectile), "Impact", new Type[] { typeof(Thing), typeof(bool) })]
+    public static class Patch_Projectile_Impact_ReactiveEvade
+    {
+        static bool Prefix(Projectile __instance, Thing hitThing, bool blockedByShield)
+        {
+            if (blockedByShield) return true;
+            if (hitThing is not Pawn pawn) return true;
+
+            CompLanternRing ring = LanternResources.GetRing(pawn);
+            if (ring == null) return true;
+
+            if (ring.TryReactiveEvadeProjectile(__instance, pawn))
+            {
+                __instance.Destroy(DestroyMode.Vanish);
+                return false;
+            }
+
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(Game), MethodType.Constructor)]
     public static class Patch_Game_Constructor
     {

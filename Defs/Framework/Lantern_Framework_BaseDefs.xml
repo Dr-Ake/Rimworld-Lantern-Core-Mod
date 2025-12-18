@@ -421,4 +421,26 @@
     </comps>
   </AbilityDef>
 
+  <!-- Base pawn-effect ability: no built-in effect, just standardized pawn targeting for add-ons. -->
+  <AbilityDef Abstract="True" Name="Lantern_Ability_PawnEffectBase">
+    <defName>Lantern_Ability_PawnEffectBase</defName>
+    <label>lantern technique</label>
+    <description>Base def for custom pawn-targeted techniques implemented via ability comps.</description>
+    <canUseAoeToGetTargets>false</canUseAoeToGetTargets>
+    <jobDef>CastAbilityOnThing</jobDef>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>20</range>
+      <warmupTime>0.3</warmupTime>
+      <targetParams>
+        <canTargetLocations>false</canTargetLocations>
+        <canTargetPawns>true</canTargetPawns>
+        <canTargetAnimals>true</canTargetAnimals>
+        <canTargetMechs>true</canTargetMechs>
+        <canTargetBuildings>false</canTargetBuildings>
+        <canTargetSelf>false</canTargetSelf>
+      </targetParams>
+    </verbProperties>
+  </AbilityDef>
+
 </Defs>
