@@ -10,6 +10,7 @@ namespace DrAke.LanternsFramework
         // UI & Visuals
         public Color ringColor = Color.green;
         public string resourceLabel = "Willpower";
+        public bool showChargeGizmo = true;
 
         // Charge
         // Max "capacity" for this ring. Most XML settings use fractions (0..1) of this max.

@@ -659,18 +659,21 @@ namespace DrAke.LanternsFramework
                     yield break;
                 }
 
-                yield return new Gizmo_LanternCharge
+                if (Extension.showChargeGizmo)
                 {
-                    ringComp = this,
-                    label = Extension.resourceLabel,
-                    barColor = Extension.ringColor,
-                    labelTextColor = Extension.chargeUseLabelColorOverride
-                        ? Extension.chargeLabelColorOverride
-                        : Extension.ringColor,
-                    percentTextColor = Extension.chargeUsePercentColorOverride
-                        ? Extension.chargePercentColorOverride
-                        : Color.white
-                };
+                    yield return new Gizmo_LanternCharge
+                    {
+                        ringComp = this,
+                        label = Extension.resourceLabel,
+                        barColor = Extension.ringColor,
+                        labelTextColor = Extension.chargeUseLabelColorOverride
+                            ? Extension.chargeLabelColorOverride
+                            : Extension.ringColor,
+                        percentTextColor = Extension.chargeUsePercentColorOverride
+                            ? Extension.chargePercentColorOverride
+                            : Color.white
+                    };
+                }
 
                 if (Extension.allowBatteryManifest)
                 {

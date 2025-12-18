@@ -152,6 +152,22 @@ function buildAbilityEditor(abilityKey) {
 
 function abilityExtraFieldsHtml(key) {
   switch (key) {
+    case "Blast":
+      return `
+        <label class="field">
+          <span>Cast sound override (SoundDef, optional)</span>
+          <input type="text" data-field="soundCastOverride" placeholder="Shot_Pistol" />
+          <small>Blank = use the parent ability sound.</small>
+        </label>
+        <label class="field">
+          <span>Mute cast sound</span>
+          <select data-field="muteSoundCast">
+            <option value="false">False</option>
+            <option value="true">True</option>
+          </select>
+          <small>Lets you turn off the default laser-like sound for blasts.</small>
+        </label>
+      `;
     case "Heal":
       return `
         <label class="field">
@@ -827,6 +843,7 @@ function getState() {
     ringDesc: byId("ringDesc").value.trim(),
     ringColor: normalizeRgba(byId("ringColor").value),
     resourceLabel: byId("resourceLabel").value.trim(),
+    showChargeGizmo: byId("showChargeGizmo")?.value !== "false",
     ringTexPath: byId("ringTexPath").value.trim(),
     marketValue: toNum(byId("marketValue").value, 5000),
     mass: toNum(byId("mass").value, 0.1),
@@ -1136,7 +1153,10 @@ function readAbilityEditors() {
     out.pauseOnClick = (fields.pauseOnClick ?? "false") === "true";
 
     // Ability-specific parameters (minimal set).
-    if (key === "Heal") {
+    if (key === "Blast") {
+      out.soundCastOverride = (fields.soundCastOverride ?? "").trim();
+      out.muteSoundCast = (fields.muteSoundCast ?? "false") === "true";
+    } else if (key === "Heal") {
       out.healAmount = toNum(fields.healAmount, 10);
       out.radius = toNum(fields.radius, 0);
     } else if (key === "Stun") {
@@ -1201,6 +1221,7 @@ function setDefaults() {
   byId("ringDesc").value = "A piece of gear fueled by a resource.";
   byId("ringColor").value = "(1, 0, 0, 1)";
   byId("resourceLabel").value = "Willpower";
+  if (document.getElementById("showChargeGizmo")) byId("showChargeGizmo").value = "true";
   byId("ringTexPath").value = "MyHeroGear/Items/MyGear";
   byId("marketValue").value = "5000";
   byId("mass").value = "0.1";
@@ -1691,6 +1712,7 @@ function buildDefsXml(state) {
 
   extLines.push(`      <ringColor>${escapeXml(state.ringColor)}</ringColor>`);
   extLines.push(`      <resourceLabel>${escapeXml(state.resourceLabel)}</resourceLabel>`);
+  if (state.showChargeGizmo === false) extLines.push(`      <showChargeGizmo>false</showChargeGizmo>`);
 
   if (state.maxCharge !== 1) extLines.push(`      <maxCharge>${state.maxCharge}</maxCharge>`);
   if (state.passiveRegenPerDay !== 0) extLines.push(`      <passiveRegenPerDay>${state.passiveRegenPerDay}</passiveRegenPerDay>`);
@@ -2014,7 +2036,24 @@ function buildAbilityDefXml(state, a, extraDefsOut) {
     ? `    <comps Inherit="False">\n${lines.join("\n")}\n    </comps>\n`
     : "";
 
-  const verbOverride = (a.range || 0) > 0 ? `    <verbProperties>\n      <range>${a.range}</range>\n    </verbProperties>\n` : "";
+  let verbOverride = "";
+  if (a.key === "Blast") {
+    const hasSound = (a.soundCastOverride || "").trim().length > 0;
+    const mute = !!a.muteSoundCast;
+    const hasRange = (a.range || 0) > 0;
+    if (hasSound || mute || hasRange) {
+      const cls = "DrAke.LanternsFramework.Abilities.VerbProperties_LanternBlast";
+      const v = [];
+      v.push(`    <verbProperties Class="${cls}">`);
+      if (hasRange) v.push(`      <range>${a.range}</range>`);
+      if (mute) v.push(`      <muteSoundCast>true</muteSoundCast>`);
+      if (hasSound) v.push(`      <soundCastOverride>${escapeXml(a.soundCastOverride)}</soundCastOverride>`);
+      v.push(`    </verbProperties>`);
+      verbOverride = v.join("\n") + "\n";
+    }
+  } else {
+    verbOverride = (a.range || 0) > 0 ? `    <verbProperties>\n      <range>${a.range}</range>\n    </verbProperties>\n` : "";
+  }
 
   return (
     `  <AbilityDef ParentName="${escapeXml(a.parent)}">\n` +
@@ -2640,6 +2679,7 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   // Extension basics
   out.ringColor = xmlText(ext, "ringColor", "(1, 1, 1, 1)");
   out.resourceLabel = xmlText(ext, "resourceLabel", "Willpower");
+  out.showChargeGizmo = xmlBool(ext, "showChargeGizmo", true);
   out.maxCharge = xmlNum(ext, "maxCharge", 1);
   out.passiveRegenPerDay = xmlNum(ext, "passiveRegenPerDay", 0);
   out.passiveDrainPerDay = xmlNum(ext, "passiveDrainPerDay", 0);
@@ -2788,6 +2828,11 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
 
     a.range = xmlNum(ad, "verbProperties > range", 0);
     if (!(a.range > 0)) delete a.range;
+
+    if (key === "Blast") {
+      a.muteSoundCast = xmlBool(ad, "verbProperties > muteSoundCast", false);
+      a.soundCastOverride = xmlText(ad, "verbProperties > soundCastOverride", "");
+    }
 
     const comps = Array.from(ad.querySelectorAll("comps > li"));
     const getComp = (cls) => comps.find((c) => c.getAttribute("Class") === cls) || null;
@@ -3013,6 +3058,7 @@ function applyImportedStateToUi(s) {
   setValueIfPresent("ringDesc", s.ringDesc);
   setValueIfPresent("ringColor", s.ringColor);
   setValueIfPresent("resourceLabel", s.resourceLabel);
+  setValueIfPresent("showChargeGizmo", s.showChargeGizmo === false ? "false" : "true");
   setValueIfPresent("ringTexPath", s.ringTexPath);
   setValueIfPresent("marketValue", s.marketValue);
   setValueIfPresent("mass", s.mass);

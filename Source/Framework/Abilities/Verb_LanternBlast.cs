@@ -12,8 +12,30 @@ namespace DrAke.LanternsFramework.Abilities
     {
         protected override bool TryCastShot()
         {
+            VerbProperties_LanternBlast customProps = verbProps as VerbProperties_LanternBlast;
+
+            // Optional sound override/mute for non-laser blasts (e.g. thrown batarangs).
+            SoundDef originalSoundCast = null;
+            bool restoreSound = false;
+            if (customProps != null && (customProps.muteSoundCast || customProps.soundCastOverride != null))
+            {
+                originalSoundCast = verbProps.soundCast;
+                restoreSound = true;
+                verbProps.soundCast = customProps.muteSoundCast ? null : customProps.soundCastOverride;
+            }
+
             // Let base handle cooldown/cost/effects; only add damage.
-            if (!base.TryCastShot()) return false;
+            bool baseResult;
+            try
+            {
+                baseResult = base.TryCastShot();
+            }
+            finally
+            {
+                if (restoreSound) verbProps.soundCast = originalSoundCast;
+            }
+
+            if (!baseResult) return false;
 
             int dmg = 10; // Default
             DamageDef dmgType = DamageDefOf.Burn;
@@ -31,7 +53,6 @@ namespace DrAke.LanternsFramework.Abilities
             }
 
             // Then allow ability XML to override via custom verbProperties.
-            VerbProperties_LanternBlast customProps = verbProps as VerbProperties_LanternBlast;
             if (customProps != null)
             {
                 if (customProps.damageOverride > 0)

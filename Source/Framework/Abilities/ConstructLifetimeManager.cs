@@ -142,7 +142,8 @@ namespace DrAke.LanternsFramework.Abilities
             if (!center.IsValid) return;
             if (radius <= 0f) return;
 
-            int shift = (int)gasType;
+            // GasGrid packs gas density in 8-bit lanes (one lane per GasType).
+            int shift = ((int)gasType) * 8;
             uint mask = 0xFFu << shift;
             foreach (IntVec3 cell in GenRadial.RadialCellsAround(center, radius, useCenter: true))
             {

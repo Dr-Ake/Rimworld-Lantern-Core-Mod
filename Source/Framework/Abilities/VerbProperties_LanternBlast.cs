@@ -8,6 +8,10 @@ namespace DrAke.LanternsFramework.Abilities
     // If not used, Verb_LanternBlast falls back to ring extension values.
     public class VerbProperties_LanternBlast : VerbProperties
     {
+        // Optional cast sound controls (lets add-ons replace the default "laser" cast sound, or disable it).
+        public bool muteSoundCast = false;
+        public SoundDef soundCastOverride;
+
         // When > 0, overrides ring blastDamage.
         public int damageOverride = 0;
 
