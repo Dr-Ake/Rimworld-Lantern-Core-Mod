@@ -31,6 +31,16 @@
   <Lantern_Command_ToggleTransformationDesc>Turns the transformation (costume/body swap) on or off without removing the gear.</Lantern_Command_ToggleTransformationDesc>
   <Lantern_Command_ToggleReactiveEvade>Toggle Reactive Evasion</Lantern_Command_ToggleReactiveEvade>
   <Lantern_Command_ToggleReactiveEvadeDesc>Turns reactive projectile evasion on or off without removing the gear.</Lantern_Command_ToggleReactiveEvadeDesc>
+  <Lantern_Command_ToggleStealth>Toggle Stealth</Lantern_Command_ToggleStealth>
+  <Lantern_Command_ToggleStealthDesc>Enter or exit stealth mode.</Lantern_Command_ToggleStealthDesc>
+  <Lantern_Command_ToggleStealth_Disabled>Stealth energy is depleted.</Lantern_Command_ToggleStealth_Disabled>
+
+  <!-- Discovery Events -->
+  <Lantern_DiscoveryEvent_LetterLabel>Discovery site</Lantern_DiscoveryEvent_LetterLabel>
+  <Lantern_DiscoveryEvent_LetterText>Scouts detected a site on the world map that may contain {0}. Travel there to investigate.</Lantern_DiscoveryEvent_LetterText>
+  <Lantern_DiscoveryEvent_SiteLabel>mysterious site</Lantern_DiscoveryEvent_SiteLabel>
+  <Lantern_DiscoveryEvent_SiteDesc>A remote site marked by unusual readings.</Lantern_DiscoveryEvent_SiteDesc>
+  <Lantern_DiscoverySite_ExpiresIn>Expires in: {0} days</Lantern_DiscoverySite_ExpiresIn>
 
   <!-- Manifest limits -->
   <Lantern_ManifestBattery_LimitGlobal>Cannot manifest more than {0} batteries total.</Lantern_ManifestBattery_LimitGlobal>
@@ -39,6 +49,8 @@
   <!-- Generic requirements -->
   <Lantern_RequiresCharge>Requires at least {0} charge.</Lantern_RequiresCharge>
   <Lantern_ChannelEnded_NoCharge>Ring energy is depleted.</Lantern_ChannelEnded_NoCharge>
+  <Lantern_StealthEnded_NoEnergy>Stealth fades as energy runs out.</Lantern_StealthEnded_NoEnergy>
+  <Lantern_RefuseRemoval>{0} refuses to remove the gear.</Lantern_RefuseRemoval>
 
   <!-- UI -->
   <Lantern_RingInfo_Title>Ring Info</Lantern_RingInfo_Title>

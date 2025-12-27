@@ -317,6 +317,204 @@ namespace DrAke.LanternsFramework.HarmonyPatches
         }
     }
 
+    // ================== Autonomy / Temptation ==================
+    [HarmonyPatch(typeof(JobGiver_OptimizeApparel), "ApparelScoreRaw")]
+    public static class Patch_ApparelScoreRaw_LanternAutonomy
+    {
+        static void Postfix(Pawn pawn, Apparel ap, ref float __result)
+        {
+            if (pawn == null || ap == null) return;
+            var comp = ap.TryGetComp<CompLanternRing>();
+            var ext = comp?.Extension;
+            if (ext == null || !ext.autoEquipEnabled) return;
+
+            if (!ext.autoEquipAllowDrafted && pawn.Drafted) return;
+
+            float chance = Mathf.Clamp01(ext.autoEquipChance);
+            if (chance <= 0f) return;
+
+            float bonus = ext.autoEquipScoreBonus;
+
+            if (!ext.autoEquipTraitBonuses.NullOrEmpty() && pawn.story?.traits != null)
+            {
+                for (int i = 0; i < ext.autoEquipTraitBonuses.Count; i++)
+                {
+                    LanternAutoEquipTraitModifier mod = ext.autoEquipTraitBonuses[i];
+                    if (mod?.trait == null) continue;
+                    Trait t = pawn.story.traits.GetTrait(mod.trait);
+                    if (t == null) continue;
+                    if (mod.degree != 0 && t.Degree != mod.degree) continue;
+                    bonus += mod.scoreOffset;
+                }
+            }
+
+            if (!ext.autoEquipHediffBonuses.NullOrEmpty() && pawn.health?.hediffSet != null)
+            {
+                for (int i = 0; i < ext.autoEquipHediffBonuses.Count; i++)
+                {
+                    LanternAutoEquipHediffModifier mod = ext.autoEquipHediffBonuses[i];
+                    if (mod?.hediff == null) continue;
+                    Hediff h = pawn.health.hediffSet.GetFirstHediffOfDef(mod.hediff);
+                    if (h == null) continue;
+                    if (h.Severity < mod.minSeverity || h.Severity > mod.maxSeverity) continue;
+                    bonus += mod.scoreOffset;
+                    if (mod.severityMultiplier != 0f) bonus += h.Severity * mod.severityMultiplier;
+                }
+            }
+
+            if (bonus != 0f)
+            {
+                __result += bonus * chance;
+            }
+        }
+    }
+
+    // ================== Refuse removal ==================
+    [HarmonyPatch(typeof(Pawn_ApparelTracker), "TryDrop", new Type[] { typeof(Apparel), typeof(Apparel), typeof(IntVec3), typeof(bool) }, new ArgumentType[] { ArgumentType.Normal, ArgumentType.Out, ArgumentType.Normal, ArgumentType.Normal })]
+    public static class Patch_PawnApparelTracker_TryDrop_RefuseRemoval
+    {
+        static bool Prefix(Pawn_ApparelTracker __instance, Apparel ap, ref bool __result)
+        {
+            if (ap == null || __instance?.pawn == null) return true;
+
+            Pawn pawn = __instance.pawn;
+            if (pawn.Dead || pawn.Downed) return true;
+
+            var comp = ap.TryGetComp<CompLanternRing>();
+            var ext = comp?.Extension;
+            if (ext == null || !ext.refuseRemoval) return true;
+
+            HediffDef hDef = ext.refuseRemovalHediff ?? ext.corruptionHediff;
+            if (hDef == null || pawn.health?.hediffSet == null) return true;
+
+            Hediff h = pawn.health.hediffSet.GetFirstHediffOfDef(hDef);
+            if (h == null || h.Severity < ext.refuseRemovalMinSeverity) return true;
+
+            string key = ext.refuseRemovalMessageKey ?? "Lantern_RefuseRemoval";
+            string text = key.CanTranslate() ? key.Translate(pawn.LabelShort) : key;
+            Messages.Message(text, pawn, MessageTypeDefOf.RejectInput);
+            __result = false;
+            return false;
+        }
+    }
+
+    // ================== Stealth interaction ==================
+    [HarmonyPatch(typeof(Verb), "TryStartCastOn", new Type[] { typeof(LocalTargetInfo), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+    public static class Patch_Verb_TryStartCastOn_StealthBreak_Single
+    {
+        static void Postfix(Verb __instance, bool __result)
+        {
+            if (!__result) return;
+            Pawn caster = __instance?.CasterPawn;
+            if (caster == null) return;
+            if (LanternInvisibilityRegistry.TryGetProfile(caster, out HediffDef invisDef, out LanternInvisibilityProfile profile) && profile.breakOnAttack)
+            {
+                LanternInvisibilityRegistry.TryDisableInvisibility(caster, invisDef);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Verb), "TryStartCastOn", new Type[] { typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+    public static class Patch_Verb_TryStartCastOn_StealthBreak_Dual
+    {
+        static void Postfix(Verb __instance, bool __result)
+        {
+            if (!__result) return;
+            Pawn caster = __instance?.CasterPawn;
+            if (caster == null) return;
+            if (LanternInvisibilityRegistry.TryGetProfile(caster, out HediffDef invisDef, out LanternInvisibilityProfile profile) && profile.breakOnAttack)
+            {
+                LanternInvisibilityRegistry.TryDisableInvisibility(caster, invisDef);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Verb), "CanHitTarget", new Type[] { typeof(LocalTargetInfo) })]
+    public static class Patch_Verb_CanHitTarget_Stealth
+    {
+        static bool Prefix(Verb __instance, LocalTargetInfo targ, ref bool __result)
+        {
+            Pawn targetPawn = targ.Thing as Pawn;
+            if (targetPawn == null) return true;
+
+            if (!LanternInvisibilityRegistry.TryGetProfile(targetPawn, out _, out LanternInvisibilityProfile profile)) return true;
+            if (!profile.preventTargeting) return true;
+
+            Pawn caster = __instance?.CasterPawn;
+            if (LanternInvisibilityRegistry.CanSeeInvisible(caster, profile)) return true;
+
+            __result = false;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Verb), "CanHitTargetFrom", new Type[] { typeof(IntVec3), typeof(LocalTargetInfo) })]
+    public static class Patch_Verb_CanHitTargetFrom_Stealth
+    {
+        static bool Prefix(Verb __instance, LocalTargetInfo targ, ref bool __result)
+        {
+            Pawn targetPawn = targ.Thing as Pawn;
+            if (targetPawn == null) return true;
+
+            if (!LanternInvisibilityRegistry.TryGetProfile(targetPawn, out _, out LanternInvisibilityProfile profile)) return true;
+            if (!profile.preventTargeting) return true;
+
+            Pawn caster = __instance?.CasterPawn;
+            if (LanternInvisibilityRegistry.CanSeeInvisible(caster, profile)) return true;
+
+            __result = false;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(AttackTargetFinder), "CanSee")]
+    public static class Patch_AttackTargetFinder_CanSee_Stealth
+    {
+        static void Postfix(Thing seer, Thing target, ref bool __result)
+        {
+            if (__result) return;
+            Pawn targetPawn = target as Pawn;
+            if (targetPawn == null) return;
+
+            if (!LanternInvisibilityRegistry.TryGetProfile(targetPawn, out _, out LanternInvisibilityProfile profile)) return;
+
+            Pawn seerPawn = seer as Pawn;
+            if (!LanternInvisibilityRegistry.CanSeeInvisible(seerPawn, profile)) return;
+
+            __result = true;
+        }
+    }
+
+    // ================== Corpse/grave drop ==================
+    [HarmonyPatch(typeof(Building_Grave), "EjectContents")]
+    public static class Patch_Building_Grave_EjectContents_LanternDrop
+    {
+        static void Prefix(Building_Grave __instance, ref Corpse __state)
+        {
+            __state = __instance?.Corpse;
+        }
+
+        static void Postfix(Building_Grave __instance, Corpse __state)
+        {
+            if (__state == null) return;
+            Map map = __instance?.Map;
+            if (map == null) return;
+            LanternResources.TryDropLanternGearFromCorpse(__state, map, __instance.Position, true);
+        }
+    }
+
+    [HarmonyPatch(typeof(Corpse), "Destroy", new Type[] { typeof(DestroyMode) })]
+    public static class Patch_Corpse_Destroy_LanternDrop
+    {
+        static void Prefix(Corpse __instance)
+        {
+            if (__instance == null) return;
+            Map map = __instance.MapHeld;
+            if (map == null) return;
+            LanternResources.TryDropLanternGearFromCorpse(__instance, map, __instance.PositionHeld, false);
+        }
+    }
+
     [HarmonyPatch(typeof(Game), MethodType.Constructor)]
     public static class Patch_Game_Constructor
     {

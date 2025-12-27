@@ -16,6 +16,7 @@ The Builder CAN:
 - Generate common abilities (blast, heal, barrier, stun, aura, construct, summon, teleport, displace, flight).
 - Add optional targeting rules and cast limits to abilities.
 - Configure costume transformation (equip apparel while worn) including drafted-only and "skip conflicts".
+- Configure stealth mode, corruption, ambient influence, auto-equip bias, and removal rules.
 - Generate new costume apparel defs (so you do not have to hand-write those defs).
 - Generate a stat-buff HediffDef and apply it while worn.
 - Optionally generate a selection def (auto-delivery) and scoring conditions.
@@ -46,10 +47,12 @@ UI tips:
    - Mod
    - Gear
    - Costume (optional)
+   - Behavior (optional)
    - Import Defs (optional but recommended)
    - Charge
    - Abilities
    - Selection (optional)
+   - Events (optional)
    - Export
 2) Export ZIP.
 3) Unzip into your RimWorld `Mods/` folder.
@@ -197,6 +200,16 @@ This is an advanced "safety valve" for art.
 
 If your costume textures only exist for one body type (for example you only drew the Male body type),
 you can temporarily force the pawn's body type while transformed so the costume still renders.
+
+## Tab: Behavior (optional)
+
+This tab exposes higher-level framework behaviors that don't require custom C#:
+
+- **Stealth / Veil**: Toggleable stealth mode with its own energy pool and optional anti-targeting.
+- **Corruption / Influence**: Persistent hediff that grows while worn and can trigger mental states.
+- **Ambient influence**: Apply a hediff to pawns while the gear is unworn (e.g., "whispers").
+- **Autonomy / Temptation**: Biases pawn apparel AI to prefer wearing the gear.
+- **Removal rules**: Refuse removal at a severity threshold; optionally force-drop from corpses/graves.
 
 Behavior:
 - When the costume applies: the pawn's body type is changed to your chosen `BodyTypeDef`.
@@ -405,6 +418,26 @@ Conditions (scoring):
 Generated XML:
 - `Defs/Generated_Gear.xml`
   - `<DrAke.LanternsFramework.RingSelectionDef>...</DrAke.LanternsFramework.RingSelectionDef>`
+
+## Tab: Events (optional)
+
+This tab creates a world-map discovery incident that spawns a site containing your gear.
+Think of it as a generic crash/ruin/stash site your caravans can travel to.
+
+Key fields:
+- Incident defName: unique defName for the incident.
+- Category/base chance: controls storyteller frequency.
+- Site label/description: what the world object shows on the map.
+- Event target: world site (caravan) or active map (local crash).
+- Map drop radius + prefer colony: controls where the crash lands on a player home map.
+- Pawn settings: how many alive/dead pawns spawn, and which PawnKindDef.
+- Gear placement: on pawn, in inventory, on ground, or in a drop pod.
+- Crash debris: optional ship chunks/slags for flavor.
+
+Generated XML:
+- `Defs/Generated_Gear.xml`
+  - `<IncidentDef>` with `IncidentWorker_LanternDiscovery`
+  - `LanternDiscoveryIncidentExtension` block with the site settings
 
 ## Tab: Export
 

@@ -115,6 +115,21 @@ Optional:
 - `absorbCombatDamage` / `absorbCombatDamageCost` / `combatDamageDefs` - optional combat damage absorption (off by default).
 - `chargeUseLabelColorOverride` / `chargeLabelColorOverride` - optionally override the **label text** color on the charge bar.
 - `chargeUsePercentColorOverride` / `chargePercentColorOverride` - optionally override the **percent text** color on the charge bar.
+- `stealthEnabled` / `stealthHediff` - enable stealth mode and the Hediff applied while active.
+- `stealthToggleGizmo` / `stealthDefaultOn` - add a toggle gizmo; optionally start active.
+- `stealthEnergyMax` / `stealthEnergyDrainPerSecond` / `stealthEnergyRegenPerDay` - optional stealth energy pool.
+- `stealthPreventTargeting` / `stealthBreakOnAttack` - optional stealth combat behavior.
+- `stealthSeeThroughPawnKinds` / `stealthSeeThroughHediffs` - who can still see invisible pawns.
+- `corruptionHediff` / `corruptionGainPerDay` / `corruptionInitialSeverity` - persistent corruption while worn.
+- `corruptionTickIntervalSeconds` / `corruptionMentalStates` - cadence + optional mental state triggers.
+- `attentionMultiplier` - scales the computed attention level (for custom incidents).
+- `ambientInfluenceEnabled` / `ambientInfluenceHediff` - ambient influence while unworn (e.g. whispers).
+- `ambientInfluenceOnlyWhenUnworn` / `ambientInfluenceOnlyWhenBuried` - influence filters.
+- `ambientInfluenceIntervalSeconds` / `ambientInfluenceSeverityPerTick` / `ambientInfluenceBreakThreshold` - influence tuning.
+- `autoEquipEnabled` / `autoEquipChance` / `autoEquipScoreBonus` - apparel AI bias to wear the gear.
+- `autoEquipTraitBonuses` / `autoEquipHediffBonuses` - trait/hediff-based temptation scores.
+- `refuseRemoval` / `refuseRemovalHediff` / `refuseRemovalMinSeverity` - block dropping above a threshold.
+- `forceDropOnWearerDeath` / `forceDropOnCorpseDestroy` / `forceDropOnGraveEject` - prevent the gear from being lost.
 
 Notes:
 - Battery manifest defaults to **50% charge** unless overridden.
@@ -440,6 +455,26 @@ Set both `projectileDef` and `projectileBeamMoteDef`. While the projectile is fl
 </HediffDef>
 ```
 
+**Corruption hediff decay (optional)**
+
+Attach this comp to your corruption hediff to decay it when the pawn is not wearing the gear.
+
+```xml
+<HediffDef>
+  <defName>MyGear_Corruption</defName>
+  <hediffClass>HediffWithComps</hediffClass>
+  <comps>
+    <li Class="DrAke.LanternsFramework.HediffCompProperties_LanternCorruption">
+      <decayWhenNotWorn>true</decayWhenNotWorn>
+      <decayPerDay>0.02</decayPerDay>
+      <!-- optional separation thought -->
+      <!-- <separationThought>MyGear_Separation</separationThought> -->
+      <!-- <separationMinSeverity>0.25</separationMinSeverity> -->
+    </li>
+  </comps>
+</HediffDef>
+```
+
 **Simple spawn (legacy utility)**
 
 If you just want "spawn one thing permanently at click":
@@ -723,6 +758,67 @@ Use any number:
 - `Condition_Passion` (`skill`, `minPassion`, `minorBonus`, `majorBonus`, `flatBonus`)
 - `Condition_Record` (`record`, `minValue`, `maxValue`, `lowerIsBetter`, `scoreMultiplier`, `flatBonus`)
 - `Condition_TraitExtensions` (scores traits using `LanternTraitScoreExtension`)
+
+---
+
+## 6) World Discovery Events (optional)
+
+You can create a world-map event that spawns a discovery site (crash/ruin/stash) containing your gear.
+This is done by creating an `IncidentDef` that uses the framework worker and extension.
+
+```xml
+<IncidentDef>
+  <defName>MyLantern_Discovery</defName>
+  <label>mysterious site</label>
+  <category>Misc</category>
+  <targetTags>
+    <li>World</li>
+  </targetTags>
+  <baseChance>0.10</baseChance>
+  <workerClass>DrAke.LanternsFramework.IncidentWorker_LanternDiscovery</workerClass>
+  <modExtensions>
+    <li Class="DrAke.LanternsFramework.LanternDiscoveryIncidentExtension">
+      <gearDef>MyLantern_Ring</gearDef>
+      <gearPlacement>PawnWorn</gearPlacement>
+      <gearReceiver>PreferAlive</gearReceiver>
+      <targetType>WorldSite</targetType>
+      <mapDropRadius>10</mapDropRadius>
+      <mapDropPreferColony>true</mapDropPreferColony>
+
+      <siteLabel>mysterious site</siteLabel>
+      <siteDescription>A remote site marked by unusual readings.</siteDescription>
+      <siteTimeoutDays>15</siteTimeoutDays>
+      <minDistanceFromPlayerTiles>6</minDistanceFromPlayerTiles>
+      <maxDistanceFromPlayerTiles>40</maxDistanceFromPlayerTiles>
+
+      <pawnKind>AncientSoldier</pawnKind>
+      <pawnFaction>Ancients</pawnFaction>
+      <alivePawnsMin>0</alivePawnsMin>
+      <alivePawnsMax>1</alivePawnsMax>
+      <deadPawnsMin>1</deadPawnsMin>
+      <deadPawnsMax>2</deadPawnsMax>
+      <alivePawnsDowned>true</alivePawnsDowned>
+
+      <spawnCrashDebris>true</spawnCrashDebris>
+      <crashChunkDef>ShipChunk</crashChunkDef>
+      <crashDebrisDef>ChunkSlagSteel</crashDebrisDef>
+      <crashDebrisCount>6</crashDebrisCount>
+      <crashDebrisRadius>6</crashDebrisRadius>
+
+      <spawnPawnsInDropPods>true</spawnPawnsInDropPods>
+      <dropPodOpenDelaySeconds>2</dropPodOpenDelaySeconds>
+    </li>
+  </modExtensions>
+</IncidentDef>
+```
+
+Notes:
+- The event creates a `Lantern_DiscoverySite` world object which players can visit by caravan.
+- If `gearPlacement` is `PawnWorn` or `PawnInventory` and there are no pawns, the gear falls back to the ground.
+- Set `siteTimeoutDays` to `0` to make the site permanent.
+- Set `targetType` to `ActiveMap` to drop the crash directly on a player home map instead of creating a world site.
+  - When using `ActiveMap`, set `<targetTags><li>Map</li></targetTags>` on the `IncidentDef`.
+- `mapDropRadius` and `mapDropPreferColony` control where the crash lands on a player home map.
 
 ### Trait score extension (optional)
 

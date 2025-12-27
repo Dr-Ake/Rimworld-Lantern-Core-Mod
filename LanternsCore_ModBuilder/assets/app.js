@@ -884,6 +884,63 @@ function getState() {
     reactiveEvadeGasRadius: toNum(byId("reactiveEvadeGasRadius")?.value, 2.4),
     reactiveEvadeGasAmount: toNum(byId("reactiveEvadeGasAmount")?.value, 60),
 
+    enableStealth: byId("enableStealth")?.value === "yes",
+    stealthHediff: byId("stealthHediff")?.value.trim() || "",
+    stealthToggleGizmo: byId("stealthToggleGizmo")?.value !== "no",
+    stealthDefaultOn: byId("stealthDefaultOn")?.value === "yes",
+    stealthBreakOnAttack: byId("stealthBreakOnAttack")?.value === "true",
+    stealthPreventTargeting: byId("stealthPreventTargeting")?.value !== "false",
+    stealthGizmoIconPath: byId("stealthGizmoIconPath")?.value.trim() || "",
+    stealthGizmoLabelKey: byId("stealthGizmoLabelKey")?.value.trim() || "",
+    stealthGizmoDescKey: byId("stealthGizmoDescKey")?.value.trim() || "",
+    stealthShowEnergyGizmo: byId("stealthShowEnergyGizmo")?.value === "true",
+    stealthEnergyLabel: byId("stealthEnergyLabel")?.value.trim() || "",
+    stealthEnergyColor: normalizeRgba(byId("stealthEnergyColor")?.value || ""),
+    stealthEnergyMax: toNum(byId("stealthEnergyMax")?.value, 1),
+    stealthEnergyStartPercent: toNum(byId("stealthEnergyStartPercent")?.value, 1),
+    stealthEnergyDrainPerSecond: toNum(byId("stealthEnergyDrainPerSecond")?.value, 0),
+    stealthEnergyRegenPerDay: toNum(byId("stealthEnergyRegenPerDay")?.value, 1),
+    stealthSeeThroughPawnKinds: readStealthSeeThroughPawnKinds(),
+    stealthSeeThroughHediffs: readStealthSeeThroughHediffs(),
+
+    corruptionHediff: byId("corruptionHediff")?.value.trim() || "",
+    corruptionInitialSeverity: toNum(byId("corruptionInitialSeverity")?.value, 0.01),
+    corruptionGainPerDay: toNum(byId("corruptionGainPerDay")?.value, 0.05),
+    corruptionTickIntervalSeconds: toNum(byId("corruptionTickIntervalSeconds")?.value, 1),
+    corruptionStealthMultiplier: toNum(byId("corruptionStealthMultiplier")?.value, 1),
+    attentionMultiplier: toNum(byId("attentionMultiplier")?.value, 1),
+    corruptionMentalStates: readCorruptionMentalStates(),
+
+    ambientInfluenceEnabled: byId("ambientInfluenceEnabled")?.value === "yes",
+    ambientInfluenceHediff: byId("ambientInfluenceHediff")?.value.trim() || "",
+    ambientInfluenceOnlyWhenUnworn: byId("ambientInfluenceOnlyWhenUnworn")?.value !== "false",
+    ambientInfluenceOnlyWhenBuried: byId("ambientInfluenceOnlyWhenBuried")?.value === "true",
+    ambientInfluenceSkipWearers: byId("ambientInfluenceSkipWearers")?.value !== "false",
+    ambientInfluenceAffectsColonistsOnly: byId("ambientInfluenceAffectsColonistsOnly")?.value !== "false",
+    ambientInfluenceAffectsHumanlikeOnly: byId("ambientInfluenceAffectsHumanlikeOnly")?.value !== "false",
+    ambientInfluenceRadius: toNum(byId("ambientInfluenceRadius")?.value, 0),
+    ambientInfluenceIntervalSeconds: toNum(byId("ambientInfluenceIntervalSeconds")?.value, 4),
+    ambientInfluenceInitialSeverity: toNum(byId("ambientInfluenceInitialSeverity")?.value, 0.02),
+    ambientInfluenceSeverityPerTick: toNum(byId("ambientInfluenceSeverityPerTick")?.value, 0.002),
+    ambientInfluenceBreakThreshold: toNum(byId("ambientInfluenceBreakThreshold")?.value, 0.8),
+    ambientInfluenceBreakChance: toNum(byId("ambientInfluenceBreakChance")?.value, 0.05),
+    ambientInfluenceMentalState: byId("ambientInfluenceMentalState")?.value.trim() || "",
+
+    autoEquipEnabled: byId("autoEquipEnabled")?.value === "yes",
+    autoEquipChance: toNum(byId("autoEquipChance")?.value, 1),
+    autoEquipScoreBonus: toNum(byId("autoEquipScoreBonus")?.value, 0),
+    autoEquipAllowDrafted: byId("autoEquipAllowDrafted")?.checked ?? false,
+    autoEquipTraitBonuses: readAutoEquipTraitBonuses(),
+    autoEquipHediffBonuses: readAutoEquipHediffBonuses(),
+
+    refuseRemoval: byId("refuseRemoval")?.value === "yes",
+    refuseRemovalHediff: byId("refuseRemovalHediff")?.value.trim() || "",
+    refuseRemovalMinSeverity: toNum(byId("refuseRemovalMinSeverity")?.value, 0.5),
+    refuseRemovalMessageKey: byId("refuseRemovalMessageKey")?.value.trim() || "",
+    forceDropOnWearerDeath: byId("forceDropOnWearerDeath")?.checked ?? false,
+    forceDropOnCorpseDestroy: byId("forceDropOnCorpseDestroy")?.checked ?? false,
+    forceDropOnGraveEject: byId("forceDropOnGraveEject")?.checked ?? false,
+
     costume_existingApparel: readExistingCostumeList(),
     costume_generatedApparel: readGeneratedCostumeList(),
     statBuffs: readStatBuffs(),
@@ -930,6 +987,44 @@ function getState() {
     sel_allowDead: byId("sel_allowDead")?.checked ?? false,
     sel_allowDowned: byId("sel_allowDowned")?.checked ?? false,
     sel_requireViolenceCapable: byId("sel_requireViolenceCapable")?.checked ?? true,
+
+    enableDiscoveryEvent: byId("enableDiscoveryEvent")?.value === "yes",
+    discoveryIncidentDefName: byId("discoveryIncidentDefName")?.value.trim() || "",
+    discoveryIncidentCategory: byId("discoveryIncidentCategory")?.value.trim() || "",
+    discoveryIncidentBaseChance: toNum(byId("discoveryIncidentBaseChance")?.value, 0.1),
+    discoverySendLetter: byId("discoverySendLetter")?.value !== "no",
+    discoveryLetterLabel: byId("discoveryLetterLabel")?.value.trim() || "",
+    discoveryLetterText: byId("discoveryLetterText")?.value.trim() || "",
+    discoveryTargetType: byId("discoveryTargetType")?.value || "WorldSite",
+
+    discoverySiteLabel: byId("discoverySiteLabel")?.value.trim() || "",
+    discoverySiteDescription: byId("discoverySiteDescription")?.value.trim() || "",
+    discoverySiteTimeoutDays: toNum(byId("discoverySiteTimeoutDays")?.value, 15),
+    discoveryMinDistanceTiles: Math.max(0, Math.floor(toNum(byId("discoveryMinDistanceTiles")?.value, 6))),
+    discoveryMaxDistanceTiles: Math.max(0, Math.floor(toNum(byId("discoveryMaxDistanceTiles")?.value, 40))),
+    discoveryMapDropRadius: Math.max(0, Math.floor(toNum(byId("discoveryMapDropRadius")?.value, 10))),
+    discoveryMapDropPreferColony: byId("discoveryMapDropPreferColony")?.checked ?? true,
+
+    discoveryGearPlacement: byId("discoveryGearPlacement")?.value || "PawnWorn",
+    discoveryGearReceiver: byId("discoveryGearReceiver")?.value || "PreferAlive",
+    discoveryGearCount: Math.max(1, Math.floor(toNum(byId("discoveryGearCount")?.value, 1))),
+
+    discoveryPawnKind: byId("discoveryPawnKind")?.value.trim() || "",
+    discoveryPawnFaction: byId("discoveryPawnFaction")?.value.trim() || "",
+    discoveryAliveMin: Math.max(0, Math.floor(toNum(byId("discoveryAliveMin")?.value, 0))),
+    discoveryAliveMax: Math.max(0, Math.floor(toNum(byId("discoveryAliveMax")?.value, 0))),
+    discoveryDeadMin: Math.max(0, Math.floor(toNum(byId("discoveryDeadMin")?.value, 1))),
+    discoveryDeadMax: Math.max(0, Math.floor(toNum(byId("discoveryDeadMax")?.value, 1))),
+    discoveryAliveDowned: byId("discoveryAliveDowned")?.value !== "false",
+    discoveryPawnScatterRadius: toNum(byId("discoveryPawnScatterRadius")?.value, 8),
+    discoverySpawnPawnsInDropPods: byId("discoverySpawnPawnsInDropPods")?.value !== "false",
+    discoveryDropPodOpenDelaySeconds: toNum(byId("discoveryDropPodOpenDelaySeconds")?.value, 2),
+
+    discoverySpawnCrashDebris: byId("discoverySpawnCrashDebris")?.value !== "false",
+    discoveryCrashChunkDef: byId("discoveryCrashChunkDef")?.value.trim() || "",
+    discoveryCrashDebrisDef: byId("discoveryCrashDebrisDef")?.value.trim() || "",
+    discoveryCrashDebrisCount: Math.max(0, Math.floor(toNum(byId("discoveryCrashDebrisCount")?.value, 6))),
+    discoveryCrashDebrisRadius: toNum(byId("discoveryCrashDebrisRadius")?.value, 6),
 
     sel_conditions: readSelectionConditions(),
   };
@@ -1122,6 +1217,224 @@ function renderStatBuffs() {
   });
 }
 
+function readStealthSeeThroughPawnKinds() {
+  const raw = byId("stealthSeeThroughPawnKindsList")?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStealthSeeThroughPawnKinds(items) {
+  const el = byId("stealthSeeThroughPawnKindsList");
+  if (!el) return;
+  const uniq = Array.from(new Set(items.map((x) => x.trim()).filter(Boolean)));
+  el.dataset.items = JSON.stringify(uniq);
+  renderStealthSeeThroughPawnKinds();
+}
+
+function renderStealthSeeThroughPawnKinds() {
+  const el = byId("stealthSeeThroughPawnKindsList");
+  if (!el) return;
+  const items = readStealthSeeThroughPawnKinds();
+  el.innerHTML = "";
+  items.forEach((name) => {
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.innerHTML = `<span><code>${escapeXml(name)}</code></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = "Remove";
+    btn.textContent = "A-";
+    btn.addEventListener("click", () => {
+      writeStealthSeeThroughPawnKinds(items.filter((x) => x !== name));
+      saveState();
+      renderExportPanel();
+    });
+    pill.appendChild(btn);
+    el.appendChild(pill);
+  });
+}
+
+function readStealthSeeThroughHediffs() {
+  const raw = byId("stealthSeeThroughHediffsList")?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStealthSeeThroughHediffs(items) {
+  const el = byId("stealthSeeThroughHediffsList");
+  if (!el) return;
+  const uniq = Array.from(new Set(items.map((x) => x.trim()).filter(Boolean)));
+  el.dataset.items = JSON.stringify(uniq);
+  renderStealthSeeThroughHediffs();
+}
+
+function renderStealthSeeThroughHediffs() {
+  const el = byId("stealthSeeThroughHediffsList");
+  if (!el) return;
+  const items = readStealthSeeThroughHediffs();
+  el.innerHTML = "";
+  items.forEach((name) => {
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.innerHTML = `<span><code>${escapeXml(name)}</code></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = "Remove";
+    btn.textContent = "A-";
+    btn.addEventListener("click", () => {
+      writeStealthSeeThroughHediffs(items.filter((x) => x !== name));
+      saveState();
+      renderExportPanel();
+    });
+    pill.appendChild(btn);
+    el.appendChild(pill);
+  });
+}
+
+function readCorruptionMentalStates() {
+  const el = document.getElementById("corruptionMentalStateList");
+  const raw = el?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCorruptionMentalStates(items) {
+  const el = document.getElementById("corruptionMentalStateList");
+  if (!el) return;
+  el.dataset.items = JSON.stringify(items);
+  renderCorruptionMentalStates();
+}
+
+function renderCorruptionMentalStates() {
+  const el = document.getElementById("corruptionMentalStateList");
+  if (!el) return;
+  const items = readCorruptionMentalStates();
+  el.innerHTML = "";
+
+  items.forEach((it) => {
+    const card = document.createElement("div");
+    card.className = "miniCard";
+    card.innerHTML = `
+      <div class="miniCard__main">
+        <div><strong>${escapeXml(it.mentalState)}</strong></div>
+        <div><span class="muted">sev:</span> <code>${escapeXml(`${it.minSeverity}..${it.maxSeverity}`)}</code></div>
+        <div><span class="muted">chance:</span> <code>${escapeXml(String(it.chancePerCheck))}</code> <span class="muted">interval:</span> <code>${escapeXml(String(it.checkIntervalTicks))}</code></div>
+      </div>
+      <div class="miniCard__actions"><button type="button">Remove</button></div>
+    `;
+    card.querySelector("button").addEventListener("click", () => {
+      writeCorruptionMentalStates(items.filter((x) => x !== it));
+      saveState();
+      renderExportPanel();
+    });
+    el.appendChild(card);
+  });
+}
+
+function readAutoEquipTraitBonuses() {
+  const el = document.getElementById("autoEquipTraitList");
+  const raw = el?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAutoEquipTraitBonuses(items) {
+  const el = document.getElementById("autoEquipTraitList");
+  if (!el) return;
+  el.dataset.items = JSON.stringify(items);
+  renderAutoEquipTraitBonuses();
+}
+
+function renderAutoEquipTraitBonuses() {
+  const el = document.getElementById("autoEquipTraitList");
+  if (!el) return;
+  const items = readAutoEquipTraitBonuses();
+  el.innerHTML = "";
+
+  items.forEach((it) => {
+    const card = document.createElement("div");
+    card.className = "miniCard";
+    card.innerHTML = `
+      <div class="miniCard__main">
+        <div><strong>${escapeXml(it.trait)}</strong> <span class="muted">degree</span> <code>${escapeXml(String(it.degree))}</code></div>
+        <div><span class="muted">score:</span> <code>${escapeXml(String(it.scoreOffset))}</code></div>
+      </div>
+      <div class="miniCard__actions"><button type="button">Remove</button></div>
+    `;
+    card.querySelector("button").addEventListener("click", () => {
+      writeAutoEquipTraitBonuses(items.filter((x) => x !== it));
+      saveState();
+      renderExportPanel();
+    });
+    el.appendChild(card);
+  });
+}
+
+function readAutoEquipHediffBonuses() {
+  const el = document.getElementById("autoEquipHediffList");
+  const raw = el?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAutoEquipHediffBonuses(items) {
+  const el = document.getElementById("autoEquipHediffList");
+  if (!el) return;
+  el.dataset.items = JSON.stringify(items);
+  renderAutoEquipHediffBonuses();
+}
+
+function renderAutoEquipHediffBonuses() {
+  const el = document.getElementById("autoEquipHediffList");
+  if (!el) return;
+  const items = readAutoEquipHediffBonuses();
+  el.innerHTML = "";
+
+  items.forEach((it) => {
+    const card = document.createElement("div");
+    card.className = "miniCard";
+    card.innerHTML = `
+      <div class="miniCard__main">
+        <div><strong>${escapeXml(it.hediff)}</strong></div>
+        <div><span class="muted">sev:</span> <code>${escapeXml(`${it.minSeverity}..${it.maxSeverity}`)}</code></div>
+        <div><span class="muted">score:</span> <code>${escapeXml(String(it.scoreOffset))}</code> <span class="muted">mult:</span> <code>${escapeXml(String(it.severityMultiplier))}</code></div>
+      </div>
+      <div class="miniCard__actions"><button type="button">Remove</button></div>
+    `;
+    card.querySelector("button").addEventListener("click", () => {
+      writeAutoEquipHediffBonuses(items.filter((x) => x !== it));
+      saveState();
+      renderExportPanel();
+    });
+    el.appendChild(card);
+  });
+}
+
 function readAbilityEditors() {
   const editors = qsa("#abilityEditors .card");
   return editors.map((card) => {
@@ -1263,6 +1576,73 @@ function setDefaults() {
     if (document.getElementById("statBuffList")) writeStatBuffs([]);
   }
 
+  if (document.getElementById("enableStealth")) {
+    byId("enableStealth").value = "no";
+    byId("stealthHediff").value = "";
+    byId("stealthToggleGizmo").value = "yes";
+    byId("stealthDefaultOn").value = "no";
+    byId("stealthBreakOnAttack").value = "false";
+    byId("stealthPreventTargeting").value = "true";
+    byId("stealthGizmoIconPath").value = "";
+    byId("stealthGizmoLabelKey").value = "";
+    byId("stealthGizmoDescKey").value = "";
+    byId("stealthShowEnergyGizmo").value = "false";
+    byId("stealthEnergyLabel").value = "Stealth";
+    byId("stealthEnergyColor").value = "(0.2, 0.6, 0.8, 1)";
+    byId("stealthEnergyMax").value = "1";
+    byId("stealthEnergyStartPercent").value = "1";
+    byId("stealthEnergyDrainPerSecond").value = "0";
+    byId("stealthEnergyRegenPerDay").value = "1";
+    writeStealthSeeThroughPawnKinds([]);
+    writeStealthSeeThroughHediffs([]);
+  }
+
+  if (document.getElementById("corruptionHediff")) {
+    byId("corruptionHediff").value = "";
+    byId("corruptionInitialSeverity").value = "0.01";
+    byId("corruptionGainPerDay").value = "0.05";
+    byId("corruptionTickIntervalSeconds").value = "1";
+    byId("corruptionStealthMultiplier").value = "1";
+    byId("attentionMultiplier").value = "1";
+    writeCorruptionMentalStates([]);
+  }
+
+  if (document.getElementById("ambientInfluenceEnabled")) {
+    byId("ambientInfluenceEnabled").value = "no";
+    byId("ambientInfluenceHediff").value = "";
+    byId("ambientInfluenceOnlyWhenUnworn").value = "true";
+    byId("ambientInfluenceOnlyWhenBuried").value = "false";
+    byId("ambientInfluenceSkipWearers").value = "true";
+    byId("ambientInfluenceAffectsColonistsOnly").value = "true";
+    byId("ambientInfluenceAffectsHumanlikeOnly").value = "true";
+    byId("ambientInfluenceRadius").value = "0";
+    byId("ambientInfluenceIntervalSeconds").value = "4";
+    byId("ambientInfluenceInitialSeverity").value = "0.02";
+    byId("ambientInfluenceSeverityPerTick").value = "0.002";
+    byId("ambientInfluenceBreakThreshold").value = "0.8";
+    byId("ambientInfluenceBreakChance").value = "0.05";
+    byId("ambientInfluenceMentalState").value = "";
+  }
+
+  if (document.getElementById("autoEquipEnabled")) {
+    byId("autoEquipEnabled").value = "no";
+    byId("autoEquipChance").value = "1";
+    byId("autoEquipScoreBonus").value = "0";
+    byId("autoEquipAllowDrafted").checked = false;
+    writeAutoEquipTraitBonuses([]);
+    writeAutoEquipHediffBonuses([]);
+  }
+
+  if (document.getElementById("refuseRemoval")) {
+    byId("refuseRemoval").value = "no";
+    byId("refuseRemovalHediff").value = "";
+    byId("refuseRemovalMinSeverity").value = "0.5";
+    byId("refuseRemovalMessageKey").value = "Lantern_RefuseRemoval";
+    byId("forceDropOnWearerDeath").checked = false;
+    byId("forceDropOnCorpseDestroy").checked = false;
+    byId("forceDropOnGraveEject").checked = false;
+  }
+
   byId("maxCharge").value = "1";
   byId("passiveRegenPerDay").value = "0";
   byId("passiveDrainPerDay").value = "0";
@@ -1306,6 +1686,46 @@ function setDefaults() {
     byId("sel_requireViolenceCapable").checked = true;
     writeSelectionConditions([]);
   }
+
+  if (document.getElementById("enableDiscoveryEvent")) {
+    byId("enableDiscoveryEvent").value = "no";
+    byId("discoveryIncidentDefName").value = "MyHeroGear_Discovery";
+    byId("discoveryIncidentCategory").value = "Misc";
+    byId("discoveryIncidentBaseChance").value = "0.1";
+    byId("discoverySendLetter").value = "yes";
+    byId("discoveryLetterLabel").value = "";
+    byId("discoveryLetterText").value = "";
+    byId("discoveryTargetType").value = "WorldSite";
+
+    byId("discoverySiteLabel").value = "";
+    byId("discoverySiteDescription").value = "";
+    byId("discoverySiteTimeoutDays").value = "15";
+    byId("discoveryMinDistanceTiles").value = "6";
+    byId("discoveryMaxDistanceTiles").value = "40";
+    byId("discoveryMapDropRadius").value = "10";
+    byId("discoveryMapDropPreferColony").checked = true;
+
+    byId("discoveryGearPlacement").value = "PawnWorn";
+    byId("discoveryGearReceiver").value = "PreferAlive";
+    byId("discoveryGearCount").value = "1";
+
+    byId("discoveryPawnKind").value = "";
+    byId("discoveryPawnFaction").value = "";
+    byId("discoveryAliveMin").value = "0";
+    byId("discoveryAliveMax").value = "0";
+    byId("discoveryDeadMin").value = "1";
+    byId("discoveryDeadMax").value = "1";
+    byId("discoveryAliveDowned").value = "true";
+    byId("discoveryPawnScatterRadius").value = "8";
+    byId("discoverySpawnPawnsInDropPods").value = "true";
+    byId("discoveryDropPodOpenDelaySeconds").value = "2";
+
+    byId("discoverySpawnCrashDebris").value = "true";
+    byId("discoveryCrashChunkDef").value = "ShipChunk";
+    byId("discoveryCrashDebrisDef").value = "ChunkSlagSteel";
+    byId("discoveryCrashDebrisCount").value = "6";
+    byId("discoveryCrashDebrisRadius").value = "6";
+  }
 }
 
 function saveState() {
@@ -1333,6 +1753,16 @@ function loadState() {
 
     byId("enableSelection").value = s.enableSelection ? "yes" : "no";
     byId("excludeIfHasAnyLanternRing").value = s.excludeIfHasAnyLanternRing ? "true" : "false";
+
+    if (document.getElementById("enableDiscoveryEvent")) {
+      byId("enableDiscoveryEvent").value = s.enableDiscoveryEvent ? "yes" : "no";
+      byId("discoverySendLetter").value = s.discoverySendLetter === false ? "no" : "yes";
+      byId("discoveryAliveDowned").value = s.discoveryAliveDowned === false ? "false" : "true";
+      byId("discoverySpawnPawnsInDropPods").value = s.discoverySpawnPawnsInDropPods === false ? "false" : "true";
+      byId("discoverySpawnCrashDebris").value = s.discoverySpawnCrashDebris === false ? "false" : "true";
+      byId("discoveryTargetType").value = s.discoveryTargetType || "WorldSite";
+      byId("discoveryMapDropPreferColony").checked = s.discoveryMapDropPreferColony ?? true;
+    }
 
     if (document.getElementById("sel_allowColonists")) {
       byId("sel_allowColonists").checked = s.sel_allowColonists ?? true;
@@ -1381,6 +1811,73 @@ function loadState() {
       writeExistingCostumeList(s.costume_existingApparel ?? []);
       writeGeneratedCostumeList(s.costume_generatedApparel ?? []);
       if (document.getElementById("statBuffList")) writeStatBuffs(s.statBuffs ?? []);
+    }
+
+    if (document.getElementById("enableStealth")) {
+      byId("enableStealth").value = s.enableStealth ? "yes" : "no";
+      byId("stealthHediff").value = s.stealthHediff ?? "";
+      byId("stealthToggleGizmo").value = s.stealthToggleGizmo === false ? "no" : "yes";
+      byId("stealthDefaultOn").value = s.stealthDefaultOn ? "yes" : "no";
+      byId("stealthBreakOnAttack").value = s.stealthBreakOnAttack ? "true" : "false";
+      byId("stealthPreventTargeting").value = s.stealthPreventTargeting === false ? "false" : "true";
+      byId("stealthGizmoIconPath").value = s.stealthGizmoIconPath ?? "";
+      byId("stealthGizmoLabelKey").value = s.stealthGizmoLabelKey ?? "";
+      byId("stealthGizmoDescKey").value = s.stealthGizmoDescKey ?? "";
+      byId("stealthShowEnergyGizmo").value = s.stealthShowEnergyGizmo ? "true" : "false";
+      byId("stealthEnergyLabel").value = s.stealthEnergyLabel ?? "Stealth";
+      byId("stealthEnergyColor").value = s.stealthEnergyColor ?? "(0.2, 0.6, 0.8, 1)";
+      byId("stealthEnergyMax").value = String(s.stealthEnergyMax ?? 1);
+      byId("stealthEnergyStartPercent").value = String(s.stealthEnergyStartPercent ?? 1);
+      byId("stealthEnergyDrainPerSecond").value = String(s.stealthEnergyDrainPerSecond ?? 0);
+      byId("stealthEnergyRegenPerDay").value = String(s.stealthEnergyRegenPerDay ?? 1);
+      writeStealthSeeThroughPawnKinds(s.stealthSeeThroughPawnKinds ?? []);
+      writeStealthSeeThroughHediffs(s.stealthSeeThroughHediffs ?? []);
+    }
+
+    if (document.getElementById("corruptionHediff")) {
+      byId("corruptionHediff").value = s.corruptionHediff ?? "";
+      byId("corruptionInitialSeverity").value = String(s.corruptionInitialSeverity ?? 0.01);
+      byId("corruptionGainPerDay").value = String(s.corruptionGainPerDay ?? 0.05);
+      byId("corruptionTickIntervalSeconds").value = String(s.corruptionTickIntervalSeconds ?? 1);
+      byId("corruptionStealthMultiplier").value = String(s.corruptionStealthMultiplier ?? 1);
+      byId("attentionMultiplier").value = String(s.attentionMultiplier ?? 1);
+      writeCorruptionMentalStates(s.corruptionMentalStates ?? []);
+    }
+
+    if (document.getElementById("ambientInfluenceEnabled")) {
+      byId("ambientInfluenceEnabled").value = s.ambientInfluenceEnabled ? "yes" : "no";
+      byId("ambientInfluenceHediff").value = s.ambientInfluenceHediff ?? "";
+      byId("ambientInfluenceOnlyWhenUnworn").value = s.ambientInfluenceOnlyWhenUnworn === false ? "false" : "true";
+      byId("ambientInfluenceOnlyWhenBuried").value = s.ambientInfluenceOnlyWhenBuried ? "true" : "false";
+      byId("ambientInfluenceSkipWearers").value = s.ambientInfluenceSkipWearers === false ? "false" : "true";
+      byId("ambientInfluenceAffectsColonistsOnly").value = s.ambientInfluenceAffectsColonistsOnly === false ? "false" : "true";
+      byId("ambientInfluenceAffectsHumanlikeOnly").value = s.ambientInfluenceAffectsHumanlikeOnly === false ? "false" : "true";
+      byId("ambientInfluenceRadius").value = String(s.ambientInfluenceRadius ?? 0);
+      byId("ambientInfluenceIntervalSeconds").value = String(s.ambientInfluenceIntervalSeconds ?? 4);
+      byId("ambientInfluenceInitialSeverity").value = String(s.ambientInfluenceInitialSeverity ?? 0.02);
+      byId("ambientInfluenceSeverityPerTick").value = String(s.ambientInfluenceSeverityPerTick ?? 0.002);
+      byId("ambientInfluenceBreakThreshold").value = String(s.ambientInfluenceBreakThreshold ?? 0.8);
+      byId("ambientInfluenceBreakChance").value = String(s.ambientInfluenceBreakChance ?? 0.05);
+      byId("ambientInfluenceMentalState").value = s.ambientInfluenceMentalState ?? "";
+    }
+
+    if (document.getElementById("autoEquipEnabled")) {
+      byId("autoEquipEnabled").value = s.autoEquipEnabled ? "yes" : "no";
+      byId("autoEquipChance").value = String(s.autoEquipChance ?? 1);
+      byId("autoEquipScoreBonus").value = String(s.autoEquipScoreBonus ?? 0);
+      byId("autoEquipAllowDrafted").checked = s.autoEquipAllowDrafted ?? false;
+      writeAutoEquipTraitBonuses(s.autoEquipTraitBonuses ?? []);
+      writeAutoEquipHediffBonuses(s.autoEquipHediffBonuses ?? []);
+    }
+
+    if (document.getElementById("refuseRemoval")) {
+      byId("refuseRemoval").value = s.refuseRemoval ? "yes" : "no";
+      byId("refuseRemovalHediff").value = s.refuseRemovalHediff ?? "";
+      byId("refuseRemovalMinSeverity").value = String(s.refuseRemovalMinSeverity ?? 0.5);
+      byId("refuseRemovalMessageKey").value = s.refuseRemovalMessageKey ?? "Lantern_RefuseRemoval";
+      byId("forceDropOnWearerDeath").checked = s.forceDropOnWearerDeath ?? false;
+      byId("forceDropOnCorpseDestroy").checked = s.forceDropOnCorpseDestroy ?? false;
+      byId("forceDropOnGraveEject").checked = s.forceDropOnGraveEject ?? false;
     }
 
     const picks = new Set((s.abilities ?? []).map((a) => a.key));
@@ -1523,12 +2020,87 @@ function validate(state) {
     if (state.selectionDefName && !isValidDefName(state.selectionDefName)) issues.push("Selection defName is not valid.");
   }
 
+  if (state.enableDiscoveryEvent) {
+    if (!state.discoveryIncidentDefName) issues.push("Discovery event: incident defName is required.");
+    if (state.discoveryIncidentDefName && !isValidDefName(state.discoveryIncidentDefName))
+      issues.push("Discovery event: incident defName is not valid.");
+    if (!state.discoveryIncidentCategory) issues.push("Discovery event: incident category is required.");
+    if (state.discoveryIncidentCategory && !isValidDefName(state.discoveryIncidentCategory))
+      issues.push("Discovery event: incident category is not a valid defName.");
+    if (!Number.isFinite(state.discoveryIncidentBaseChance) || state.discoveryIncidentBaseChance < 0)
+      issues.push("Discovery event: base chance must be >= 0.");
+    if (!Number.isFinite(state.discoverySiteTimeoutDays) || state.discoverySiteTimeoutDays < 0)
+      issues.push("Discovery event: timeout days must be >= 0.");
+    if (!Number.isFinite(state.discoveryMinDistanceTiles) || state.discoveryMinDistanceTiles < 0)
+      issues.push("Discovery event: min distance must be >= 0.");
+    if (!Number.isFinite(state.discoveryMaxDistanceTiles) || state.discoveryMaxDistanceTiles < 0)
+      issues.push("Discovery event: max distance must be >= 0.");
+    if (!Number.isFinite(state.discoveryMapDropRadius) || state.discoveryMapDropRadius < 0)
+      issues.push("Discovery event: map drop radius must be >= 0.");
+    if (state.discoveryMinDistanceTiles > state.discoveryMaxDistanceTiles)
+      issues.push("Discovery event: min distance must be <= max distance.");
+    if (!Number.isFinite(state.discoveryGearCount) || state.discoveryGearCount < 1)
+      issues.push("Discovery event: gear count must be >= 1.");
+
+    const aliveMax = Math.max(0, Number(state.discoveryAliveMax || 0));
+    const deadMax = Math.max(0, Number(state.discoveryDeadMax || 0));
+    if (Number(state.discoveryAliveMin || 0) > Number(state.discoveryAliveMax || 0))
+      issues.push("Discovery event: alive min must be <= alive max.");
+    if (Number(state.discoveryDeadMin || 0) > Number(state.discoveryDeadMax || 0))
+      issues.push("Discovery event: dead min must be <= dead max.");
+    if ((aliveMax > 0 || deadMax > 0) && !state.discoveryPawnKind)
+      issues.push("Discovery event: pawnKind is required when spawning pawns.");
+    if (state.discoveryPawnKind && !isValidDefName(state.discoveryPawnKind))
+      issues.push("Discovery event: pawnKind is not a valid defName.");
+    if (state.discoveryPawnFaction && !isValidDefName(state.discoveryPawnFaction))
+      issues.push("Discovery event: pawnFaction is not a valid defName.");
+    if ((state.discoveryGearPlacement === "PawnWorn" || state.discoveryGearPlacement === "PawnInventory") && aliveMax + deadMax <= 0)
+      issues.push("Discovery event: pawn gear placement requires alive/dead pawn counts.");
+  }
+
   if (state.associatedHediff && !isValidDefName(state.associatedHediff)) issues.push("Associated hediff must be a valid defName.");
 
   if (state.allowBatteryManifest) {
     if (!state.batteryDef) issues.push("Battery manifest enabled: battery ThingDef is required.");
     if (!Number.isFinite(state.batteryManifestCost) || state.batteryManifestCost < 0 || state.batteryManifestCost > 1)
       issues.push("Battery manifest cost must be 0..1.");
+  }
+
+  if (state.enableStealth) {
+    if (!state.stealthHediff || !isValidDefName(state.stealthHediff)) issues.push("Stealth enabled: Stealth HediffDef is required.");
+    if (!Number.isFinite(state.stealthEnergyMax) || state.stealthEnergyMax <= 0) issues.push("Stealth energy max must be > 0.");
+    if (!Number.isFinite(state.stealthEnergyStartPercent) || state.stealthEnergyStartPercent < 0 || state.stealthEnergyStartPercent > 1)
+      issues.push("Stealth start energy must be 0..1.");
+  }
+
+  if ((state.corruptionGainPerDay > 0 || (state.corruptionMentalStates || []).length) && !state.corruptionHediff) {
+    issues.push("Corruption settings require a Corruption HediffDef.");
+  }
+
+  if (state.ambientInfluenceEnabled) {
+    if (!state.ambientInfluenceHediff || !isValidDefName(state.ambientInfluenceHediff)) {
+      issues.push("Ambient influence enabled: HediffDef is required.");
+    }
+  }
+
+  if (state.refuseRemoval && state.refuseRemovalHediff && !isValidDefName(state.refuseRemovalHediff)) {
+    issues.push("Refuse removal: HediffDef must be a valid defName.");
+  }
+
+  for (const defName of state.stealthSeeThroughPawnKinds || []) {
+    if (!isValidDefName(defName)) issues.push(`Stealth see-through PawnKindDef invalid: ${defName}`);
+  }
+  for (const defName of state.stealthSeeThroughHediffs || []) {
+    if (!isValidDefName(defName)) issues.push(`Stealth see-through HediffDef invalid: ${defName}`);
+  }
+  for (const it of state.corruptionMentalStates || []) {
+    if (!it?.mentalState || !isValidDefName(it.mentalState)) issues.push("Corruption mental state: MentalStateDef is missing/invalid.");
+  }
+  for (const it of state.autoEquipTraitBonuses || []) {
+    if (!it?.trait || !isValidDefName(it.trait)) issues.push("Auto-equip trait bonus: TraitDef is missing/invalid.");
+  }
+  for (const it of state.autoEquipHediffBonuses || []) {
+    if (!it?.hediff || !isValidDefName(it.hediff)) issues.push("Auto-equip hediff bonus: HediffDef is missing/invalid.");
   }
 
   for (const sb of state.statBuffs || []) {
@@ -1581,6 +2153,9 @@ function buildTextureChecklist(state) {
     required.push(`Textures/${app.texPath}_south.png`);
     required.push(`Textures/${app.texPath}_east.png`);
   }
+  if (state.enableStealth && state.stealthGizmoIconPath) {
+    required.push(`Textures/${state.stealthGizmoIconPath}.png`);
+  }
   // De-dup
   return Array.from(new Set(required)).sort();
 }
@@ -1605,10 +2180,38 @@ function referencedDefsForDependencies(state) {
 
   if (state.allowBatteryManifest && state.batteryDef) refs.push({ type: "ThingDef", defName: state.batteryDef });
   if (state.associatedHediff) refs.push({ type: "HediffDef", defName: state.associatedHediff });
+  if (state.enableStealth && state.stealthHediff) refs.push({ type: "HediffDef", defName: state.stealthHediff });
+  if (state.corruptionHediff) refs.push({ type: "HediffDef", defName: state.corruptionHediff });
+  if (state.ambientInfluenceHediff) refs.push({ type: "HediffDef", defName: state.ambientInfluenceHediff });
+  if (state.refuseRemovalHediff) refs.push({ type: "HediffDef", defName: state.refuseRemovalHediff });
+  if (state.ambientInfluenceMentalState) refs.push({ type: "MentalStateDef", defName: state.ambientInfluenceMentalState });
+
+  if (state.enableDiscoveryEvent) {
+    if (state.discoveryPawnKind) refs.push({ type: "PawnKindDef", defName: state.discoveryPawnKind });
+    if (state.discoveryPawnFaction) refs.push({ type: "FactionDef", defName: state.discoveryPawnFaction });
+    if (state.discoveryCrashChunkDef) refs.push({ type: "ThingDef", defName: state.discoveryCrashChunkDef });
+    if (state.discoveryCrashDebrisDef) refs.push({ type: "ThingDef", defName: state.discoveryCrashDebrisDef });
+  }
 
   for (const a of state.abilities || []) {
     if (a?.key === "Summon" && a.pawnKind) refs.push({ type: "PawnKindDef", defName: a.pawnKind });
     if (a?.key === "Construct" && a.thingDef) refs.push({ type: "ThingDef", defName: a.thingDef });
+  }
+
+  for (const defName of state.stealthSeeThroughPawnKinds || []) {
+    if (defName) refs.push({ type: "PawnKindDef", defName });
+  }
+  for (const defName of state.stealthSeeThroughHediffs || []) {
+    if (defName) refs.push({ type: "HediffDef", defName });
+  }
+  for (const it of state.corruptionMentalStates || []) {
+    if (it?.mentalState) refs.push({ type: "MentalStateDef", defName: it.mentalState });
+  }
+  for (const it of state.autoEquipTraitBonuses || []) {
+    if (it?.trait) refs.push({ type: "TraitDef", defName: it.trait });
+  }
+  for (const it of state.autoEquipHediffBonuses || []) {
+    if (it?.hediff) refs.push({ type: "HediffDef", defName: it.hediff });
   }
 
   for (const defName of state.costume_existingApparel || []) {
@@ -1774,6 +2377,137 @@ function buildDefsXml(state) {
     extLines.push(`      <reactiveEvadeGasAmount>${Math.max(0, Math.floor(toNum(state.reactiveEvadeGasAmount, 60)))}</reactiveEvadeGasAmount>`);
   }
 
+  if (state.enableStealth) {
+    extLines.push(`      <stealthEnabled>true</stealthEnabled>`);
+    if (state.stealthHediff) extLines.push(`      <stealthHediff>${escapeXml(state.stealthHediff)}</stealthHediff>`);
+    if (state.stealthToggleGizmo === false) extLines.push(`      <stealthToggleGizmo>false</stealthToggleGizmo>`);
+    if (state.stealthDefaultOn) extLines.push(`      <stealthDefaultOn>true</stealthDefaultOn>`);
+    if (state.stealthBreakOnAttack) extLines.push(`      <stealthBreakOnAttack>true</stealthBreakOnAttack>`);
+    if (state.stealthPreventTargeting === false) extLines.push(`      <stealthPreventTargeting>false</stealthPreventTargeting>`);
+    if (state.stealthGizmoIconPath) extLines.push(`      <stealthGizmoIconPath>${escapeXml(state.stealthGizmoIconPath)}</stealthGizmoIconPath>`);
+    if (state.stealthGizmoLabelKey) extLines.push(`      <stealthGizmoLabelKey>${escapeXml(state.stealthGizmoLabelKey)}</stealthGizmoLabelKey>`);
+    if (state.stealthGizmoDescKey) extLines.push(`      <stealthGizmoDescKey>${escapeXml(state.stealthGizmoDescKey)}</stealthGizmoDescKey>`);
+    if (state.stealthShowEnergyGizmo) extLines.push(`      <stealthShowEnergyGizmo>true</stealthShowEnergyGizmo>`);
+    if (state.stealthEnergyLabel && state.stealthEnergyLabel !== "Stealth")
+      extLines.push(`      <stealthEnergyLabel>${escapeXml(state.stealthEnergyLabel)}</stealthEnergyLabel>`);
+    if (state.stealthEnergyColor) extLines.push(`      <stealthEnergyColor>${escapeXml(state.stealthEnergyColor)}</stealthEnergyColor>`);
+    if (state.stealthEnergyMax !== 1) extLines.push(`      <stealthEnergyMax>${state.stealthEnergyMax}</stealthEnergyMax>`);
+    if (state.stealthEnergyStartPercent !== 1)
+      extLines.push(`      <stealthEnergyStartPercent>${state.stealthEnergyStartPercent}</stealthEnergyStartPercent>`);
+    if (state.stealthEnergyDrainPerSecond !== 0)
+      extLines.push(`      <stealthEnergyDrainPerSecond>${state.stealthEnergyDrainPerSecond}</stealthEnergyDrainPerSecond>`);
+    if (state.stealthEnergyRegenPerDay !== 1)
+      extLines.push(`      <stealthEnergyRegenPerDay>${state.stealthEnergyRegenPerDay}</stealthEnergyRegenPerDay>`);
+
+    if ((state.stealthSeeThroughPawnKinds || []).length) {
+      extLines.push(`      <stealthSeeThroughPawnKinds>`);
+      for (const defName of state.stealthSeeThroughPawnKinds) extLines.push(`        <li>${escapeXml(defName)}</li>`);
+      extLines.push(`      </stealthSeeThroughPawnKinds>`);
+    }
+    if ((state.stealthSeeThroughHediffs || []).length) {
+      extLines.push(`      <stealthSeeThroughHediffs>`);
+      for (const defName of state.stealthSeeThroughHediffs) extLines.push(`        <li>${escapeXml(defName)}</li>`);
+      extLines.push(`      </stealthSeeThroughHediffs>`);
+    }
+  }
+
+  if (state.corruptionHediff) extLines.push(`      <corruptionHediff>${escapeXml(state.corruptionHediff)}</corruptionHediff>`);
+  if (state.corruptionInitialSeverity !== 0.01)
+    extLines.push(`      <corruptionInitialSeverity>${state.corruptionInitialSeverity}</corruptionInitialSeverity>`);
+  if (state.corruptionGainPerDay !== 0.05) extLines.push(`      <corruptionGainPerDay>${state.corruptionGainPerDay}</corruptionGainPerDay>`);
+  if (state.corruptionTickIntervalSeconds !== 1)
+    extLines.push(`      <corruptionTickIntervalSeconds>${Math.max(1, Math.floor(state.corruptionTickIntervalSeconds))}</corruptionTickIntervalSeconds>`);
+  if (state.corruptionStealthMultiplier !== 1)
+    extLines.push(`      <corruptionStealthMultiplier>${state.corruptionStealthMultiplier}</corruptionStealthMultiplier>`);
+  if (state.attentionMultiplier !== 1) extLines.push(`      <attentionMultiplier>${state.attentionMultiplier}</attentionMultiplier>`);
+
+  if ((state.corruptionMentalStates || []).length) {
+    extLines.push(`      <corruptionMentalStates>`);
+    for (const it of state.corruptionMentalStates) {
+      extLines.push(`        <li>`);
+      extLines.push(`          <mentalState>${escapeXml(it.mentalState)}</mentalState>`);
+      if (it.minSeverity != null) extLines.push(`          <minSeverity>${it.minSeverity}</minSeverity>`);
+      if (it.maxSeverity != null) extLines.push(`          <maxSeverity>${it.maxSeverity}</maxSeverity>`);
+      if (it.chancePerCheck != null) extLines.push(`          <chancePerCheck>${it.chancePerCheck}</chancePerCheck>`);
+      if (it.checkIntervalTicks != null) extLines.push(`          <checkIntervalTicks>${Math.max(1, Math.floor(it.checkIntervalTicks))}</checkIntervalTicks>`);
+      if (it.requireNotAlreadyInState === false)
+        extLines.push(`          <requireNotAlreadyInState>false</requireNotAlreadyInState>`);
+      extLines.push(`        </li>`);
+    }
+    extLines.push(`      </corruptionMentalStates>`);
+  }
+
+  if (state.ambientInfluenceEnabled) {
+    extLines.push(`      <ambientInfluenceEnabled>true</ambientInfluenceEnabled>`);
+    if (state.ambientInfluenceHediff) extLines.push(`      <ambientInfluenceHediff>${escapeXml(state.ambientInfluenceHediff)}</ambientInfluenceHediff>`);
+    if (state.ambientInfluenceOnlyWhenUnworn === false)
+      extLines.push(`      <ambientInfluenceOnlyWhenUnworn>false</ambientInfluenceOnlyWhenUnworn>`);
+    if (state.ambientInfluenceOnlyWhenBuried) extLines.push(`      <ambientInfluenceOnlyWhenBuried>true</ambientInfluenceOnlyWhenBuried>`);
+    if (state.ambientInfluenceSkipWearers === false) extLines.push(`      <ambientInfluenceSkipWearers>false</ambientInfluenceSkipWearers>`);
+    if (state.ambientInfluenceAffectsColonistsOnly === false)
+      extLines.push(`      <ambientInfluenceAffectsColonistsOnly>false</ambientInfluenceAffectsColonistsOnly>`);
+    if (state.ambientInfluenceAffectsHumanlikeOnly === false)
+      extLines.push(`      <ambientInfluenceAffectsHumanlikeOnly>false</ambientInfluenceAffectsHumanlikeOnly>`);
+    if (state.ambientInfluenceRadius !== 0) extLines.push(`      <ambientInfluenceRadius>${state.ambientInfluenceRadius}</ambientInfluenceRadius>`);
+    if (state.ambientInfluenceIntervalSeconds !== 4)
+      extLines.push(`      <ambientInfluenceIntervalSeconds>${state.ambientInfluenceIntervalSeconds}</ambientInfluenceIntervalSeconds>`);
+    if (state.ambientInfluenceInitialSeverity !== 0.02)
+      extLines.push(`      <ambientInfluenceInitialSeverity>${state.ambientInfluenceInitialSeverity}</ambientInfluenceInitialSeverity>`);
+    if (state.ambientInfluenceSeverityPerTick !== 0.002)
+      extLines.push(`      <ambientInfluenceSeverityPerTick>${state.ambientInfluenceSeverityPerTick}</ambientInfluenceSeverityPerTick>`);
+    if (state.ambientInfluenceBreakThreshold !== 0.8)
+      extLines.push(`      <ambientInfluenceBreakThreshold>${state.ambientInfluenceBreakThreshold}</ambientInfluenceBreakThreshold>`);
+    if (state.ambientInfluenceBreakChance !== 0.05)
+      extLines.push(`      <ambientInfluenceBreakChance>${state.ambientInfluenceBreakChance}</ambientInfluenceBreakChance>`);
+    if (state.ambientInfluenceMentalState)
+      extLines.push(`      <ambientInfluenceMentalState>${escapeXml(state.ambientInfluenceMentalState)}</ambientInfluenceMentalState>`);
+  }
+
+  if (state.autoEquipEnabled) {
+    extLines.push(`      <autoEquipEnabled>true</autoEquipEnabled>`);
+    if (state.autoEquipChance !== 1) extLines.push(`      <autoEquipChance>${state.autoEquipChance}</autoEquipChance>`);
+    if (state.autoEquipScoreBonus !== 0) extLines.push(`      <autoEquipScoreBonus>${state.autoEquipScoreBonus}</autoEquipScoreBonus>`);
+    if (state.autoEquipAllowDrafted) extLines.push(`      <autoEquipAllowDrafted>true</autoEquipAllowDrafted>`);
+
+    if ((state.autoEquipTraitBonuses || []).length) {
+      extLines.push(`      <autoEquipTraitBonuses>`);
+      for (const it of state.autoEquipTraitBonuses) {
+        extLines.push(`        <li>`);
+        extLines.push(`          <trait>${escapeXml(it.trait)}</trait>`);
+        if ((it.degree || 0) !== 0) extLines.push(`          <degree>${it.degree}</degree>`);
+        if (it.scoreOffset != null) extLines.push(`          <scoreOffset>${it.scoreOffset}</scoreOffset>`);
+        extLines.push(`        </li>`);
+      }
+      extLines.push(`      </autoEquipTraitBonuses>`);
+    }
+
+    if ((state.autoEquipHediffBonuses || []).length) {
+      extLines.push(`      <autoEquipHediffBonuses>`);
+      for (const it of state.autoEquipHediffBonuses) {
+        extLines.push(`        <li>`);
+        extLines.push(`          <hediff>${escapeXml(it.hediff)}</hediff>`);
+        if (it.minSeverity != null) extLines.push(`          <minSeverity>${it.minSeverity}</minSeverity>`);
+        if (it.maxSeverity != null) extLines.push(`          <maxSeverity>${it.maxSeverity}</maxSeverity>`);
+        if (it.scoreOffset != null) extLines.push(`          <scoreOffset>${it.scoreOffset}</scoreOffset>`);
+        if (it.severityMultiplier != null) extLines.push(`          <severityMultiplier>${it.severityMultiplier}</severityMultiplier>`);
+        extLines.push(`        </li>`);
+      }
+      extLines.push(`      </autoEquipHediffBonuses>`);
+    }
+  }
+
+  if (state.refuseRemoval) {
+    extLines.push(`      <refuseRemoval>true</refuseRemoval>`);
+    if (state.refuseRemovalHediff) extLines.push(`      <refuseRemovalHediff>${escapeXml(state.refuseRemovalHediff)}</refuseRemovalHediff>`);
+    if (state.refuseRemovalMinSeverity !== 0.5)
+      extLines.push(`      <refuseRemovalMinSeverity>${state.refuseRemovalMinSeverity}</refuseRemovalMinSeverity>`);
+    if (state.refuseRemovalMessageKey && state.refuseRemovalMessageKey !== "Lantern_RefuseRemoval")
+      extLines.push(`      <refuseRemovalMessageKey>${escapeXml(state.refuseRemovalMessageKey)}</refuseRemovalMessageKey>`);
+  }
+  if (state.forceDropOnWearerDeath) extLines.push(`      <forceDropOnWearerDeath>true</forceDropOnWearerDeath>`);
+  if (state.forceDropOnCorpseDestroy) extLines.push(`      <forceDropOnCorpseDestroy>true</forceDropOnCorpseDestroy>`);
+  if (state.forceDropOnGraveEject) extLines.push(`      <forceDropOnGraveEject>true</forceDropOnGraveEject>`);
+
   if ((state.statBuffs || []).length) {
     const statHediff = derivedDefName(state.ringDefName, "Hediff_GearBuffs");
     extraDefs.push(buildStatBuffHediffDefXml(statHediff, state.ringLabel, state.statBuffs));
@@ -1872,10 +2606,11 @@ function buildDefsXml(state) {
     .join("\n");
 
   const selectionXml = state.enableSelection ? buildSelectionDefXml(state) : "";
+  const discoveryXml = state.enableDiscoveryEvent ? buildDiscoveryIncidentDefXml(state) : "";
 
   const costumeDefsXml = buildGeneratedCostumeDefsXml(state);
 
-  return `<?xml version="1.0" encoding="utf-8"?>\n<Defs>\n\n${ringXml}\n${abilitiesXml}\n${extraDefs.join("\n")}\n${costumeDefsXml}\n${selectionXml}</Defs>\n`;
+  return `<?xml version="1.0" encoding="utf-8"?>\n<Defs>\n\n${ringXml}\n${abilitiesXml}\n${extraDefs.join("\n")}\n${costumeDefsXml}\n${selectionXml}\n${discoveryXml}</Defs>\n`;
 }
 
 function collectTransformationApparel(state) {
@@ -2160,6 +2895,73 @@ function buildSelectionDefXml(state) {
     `${filterLines.map((l) => `    ${l}`).join("\n")}\n` +
     `${condXml}` +
     `  </DrAke.LanternsFramework.RingSelectionDef>\n\n`
+  );
+}
+
+function buildDiscoveryIncidentDefXml(state) {
+  const defName = state.discoveryIncidentDefName || derivedDefName(state.ringDefName, "Discovery");
+  const category = (state.discoveryIncidentCategory || "Misc").trim() || "Misc";
+  const baseChance = Number.isFinite(state.discoveryIncidentBaseChance) ? state.discoveryIncidentBaseChance : 0.1;
+  const label = state.discoverySiteLabel || state.ringLabel || "discovery site";
+  const targetType = state.discoveryTargetType || "WorldSite";
+  const targetTag = targetType === "ActiveMap" ? "Map" : "World";
+
+  const extLines = [];
+  extLines.push(`        <gearDef>${escapeXml(state.ringDefName)}</gearDef>`);
+  if (state.discoveryGearCount !== 1) extLines.push(`        <gearCount>${Math.max(1, Math.floor(state.discoveryGearCount))}</gearCount>`);
+
+  if (targetType !== "WorldSite") extLines.push(`        <targetType>${escapeXml(targetType)}</targetType>`);
+  if (state.discoveryMapDropRadius !== 10) extLines.push(`        <mapDropRadius>${state.discoveryMapDropRadius}</mapDropRadius>`);
+  if (state.discoveryMapDropPreferColony === false) extLines.push(`        <mapDropPreferColony>false</mapDropPreferColony>`);
+
+  if (state.discoverySiteLabel) extLines.push(`        <siteLabel>${escapeXml(state.discoverySiteLabel)}</siteLabel>`);
+  if (state.discoverySiteDescription) extLines.push(`        <siteDescription>${escapeXml(state.discoverySiteDescription)}</siteDescription>`);
+  if (state.discoverySiteTimeoutDays !== 15) extLines.push(`        <siteTimeoutDays>${state.discoverySiteTimeoutDays}</siteTimeoutDays>`);
+  if (state.discoveryMinDistanceTiles !== 6) extLines.push(`        <minDistanceFromPlayerTiles>${Math.max(0, Math.floor(state.discoveryMinDistanceTiles))}</minDistanceFromPlayerTiles>`);
+  if (state.discoveryMaxDistanceTiles !== 40) extLines.push(`        <maxDistanceFromPlayerTiles>${Math.max(0, Math.floor(state.discoveryMaxDistanceTiles))}</maxDistanceFromPlayerTiles>`);
+
+  if (state.discoverySendLetter === false) extLines.push(`        <sendLetter>false</sendLetter>`);
+  if (state.discoveryLetterLabel) extLines.push(`        <letterLabel>${escapeXml(state.discoveryLetterLabel)}</letterLabel>`);
+  if (state.discoveryLetterText) extLines.push(`        <letterText>${escapeXml(state.discoveryLetterText)}</letterText>`);
+
+  if (state.discoverySpawnCrashDebris === false) extLines.push(`        <spawnCrashDebris>false</spawnCrashDebris>`);
+  if (state.discoveryCrashChunkDef) extLines.push(`        <crashChunkDef>${escapeXml(state.discoveryCrashChunkDef)}</crashChunkDef>`);
+  if (state.discoveryCrashDebrisDef) extLines.push(`        <crashDebrisDef>${escapeXml(state.discoveryCrashDebrisDef)}</crashDebrisDef>`);
+  if (state.discoveryCrashDebrisCount !== 6) extLines.push(`        <crashDebrisCount>${Math.max(0, Math.floor(state.discoveryCrashDebrisCount))}</crashDebrisCount>`);
+  if (state.discoveryCrashDebrisRadius !== 6) extLines.push(`        <crashDebrisRadius>${state.discoveryCrashDebrisRadius}</crashDebrisRadius>`);
+
+  if (state.discoveryPawnKind) extLines.push(`        <pawnKind>${escapeXml(state.discoveryPawnKind)}</pawnKind>`);
+  if (state.discoveryPawnFaction) extLines.push(`        <pawnFaction>${escapeXml(state.discoveryPawnFaction)}</pawnFaction>`);
+  if (state.discoveryAliveMin !== 0) extLines.push(`        <alivePawnsMin>${Math.max(0, Math.floor(state.discoveryAliveMin))}</alivePawnsMin>`);
+  if (state.discoveryAliveMax !== 0) extLines.push(`        <alivePawnsMax>${Math.max(0, Math.floor(state.discoveryAliveMax))}</alivePawnsMax>`);
+  if (state.discoveryDeadMin !== 1) extLines.push(`        <deadPawnsMin>${Math.max(0, Math.floor(state.discoveryDeadMin))}</deadPawnsMin>`);
+  if (state.discoveryDeadMax !== 1) extLines.push(`        <deadPawnsMax>${Math.max(0, Math.floor(state.discoveryDeadMax))}</deadPawnsMax>`);
+  if (state.discoveryAliveDowned === false) extLines.push(`        <alivePawnsDowned>false</alivePawnsDowned>`);
+  if (state.discoveryPawnScatterRadius !== 8) extLines.push(`        <pawnScatterRadius>${state.discoveryPawnScatterRadius}</pawnScatterRadius>`);
+  if (state.discoverySpawnPawnsInDropPods === false) extLines.push(`        <spawnPawnsInDropPods>false</spawnPawnsInDropPods>`);
+  if (state.discoveryDropPodOpenDelaySeconds !== 2) extLines.push(`        <dropPodOpenDelaySeconds>${state.discoveryDropPodOpenDelaySeconds}</dropPodOpenDelaySeconds>`);
+
+  if (state.discoveryGearPlacement && state.discoveryGearPlacement !== "PawnWorn")
+    extLines.push(`        <gearPlacement>${escapeXml(state.discoveryGearPlacement)}</gearPlacement>`);
+  if (state.discoveryGearReceiver && state.discoveryGearReceiver !== "PreferAlive")
+    extLines.push(`        <gearReceiver>${escapeXml(state.discoveryGearReceiver)}</gearReceiver>`);
+
+  return (
+    `\n  <IncidentDef>\n` +
+    `    <defName>${escapeXml(defName)}</defName>\n` +
+    `    <label>${escapeXml(label)}</label>\n` +
+    `    <category>${escapeXml(category)}</category>\n` +
+    `    <targetTags>\n` +
+    `      <li>${escapeXml(targetTag)}</li>\n` +
+    `    </targetTags>\n` +
+    `    <baseChance>${baseChance}</baseChance>\n` +
+    `    <workerClass>DrAke.LanternsFramework.IncidentWorker_LanternDiscovery</workerClass>\n` +
+    `    <modExtensions>\n` +
+    `      <li Class="DrAke.LanternsFramework.LanternDiscoveryIncidentExtension">\n` +
+    `${extLines.join("\n")}\n` +
+    `      </li>\n` +
+    `    </modExtensions>\n` +
+    `  </IncidentDef>\n`
   );
 }
 
@@ -2721,6 +3523,89 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   out.reactiveEvadeGasRadius = xmlNum(ext, "reactiveEvadeGasRadius", 2.4);
   out.reactiveEvadeGasAmount = Math.max(0, Math.floor(xmlNum(ext, "reactiveEvadeGasAmount", 60)));
 
+  // Stealth
+  out.enableStealth = xmlBool(ext, "stealthEnabled", false);
+  out.stealthHediff = xmlText(ext, "stealthHediff", "");
+  out.stealthToggleGizmo = xmlBool(ext, "stealthToggleGizmo", true);
+  out.stealthDefaultOn = xmlBool(ext, "stealthDefaultOn", false);
+  out.stealthBreakOnAttack = xmlBool(ext, "stealthBreakOnAttack", false);
+  out.stealthPreventTargeting = xmlBool(ext, "stealthPreventTargeting", true);
+  out.stealthGizmoIconPath = xmlText(ext, "stealthGizmoIconPath", "");
+  out.stealthGizmoLabelKey = xmlText(ext, "stealthGizmoLabelKey", "");
+  out.stealthGizmoDescKey = xmlText(ext, "stealthGizmoDescKey", "");
+  out.stealthShowEnergyGizmo = xmlBool(ext, "stealthShowEnergyGizmo", false);
+  out.stealthEnergyLabel = xmlText(ext, "stealthEnergyLabel", "Stealth");
+  out.stealthEnergyColor = xmlText(ext, "stealthEnergyColor", "(0.2, 0.6, 0.8, 1)");
+  out.stealthEnergyMax = xmlNum(ext, "stealthEnergyMax", 1);
+  out.stealthEnergyStartPercent = xmlNum(ext, "stealthEnergyStartPercent", 1);
+  out.stealthEnergyDrainPerSecond = xmlNum(ext, "stealthEnergyDrainPerSecond", 0);
+  out.stealthEnergyRegenPerDay = xmlNum(ext, "stealthEnergyRegenPerDay", 1);
+  out.stealthSeeThroughPawnKinds = Array.from(ext.querySelectorAll("stealthSeeThroughPawnKinds > li"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+  out.stealthSeeThroughHediffs = Array.from(ext.querySelectorAll("stealthSeeThroughHediffs > li"))
+    .map((x) => x.textContent?.trim())
+    .filter(Boolean);
+
+  // Corruption / influence
+  out.corruptionHediff = xmlText(ext, "corruptionHediff", "");
+  out.corruptionInitialSeverity = xmlNum(ext, "corruptionInitialSeverity", 0.01);
+  out.corruptionGainPerDay = xmlNum(ext, "corruptionGainPerDay", 0.05);
+  out.corruptionTickIntervalSeconds = xmlNum(ext, "corruptionTickIntervalSeconds", 1);
+  out.corruptionStealthMultiplier = xmlNum(ext, "corruptionStealthMultiplier", 1);
+  out.attentionMultiplier = xmlNum(ext, "attentionMultiplier", 1);
+  out.corruptionMentalStates = Array.from(ext.querySelectorAll("corruptionMentalStates > li")).map((li) => ({
+    mentalState: xmlText(li, "mentalState", ""),
+    minSeverity: xmlNum(li, "minSeverity", 0.5),
+    maxSeverity: xmlNum(li, "maxSeverity", 1),
+    chancePerCheck: xmlNum(li, "chancePerCheck", 0.05),
+    checkIntervalTicks: Math.max(1, Math.floor(xmlNum(li, "checkIntervalTicks", 1000))),
+    requireNotAlreadyInState: xmlBool(li, "requireNotAlreadyInState", true),
+  })).filter((x) => x.mentalState);
+
+  // Ambient influence
+  out.ambientInfluenceEnabled = xmlBool(ext, "ambientInfluenceEnabled", false);
+  out.ambientInfluenceHediff = xmlText(ext, "ambientInfluenceHediff", "");
+  out.ambientInfluenceOnlyWhenUnworn = xmlBool(ext, "ambientInfluenceOnlyWhenUnworn", true);
+  out.ambientInfluenceOnlyWhenBuried = xmlBool(ext, "ambientInfluenceOnlyWhenBuried", false);
+  out.ambientInfluenceSkipWearers = xmlBool(ext, "ambientInfluenceSkipWearers", true);
+  out.ambientInfluenceAffectsColonistsOnly = xmlBool(ext, "ambientInfluenceAffectsColonistsOnly", true);
+  out.ambientInfluenceAffectsHumanlikeOnly = xmlBool(ext, "ambientInfluenceAffectsHumanlikeOnly", true);
+  out.ambientInfluenceRadius = xmlNum(ext, "ambientInfluenceRadius", 0);
+  out.ambientInfluenceIntervalSeconds = xmlNum(ext, "ambientInfluenceIntervalSeconds", 4);
+  out.ambientInfluenceInitialSeverity = xmlNum(ext, "ambientInfluenceInitialSeverity", 0.02);
+  out.ambientInfluenceSeverityPerTick = xmlNum(ext, "ambientInfluenceSeverityPerTick", 0.002);
+  out.ambientInfluenceBreakThreshold = xmlNum(ext, "ambientInfluenceBreakThreshold", 0.8);
+  out.ambientInfluenceBreakChance = xmlNum(ext, "ambientInfluenceBreakChance", 0.05);
+  out.ambientInfluenceMentalState = xmlText(ext, "ambientInfluenceMentalState", "");
+
+  // Autonomy
+  out.autoEquipEnabled = xmlBool(ext, "autoEquipEnabled", false);
+  out.autoEquipChance = xmlNum(ext, "autoEquipChance", 1);
+  out.autoEquipScoreBonus = xmlNum(ext, "autoEquipScoreBonus", 0);
+  out.autoEquipAllowDrafted = xmlBool(ext, "autoEquipAllowDrafted", false);
+  out.autoEquipTraitBonuses = Array.from(ext.querySelectorAll("autoEquipTraitBonuses > li")).map((li) => ({
+    trait: xmlText(li, "trait", ""),
+    degree: xmlNum(li, "degree", 0),
+    scoreOffset: xmlNum(li, "scoreOffset", 10),
+  })).filter((x) => x.trait);
+  out.autoEquipHediffBonuses = Array.from(ext.querySelectorAll("autoEquipHediffBonuses > li")).map((li) => ({
+    hediff: xmlText(li, "hediff", ""),
+    minSeverity: xmlNum(li, "minSeverity", 0),
+    maxSeverity: xmlNum(li, "maxSeverity", 9999),
+    scoreOffset: xmlNum(li, "scoreOffset", 10),
+    severityMultiplier: xmlNum(li, "severityMultiplier", 0),
+  })).filter((x) => x.hediff);
+
+  // Persistence
+  out.refuseRemoval = xmlBool(ext, "refuseRemoval", false);
+  out.refuseRemovalHediff = xmlText(ext, "refuseRemovalHediff", "");
+  out.refuseRemovalMinSeverity = xmlNum(ext, "refuseRemovalMinSeverity", 0.5);
+  out.refuseRemovalMessageKey = xmlText(ext, "refuseRemovalMessageKey", "Lantern_RefuseRemoval");
+  out.forceDropOnWearerDeath = xmlBool(ext, "forceDropOnWearerDeath", false);
+  out.forceDropOnCorpseDestroy = xmlBool(ext, "forceDropOnCorpseDestroy", false);
+  out.forceDropOnGraveEject = xmlBool(ext, "forceDropOnGraveEject", false);
+
   // Costume/transformation
   const apparel = Array.from(ext.querySelectorAll("transformationApparel > li"))
     .map((x) => x.textContent?.trim())
@@ -3036,6 +3921,64 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   }
   out.sel_conditions = conds;
 
+  // Discovery incident
+  const incidentDefs = Array.from(defsDoc.getElementsByTagName("IncidentDef") || []);
+  let discoveryIncident = null;
+  let discoveryExt = null;
+  for (const id of incidentDefs) {
+    const e = id.querySelector('modExtensions > li[Class="DrAke.LanternsFramework.LanternDiscoveryIncidentExtension"]');
+    if (e) {
+      discoveryIncident = id;
+      discoveryExt = e;
+      break;
+    }
+  }
+
+  out.enableDiscoveryEvent = !!discoveryIncident;
+  out.discoveryIncidentDefName = discoveryIncident
+    ? xmlText(discoveryIncident, "defName", derivedDefName(out.ringDefName, "Discovery"))
+    : derivedDefName(out.ringDefName, "Discovery");
+  out.discoveryIncidentCategory = discoveryIncident ? xmlText(discoveryIncident, "category", "Misc") : "Misc";
+  out.discoveryIncidentBaseChance = discoveryIncident ? xmlNum(discoveryIncident, "baseChance", 0.1) : 0.1;
+
+  out.discoverySendLetter = discoveryExt ? xmlBool(discoveryExt, "sendLetter", true) : true;
+  out.discoveryLetterLabel = discoveryExt ? xmlText(discoveryExt, "letterLabel", "") : "";
+  out.discoveryLetterText = discoveryExt ? xmlText(discoveryExt, "letterText", "") : "";
+
+  out.discoverySiteLabel = discoveryExt ? xmlText(discoveryExt, "siteLabel", "") : "";
+  out.discoverySiteDescription = discoveryExt ? xmlText(discoveryExt, "siteDescription", "") : "";
+  out.discoverySiteTimeoutDays = discoveryExt ? xmlNum(discoveryExt, "siteTimeoutDays", 15) : 15;
+  out.discoveryMinDistanceTiles = discoveryExt ? xmlNum(discoveryExt, "minDistanceFromPlayerTiles", 6) : 6;
+  out.discoveryMaxDistanceTiles = discoveryExt ? xmlNum(discoveryExt, "maxDistanceFromPlayerTiles", 40) : 40;
+  out.discoveryTargetType = discoveryExt ? xmlText(discoveryExt, "targetType", "WorldSite") : "WorldSite";
+  if (discoveryIncident && (!discoveryExt || !discoveryExt.querySelector("targetType"))) {
+    const tags = Array.from(discoveryIncident.querySelectorAll("targetTags > li")).map((x) => x.textContent?.trim());
+    if (tags.includes("Map")) out.discoveryTargetType = "ActiveMap";
+  }
+  out.discoveryMapDropRadius = discoveryExt ? xmlNum(discoveryExt, "mapDropRadius", 10) : 10;
+  out.discoveryMapDropPreferColony = discoveryExt ? xmlBool(discoveryExt, "mapDropPreferColony", true) : true;
+
+  out.discoveryGearPlacement = discoveryExt ? xmlText(discoveryExt, "gearPlacement", "PawnWorn") : "PawnWorn";
+  out.discoveryGearReceiver = discoveryExt ? xmlText(discoveryExt, "gearReceiver", "PreferAlive") : "PreferAlive";
+  out.discoveryGearCount = discoveryExt ? xmlNum(discoveryExt, "gearCount", 1) : 1;
+
+  out.discoveryPawnKind = discoveryExt ? xmlText(discoveryExt, "pawnKind", "") : "";
+  out.discoveryPawnFaction = discoveryExt ? xmlText(discoveryExt, "pawnFaction", "") : "";
+  out.discoveryAliveMin = discoveryExt ? xmlNum(discoveryExt, "alivePawnsMin", 0) : 0;
+  out.discoveryAliveMax = discoveryExt ? xmlNum(discoveryExt, "alivePawnsMax", 0) : 0;
+  out.discoveryDeadMin = discoveryExt ? xmlNum(discoveryExt, "deadPawnsMin", 1) : 1;
+  out.discoveryDeadMax = discoveryExt ? xmlNum(discoveryExt, "deadPawnsMax", 1) : 1;
+  out.discoveryAliveDowned = discoveryExt ? xmlBool(discoveryExt, "alivePawnsDowned", true) : true;
+  out.discoveryPawnScatterRadius = discoveryExt ? xmlNum(discoveryExt, "pawnScatterRadius", 8) : 8;
+  out.discoverySpawnPawnsInDropPods = discoveryExt ? xmlBool(discoveryExt, "spawnPawnsInDropPods", true) : true;
+  out.discoveryDropPodOpenDelaySeconds = discoveryExt ? xmlNum(discoveryExt, "dropPodOpenDelaySeconds", 2) : 2;
+
+  out.discoverySpawnCrashDebris = discoveryExt ? xmlBool(discoveryExt, "spawnCrashDebris", true) : true;
+  out.discoveryCrashChunkDef = discoveryExt ? xmlText(discoveryExt, "crashChunkDef", "") : "";
+  out.discoveryCrashDebrisDef = discoveryExt ? xmlText(discoveryExt, "crashDebrisDef", "") : "";
+  out.discoveryCrashDebrisCount = discoveryExt ? xmlNum(discoveryExt, "crashDebrisCount", 6) : 6;
+  out.discoveryCrashDebrisRadius = discoveryExt ? xmlNum(discoveryExt, "crashDebrisRadius", 6) : 6;
+
   return out;
 }
 
@@ -3100,6 +4043,63 @@ function applyImportedStateToUi(s) {
   setValueIfPresent("reactiveEvadeGasRadius", s.reactiveEvadeGasRadius ?? 2.4);
   setValueIfPresent("reactiveEvadeGasAmount", s.reactiveEvadeGasAmount ?? 60);
 
+  setSelectYesNoIfPresent("enableStealth", !!s.enableStealth);
+  setValueIfPresent("stealthHediff", s.stealthHediff || "");
+  setValueIfPresent("stealthToggleGizmo", s.stealthToggleGizmo === false ? "no" : "yes");
+  setValueIfPresent("stealthDefaultOn", s.stealthDefaultOn ? "yes" : "no");
+  setValueIfPresent("stealthBreakOnAttack", s.stealthBreakOnAttack ? "true" : "false");
+  setValueIfPresent("stealthPreventTargeting", s.stealthPreventTargeting === false ? "false" : "true");
+  setValueIfPresent("stealthGizmoIconPath", s.stealthGizmoIconPath || "");
+  setValueIfPresent("stealthGizmoLabelKey", s.stealthGizmoLabelKey || "");
+  setValueIfPresent("stealthGizmoDescKey", s.stealthGizmoDescKey || "");
+  setValueIfPresent("stealthShowEnergyGizmo", s.stealthShowEnergyGizmo ? "true" : "false");
+  setValueIfPresent("stealthEnergyLabel", s.stealthEnergyLabel || "Stealth");
+  setValueIfPresent("stealthEnergyColor", s.stealthEnergyColor || "(0.2, 0.6, 0.8, 1)");
+  setValueIfPresent("stealthEnergyMax", s.stealthEnergyMax ?? 1);
+  setValueIfPresent("stealthEnergyStartPercent", s.stealthEnergyStartPercent ?? 1);
+  setValueIfPresent("stealthEnergyDrainPerSecond", s.stealthEnergyDrainPerSecond ?? 0);
+  setValueIfPresent("stealthEnergyRegenPerDay", s.stealthEnergyRegenPerDay ?? 1);
+  writeStealthSeeThroughPawnKinds(s.stealthSeeThroughPawnKinds || []);
+  writeStealthSeeThroughHediffs(s.stealthSeeThroughHediffs || []);
+
+  setValueIfPresent("corruptionHediff", s.corruptionHediff || "");
+  setValueIfPresent("corruptionInitialSeverity", s.corruptionInitialSeverity ?? 0.01);
+  setValueIfPresent("corruptionGainPerDay", s.corruptionGainPerDay ?? 0.05);
+  setValueIfPresent("corruptionTickIntervalSeconds", s.corruptionTickIntervalSeconds ?? 1);
+  setValueIfPresent("corruptionStealthMultiplier", s.corruptionStealthMultiplier ?? 1);
+  setValueIfPresent("attentionMultiplier", s.attentionMultiplier ?? 1);
+  writeCorruptionMentalStates(s.corruptionMentalStates || []);
+
+  setSelectYesNoIfPresent("ambientInfluenceEnabled", !!s.ambientInfluenceEnabled);
+  setValueIfPresent("ambientInfluenceHediff", s.ambientInfluenceHediff || "");
+  setValueIfPresent("ambientInfluenceOnlyWhenUnworn", s.ambientInfluenceOnlyWhenUnworn === false ? "false" : "true");
+  setValueIfPresent("ambientInfluenceOnlyWhenBuried", s.ambientInfluenceOnlyWhenBuried ? "true" : "false");
+  setValueIfPresent("ambientInfluenceSkipWearers", s.ambientInfluenceSkipWearers === false ? "false" : "true");
+  setValueIfPresent("ambientInfluenceAffectsColonistsOnly", s.ambientInfluenceAffectsColonistsOnly === false ? "false" : "true");
+  setValueIfPresent("ambientInfluenceAffectsHumanlikeOnly", s.ambientInfluenceAffectsHumanlikeOnly === false ? "false" : "true");
+  setValueIfPresent("ambientInfluenceRadius", s.ambientInfluenceRadius ?? 0);
+  setValueIfPresent("ambientInfluenceIntervalSeconds", s.ambientInfluenceIntervalSeconds ?? 4);
+  setValueIfPresent("ambientInfluenceInitialSeverity", s.ambientInfluenceInitialSeverity ?? 0.02);
+  setValueIfPresent("ambientInfluenceSeverityPerTick", s.ambientInfluenceSeverityPerTick ?? 0.002);
+  setValueIfPresent("ambientInfluenceBreakThreshold", s.ambientInfluenceBreakThreshold ?? 0.8);
+  setValueIfPresent("ambientInfluenceBreakChance", s.ambientInfluenceBreakChance ?? 0.05);
+  setValueIfPresent("ambientInfluenceMentalState", s.ambientInfluenceMentalState || "");
+
+  setSelectYesNoIfPresent("autoEquipEnabled", !!s.autoEquipEnabled);
+  setValueIfPresent("autoEquipChance", s.autoEquipChance ?? 1);
+  setValueIfPresent("autoEquipScoreBonus", s.autoEquipScoreBonus ?? 0);
+  setCheckedIfPresent("autoEquipAllowDrafted", !!s.autoEquipAllowDrafted);
+  writeAutoEquipTraitBonuses(s.autoEquipTraitBonuses || []);
+  writeAutoEquipHediffBonuses(s.autoEquipHediffBonuses || []);
+
+  setSelectYesNoIfPresent("refuseRemoval", !!s.refuseRemoval);
+  setValueIfPresent("refuseRemovalHediff", s.refuseRemovalHediff || "");
+  setValueIfPresent("refuseRemovalMinSeverity", s.refuseRemovalMinSeverity ?? 0.5);
+  setValueIfPresent("refuseRemovalMessageKey", s.refuseRemovalMessageKey || "Lantern_RefuseRemoval");
+  setCheckedIfPresent("forceDropOnWearerDeath", !!s.forceDropOnWearerDeath);
+  setCheckedIfPresent("forceDropOnCorpseDestroy", !!s.forceDropOnCorpseDestroy);
+  setCheckedIfPresent("forceDropOnGraveEject", !!s.forceDropOnGraveEject);
+
   // Lists
   if (document.getElementById("existingApparelList")) writeExistingCostumeList(s.costume_existingApparel || []);
   if (document.getElementById("generatedApparelList")) writeGeneratedCostumeList(s.costume_generatedApparel || []);
@@ -3160,6 +4160,41 @@ function applyImportedStateToUi(s) {
     renderSelectionConditions();
   }
 
+  // Discovery event
+  setSelectYesNoIfPresent("enableDiscoveryEvent", !!s.enableDiscoveryEvent);
+  setValueIfPresent("discoveryIncidentDefName", s.discoveryIncidentDefName || "");
+  setValueIfPresent("discoveryIncidentCategory", s.discoveryIncidentCategory || "Misc");
+  setValueIfPresent("discoveryIncidentBaseChance", s.discoveryIncidentBaseChance ?? 0.1);
+  setValueIfPresent("discoverySendLetter", s.discoverySendLetter === false ? "no" : "yes");
+  setValueIfPresent("discoveryLetterLabel", s.discoveryLetterLabel || "");
+  setValueIfPresent("discoveryLetterText", s.discoveryLetterText || "");
+  setValueIfPresent("discoveryTargetType", s.discoveryTargetType || "WorldSite");
+  setValueIfPresent("discoverySiteLabel", s.discoverySiteLabel || "");
+  setValueIfPresent("discoverySiteDescription", s.discoverySiteDescription || "");
+  setValueIfPresent("discoverySiteTimeoutDays", s.discoverySiteTimeoutDays ?? 15);
+  setValueIfPresent("discoveryMinDistanceTiles", s.discoveryMinDistanceTiles ?? 6);
+  setValueIfPresent("discoveryMaxDistanceTiles", s.discoveryMaxDistanceTiles ?? 40);
+  setValueIfPresent("discoveryMapDropRadius", s.discoveryMapDropRadius ?? 10);
+  setCheckedIfPresent("discoveryMapDropPreferColony", s.discoveryMapDropPreferColony ?? true);
+  setValueIfPresent("discoveryGearPlacement", s.discoveryGearPlacement || "PawnWorn");
+  setValueIfPresent("discoveryGearReceiver", s.discoveryGearReceiver || "PreferAlive");
+  setValueIfPresent("discoveryGearCount", s.discoveryGearCount ?? 1);
+  setValueIfPresent("discoveryPawnKind", s.discoveryPawnKind || "");
+  setValueIfPresent("discoveryPawnFaction", s.discoveryPawnFaction || "");
+  setValueIfPresent("discoveryAliveMin", s.discoveryAliveMin ?? 0);
+  setValueIfPresent("discoveryAliveMax", s.discoveryAliveMax ?? 0);
+  setValueIfPresent("discoveryDeadMin", s.discoveryDeadMin ?? 1);
+  setValueIfPresent("discoveryDeadMax", s.discoveryDeadMax ?? 1);
+  setValueIfPresent("discoveryAliveDowned", s.discoveryAliveDowned === false ? "false" : "true");
+  setValueIfPresent("discoveryPawnScatterRadius", s.discoveryPawnScatterRadius ?? 8);
+  setValueIfPresent("discoverySpawnPawnsInDropPods", s.discoverySpawnPawnsInDropPods === false ? "false" : "true");
+  setValueIfPresent("discoveryDropPodOpenDelaySeconds", s.discoveryDropPodOpenDelaySeconds ?? 2);
+  setValueIfPresent("discoverySpawnCrashDebris", s.discoverySpawnCrashDebris === false ? "false" : "true");
+  setValueIfPresent("discoveryCrashChunkDef", s.discoveryCrashChunkDef || "ShipChunk");
+  setValueIfPresent("discoveryCrashDebrisDef", s.discoveryCrashDebrisDef || "ChunkSlagSteel");
+  setValueIfPresent("discoveryCrashDebrisCount", s.discoveryCrashDebrisCount ?? 6);
+  setValueIfPresent("discoveryCrashDebrisRadius", s.discoveryCrashDebrisRadius ?? 6);
+
   // Refresh any derived UI rules/help (without re-wiring event listeners)
   document.getElementById("gearParent")?.dispatchEvent(new Event("change"));
   document.getElementById("gearGraphicClass")?.dispatchEvent(new Event("change"));
@@ -3210,10 +4245,32 @@ function init() {
     renderSelectionConditions();
   }
 
+  if (document.getElementById("stealthSeeThroughPawnKindsList")) {
+    if (!document.getElementById("stealthSeeThroughPawnKindsList").dataset.items) writeStealthSeeThroughPawnKinds([]);
+    renderStealthSeeThroughPawnKinds();
+  }
+  if (document.getElementById("stealthSeeThroughHediffsList")) {
+    if (!document.getElementById("stealthSeeThroughHediffsList").dataset.items) writeStealthSeeThroughHediffs([]);
+    renderStealthSeeThroughHediffs();
+  }
+  if (document.getElementById("corruptionMentalStateList")) {
+    if (!document.getElementById("corruptionMentalStateList").dataset.items) writeCorruptionMentalStates([]);
+    renderCorruptionMentalStates();
+  }
+  if (document.getElementById("autoEquipTraitList")) {
+    if (!document.getElementById("autoEquipTraitList").dataset.items) writeAutoEquipTraitBonuses([]);
+    renderAutoEquipTraitBonuses();
+  }
+  if (document.getElementById("autoEquipHediffList")) {
+    if (!document.getElementById("autoEquipHediffList").dataset.items) writeAutoEquipHediffBonuses([]);
+    renderAutoEquipHediffBonuses();
+  }
+
   wireConditionDefAutocomplete();
   wireBodyTypeOverrideUi();
   wireMissingGraphicBehaviorUi();
   wireTransformationToggleUi();
+  wireBehaviorActions();
   refreshSelectHelpText();
 }
 
@@ -3315,6 +4372,16 @@ function refreshSelectHelpText() {
   applySelectHelp("excludeIfHasAnyLanternRing", "excludeIfHasAnyLanternRingDesc", {
     true: "Skips pawns who already have any LanternsCore gear.",
     false: "Allows pawns even if they already have LanternsCore gear.",
+  });
+
+  applySelectHelp("enableDiscoveryEvent", null, {
+    no: "No discovery incident generated.",
+    yes: "Generates a discovery incident (world site or active map drop).",
+  });
+
+  applySelectHelp("discoveryTargetType", null, {
+    WorldSite: "Creates a world-map site that caravans can visit.",
+    ActiveMap: "Drops the crash directly onto a player home map.",
   });
 
   applySelectHelp("condType", "condTypeDesc", {
@@ -3511,4 +4578,91 @@ function wireConditionDefAutocomplete() {
   typeEl.addEventListener("change", apply);
   apply();
   refreshSelectHelpText();
+}
+
+function wireBehaviorActions() {
+  const btnAddKind = document.getElementById("btnAddStealthSeeThroughPawnKind");
+  if (btnAddKind) {
+    btnAddKind.addEventListener("click", () => {
+      const val = byId("stealthSeeThroughPawnKindInput").value.trim();
+      if (!val) return;
+      const items = readStealthSeeThroughPawnKinds();
+      writeStealthSeeThroughPawnKinds([...items, val]);
+      byId("stealthSeeThroughPawnKindInput").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
+
+  const btnAddHediff = document.getElementById("btnAddStealthSeeThroughHediff");
+  if (btnAddHediff) {
+    btnAddHediff.addEventListener("click", () => {
+      const val = byId("stealthSeeThroughHediffInput").value.trim();
+      if (!val) return;
+      const items = readStealthSeeThroughHediffs();
+      writeStealthSeeThroughHediffs([...items, val]);
+      byId("stealthSeeThroughHediffInput").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
+
+  const btnAddMental = document.getElementById("btnAddCorruptionMentalState");
+  if (btnAddMental) {
+    btnAddMental.addEventListener("click", () => {
+      const def = byId("corruptionMentalStateDef").value.trim();
+      if (!def) return;
+      const item = {
+        mentalState: def,
+        minSeverity: toNum(byId("corruptionMentalStateMinSeverity").value, 0.5),
+        maxSeverity: toNum(byId("corruptionMentalStateMaxSeverity").value, 1),
+        chancePerCheck: toNum(byId("corruptionMentalStateChance").value, 0.05),
+        checkIntervalTicks: Math.max(1, Math.floor(toNum(byId("corruptionMentalStateInterval").value, 1000))),
+        requireNotAlreadyInState: byId("corruptionMentalStateRequireNotAlready").value !== "false",
+      };
+      const items = readCorruptionMentalStates();
+      writeCorruptionMentalStates([...items, item]);
+      byId("corruptionMentalStateDef").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
+
+  const btnAddTrait = document.getElementById("btnAddAutoEquipTrait");
+  if (btnAddTrait) {
+    btnAddTrait.addEventListener("click", () => {
+      const trait = byId("autoEquipTraitDef").value.trim();
+      if (!trait) return;
+      const item = {
+        trait,
+        degree: Math.floor(toNum(byId("autoEquipTraitDegree").value, 0)),
+        scoreOffset: toNum(byId("autoEquipTraitScoreOffset").value, 10),
+      };
+      const items = readAutoEquipTraitBonuses();
+      writeAutoEquipTraitBonuses([...items, item]);
+      byId("autoEquipTraitDef").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
+
+  const btnAddAutoHediff = document.getElementById("btnAddAutoEquipHediff");
+  if (btnAddAutoHediff) {
+    btnAddAutoHediff.addEventListener("click", () => {
+      const hediff = byId("autoEquipHediffDef").value.trim();
+      if (!hediff) return;
+      const item = {
+        hediff,
+        minSeverity: toNum(byId("autoEquipHediffMinSeverity").value, 0),
+        maxSeverity: toNum(byId("autoEquipHediffMaxSeverity").value, 9999),
+        scoreOffset: toNum(byId("autoEquipHediffScoreOffset").value, 10),
+        severityMultiplier: toNum(byId("autoEquipHediffSeverityMultiplier").value, 0),
+      };
+      const items = readAutoEquipHediffBonuses();
+      writeAutoEquipHediffBonuses([...items, item]);
+      byId("autoEquipHediffDef").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
 }

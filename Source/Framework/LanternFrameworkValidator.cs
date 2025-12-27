@@ -14,6 +14,7 @@ namespace DrAke.LanternsFramework
             {
                 ValidateRings();
                 ValidateSelectionDefs();
+                ValidateDiscoveryIncidents();
             }
             catch (Exception e)
             {
@@ -46,12 +47,39 @@ namespace DrAke.LanternsFramework
                     Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has one or more missing ability refs in LanternDefExtension.abilities.", (def.defName + "_abilitiesNull").GetHashCode());
                 }
 
+                if (ext.stealthEnabled && ext.stealthHediff == null)
+                {
+                    Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has stealthEnabled but no stealthHediff set.", (def.defName + "_stealthHediff").GetHashCode());
+                }
+
+                if (ext.corruptionHediff == null && ext.corruptionGainPerDay > 0f)
+                {
+                    Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has corruptionGainPerDay but no corruptionHediff set.", (def.defName + "_corruptionHediff").GetHashCode());
+                }
+
+                if (ext.ambientInfluenceEnabled && ext.ambientInfluenceHediff == null)
+                {
+                    Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has ambientInfluenceEnabled but no ambientInfluenceHediff set.", (def.defName + "_ambientHediff").GetHashCode());
+                }
+
                 ValidateFraction(def.defName, "batteryManifestCost", ext.batteryManifestCost);
                 ValidateFraction(def.defName, "passiveRegenPerDay", ext.passiveRegenPerDay, allowAboveOne: true);
                 ValidateFraction(def.defName, "passiveDrainPerDay", ext.passiveDrainPerDay, allowAboveOne: true);
                 ValidateFraction(def.defName, "blockEnvironmentalHediffsCost", ext.blockEnvironmentalHediffsCost, allowAboveOne: true);
                 ValidateFraction(def.defName, "absorbEnvironmentalDamageCost", ext.absorbEnvironmentalDamageCost, allowAboveOne: true);
                 ValidateFraction(def.defName, "absorbCombatDamageCost", ext.absorbCombatDamageCost, allowAboveOne: true);
+
+                ValidateFraction(def.defName, "stealthEnergyStartPercent", ext.stealthEnergyStartPercent);
+                ValidateFraction(def.defName, "stealthEnergyDrainPerSecond", ext.stealthEnergyDrainPerSecond, allowAboveOne: true);
+                ValidateFraction(def.defName, "stealthEnergyRegenPerDay", ext.stealthEnergyRegenPerDay, allowAboveOne: true);
+                ValidateFraction(def.defName, "corruptionInitialSeverity", ext.corruptionInitialSeverity);
+                ValidateFraction(def.defName, "corruptionGainPerDay", ext.corruptionGainPerDay, allowAboveOne: true);
+                ValidateFraction(def.defName, "ambientInfluenceInitialSeverity", ext.ambientInfluenceInitialSeverity);
+                ValidateFraction(def.defName, "ambientInfluenceSeverityPerTick", ext.ambientInfluenceSeverityPerTick, allowAboveOne: true);
+                ValidateFraction(def.defName, "ambientInfluenceBreakThreshold", ext.ambientInfluenceBreakThreshold);
+                ValidateFraction(def.defName, "ambientInfluenceBreakChance", ext.ambientInfluenceBreakChance);
+                ValidateFraction(def.defName, "autoEquipChance", ext.autoEquipChance);
+                ValidateFraction(def.defName, "refuseRemovalMinSeverity", ext.refuseRemovalMinSeverity);
             }
         }
 
@@ -85,6 +113,53 @@ namespace DrAke.LanternsFramework
                 {
                     Log.WarningOnce($"[LanternsCore] RingSelectionDef '{def.defName}' has a null entry in conditions (XML class name typo?).", (def.defName + "_conditionsNull").GetHashCode());
                 }
+            }
+        }
+
+        private static void ValidateDiscoveryIncidents()
+        {
+            foreach (IncidentDef def in DefDatabase<IncidentDef>.AllDefsListForReading)
+            {
+                if (def == null) continue;
+                LanternDiscoveryIncidentExtension ext = def.GetModExtension<LanternDiscoveryIncidentExtension>();
+                if (ext == null) continue;
+
+                if (ext.gearDef == null)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' is missing gearDef in LanternDiscoveryIncidentExtension.", (def.defName + "_gearDef").GetHashCode());
+                }
+
+                if (ext.gearCount < 1)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' has gearCount < 1; defaulting to 1 at runtime.", (def.defName + "_gearCount").GetHashCode());
+                }
+
+                if ((ext.alivePawnsMax > 0 || ext.deadPawnsMax > 0) && ext.pawnKind == null)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' spawns pawns but has no pawnKind set.", (def.defName + "_pawnKind").GetHashCode());
+                }
+
+                if (ext.minDistanceFromPlayerTiles < 0 || ext.maxDistanceFromPlayerTiles < 0)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' has negative distance constraints.", (def.defName + "_distNeg").GetHashCode());
+                }
+                if (ext.minDistanceFromPlayerTiles > ext.maxDistanceFromPlayerTiles)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' has minDistanceFromPlayerTiles > maxDistanceFromPlayerTiles.", (def.defName + "_distOrder").GetHashCode());
+                }
+
+                if (ext.alivePawnsMin > ext.alivePawnsMax)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' has alivePawnsMin > alivePawnsMax.", (def.defName + "_aliveOrder").GetHashCode());
+                }
+                if (ext.deadPawnsMin > ext.deadPawnsMax)
+                {
+                    Log.WarningOnce($"[LanternsCore] Incident '{def.defName}' has deadPawnsMin > deadPawnsMax.", (def.defName + "_deadOrder").GetHashCode());
+                }
+
+                ValidateFraction(def.defName, "siteTimeoutDays", ext.siteTimeoutDays, allowAboveOne: true);
+                ValidateFraction(def.defName, "dropPodOpenDelaySeconds", ext.dropPodOpenDelaySeconds, allowAboveOne: true);
+                ValidateFraction(def.defName, "mapDropRadius", ext.mapDropRadius, allowAboveOne: true);
             }
         }
 

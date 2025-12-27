@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -44,6 +45,16 @@ namespace DrAke.LanternsFramework
         private bool reactiveEvadeInitialized = false;
         private int lastReactiveEvadeTick = -999999;
 
+        // Stealth / Veil state
+        private float stealthEnergy = 1.0f;
+        private bool stealthActive = false;
+        private bool stealthInitialized = false;
+        private int stealthEnergyTickAccumulator = 0;
+
+        // Corruption / attention
+        private int corruptionTickAccumulator = 0;
+        private float attentionLevel = 0f;
+
         private Dictionary<string, AbilityCastTracker> abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
 
         private int wornGraphicCheckTick = -999999;
@@ -70,6 +81,11 @@ namespace DrAke.LanternsFramework
         public float EffectiveDrainMultiplier => Mathf.Max(0f, LanternCoreMod.Settings?.drainMultiplier ?? 1f);
 
         public float GetEffectiveCostFraction(float baseFraction) => Mathf.Max(0f, baseFraction) * EffectiveCostMultiplier;
+
+        public float StealthEnergyMax => Mathf.Max(0.001f, Extension?.stealthEnergyMax ?? 1f);
+        public float StealthEnergyPercent => Mathf.Clamp01(stealthEnergy / StealthEnergyMax);
+        public bool StealthActive => stealthActive;
+        public float AttentionLevel => attentionLevel;
 
         public bool IsActive
         {
@@ -111,6 +127,10 @@ namespace DrAke.LanternsFramework
 
             TickChargeModel();
 
+            TickCorruptionModel();
+
+            TickStealthModel();
+
             TickTransformationConditions();
         }
 
@@ -132,6 +152,15 @@ namespace DrAke.LanternsFramework
             {
                 reactiveEvadeInitialized = true;
                 reactiveEvadeEnabled = Extension?.reactiveEvadeDefaultEnabled ?? true;
+            }
+
+            if (!stealthInitialized)
+            {
+                stealthInitialized = true;
+                float startPct = Mathf.Clamp01(Extension?.stealthEnergyStartPercent ?? 1f);
+                stealthEnergy = StealthEnergyMax * startPct;
+                stealthActive = Extension?.stealthDefaultOn ?? false;
+                if (Extension?.stealthEnabled != true) stealthActive = false;
             }
 
             // Default new rings to full charge.
@@ -227,6 +256,234 @@ namespace DrAke.LanternsFramework
             }
         }
 
+        private void TickCorruptionModel()
+        {
+            var ext = Extension;
+            if (ext == null || ext.corruptionHediff == null) return;
+            Pawn wearer = Wearer;
+            if (wearer == null || wearer.Dead || wearer.health?.hediffSet == null)
+            {
+                attentionLevel = 0f;
+                return;
+            }
+
+            int intervalTicks = Mathf.Max(1, (int)(Mathf.Max(0.1f, ext.corruptionTickIntervalSeconds) * 60f));
+            corruptionTickAccumulator++;
+            if (corruptionTickAccumulator < intervalTicks)
+            {
+                UpdateAttentionFromCorruption(wearer);
+                return;
+            }
+
+            int ticks = corruptionTickAccumulator;
+            corruptionTickAccumulator = 0;
+
+            Hediff corruption = wearer.health.hediffSet.GetFirstHediffOfDef(ext.corruptionHediff);
+            if (corruption == null)
+            {
+                corruption = wearer.health.AddHediff(ext.corruptionHediff);
+                corruption.Severity = Mathf.Clamp01(ext.corruptionInitialSeverity);
+            }
+
+            float perDay = Mathf.Max(0f, ext.corruptionGainPerDay);
+            if (stealthActive && ext.corruptionStealthMultiplier != 1f)
+            {
+                perDay *= ext.corruptionStealthMultiplier;
+            }
+
+            if (perDay > 0f)
+            {
+                float delta = perDay * (ticks / (float)GenDate.TicksPerDay);
+                corruption.Severity = Mathf.Clamp01(corruption.Severity + delta);
+            }
+
+            UpdateAttentionFromCorruption(wearer, corruption);
+            TryCorruptionMentalStates(wearer, corruption.Severity);
+        }
+
+        private void UpdateAttentionFromCorruption(Pawn wearer, Hediff corruption = null)
+        {
+            if (wearer == null || Extension == null)
+            {
+                attentionLevel = 0f;
+                return;
+            }
+
+            if (corruption == null && Extension.corruptionHediff != null && wearer.health?.hediffSet != null)
+            {
+                corruption = wearer.health.hediffSet.GetFirstHediffOfDef(Extension.corruptionHediff);
+            }
+
+            if (corruption == null)
+            {
+                attentionLevel = 0f;
+                return;
+            }
+
+            float mult = Mathf.Max(0f, Extension.attentionMultiplier);
+            float level = corruption.Severity * mult;
+            if (stealthActive && Extension.corruptionStealthMultiplier != 1f)
+            {
+                level *= Extension.corruptionStealthMultiplier;
+            }
+            attentionLevel = Mathf.Clamp01(level);
+        }
+
+        private void TryCorruptionMentalStates(Pawn wearer, float severity)
+        {
+            if (Extension == null || Extension.corruptionMentalStates.NullOrEmpty()) return;
+            if (wearer?.mindState?.mentalStateHandler == null) return;
+
+            for (int i = 0; i < Extension.corruptionMentalStates.Count; i++)
+            {
+                LanternMentalStateTrigger trigger = Extension.corruptionMentalStates[i];
+                if (trigger?.mentalState == null) continue;
+                if (severity < trigger.minSeverity || severity > trigger.maxSeverity) continue;
+
+                int interval = Mathf.Max(1, trigger.checkIntervalTicks);
+                if (!wearer.IsHashIntervalTick(interval)) continue;
+
+                if (trigger.requireNotAlreadyInState && wearer.mindState.mentalStateHandler.CurStateDef == trigger.mentalState)
+                {
+                    continue;
+                }
+
+                if (Rand.Value < Mathf.Clamp01(trigger.chancePerCheck))
+                {
+                    wearer.mindState.mentalStateHandler.TryStartMentalState(trigger.mentalState, null, true);
+                }
+            }
+        }
+
+        private void TickStealthModel()
+        {
+            var ext = Extension;
+            if (ext == null || !ext.stealthEnabled || ext.stealthHediff == null)
+            {
+                if (stealthActive)
+                {
+                    ForceDisableStealth(Wearer);
+                }
+                return;
+            }
+
+            Pawn wearer = Wearer;
+            if (wearer == null || wearer.Dead || wearer.health?.hediffSet == null)
+            {
+                if (stealthActive)
+                {
+                    ForceDisableStealth(wearer);
+                }
+                return;
+            }
+
+            if (!IsActive)
+            {
+                if (stealthActive)
+                {
+                    ForceDisableStealth(wearer);
+                }
+                return;
+            }
+
+            bool hasHediff = wearer.health.hediffSet.GetFirstHediffOfDef(ext.stealthHediff) != null;
+
+            if (!ext.stealthToggleGizmo)
+            {
+                bool shouldBeActive = stealthEnergy > 0f;
+                if (shouldBeActive && !stealthActive)
+                {
+                    SetStealthActive(wearer, true);
+                }
+                else if (!shouldBeActive && stealthActive)
+                {
+                    ForceDisableStealth(wearer);
+                }
+            }
+
+            if (stealthActive && !hasHediff)
+            {
+                ApplyStealthHediff(wearer);
+            }
+            else if (!stealthActive && hasHediff && ext.stealthToggleGizmo)
+            {
+                stealthActive = true;
+            }
+
+            stealthEnergyTickAccumulator++;
+            if (stealthEnergyTickAccumulator < 60) return;
+            int ticks = stealthEnergyTickAccumulator;
+            stealthEnergyTickAccumulator = 0;
+
+            if (stealthActive)
+            {
+                float drainPerSecond = Mathf.Max(0f, ext.stealthEnergyDrainPerSecond);
+                if (drainPerSecond > 0f)
+                {
+                    float seconds = ticks / 60f;
+                    float delta = drainPerSecond * seconds * StealthEnergyMax;
+                    stealthEnergy = Mathf.Max(0f, stealthEnergy - delta);
+                }
+
+                if (stealthEnergy <= 0f)
+                {
+                    ForceDisableStealth(wearer);
+                    Messages.Message("Lantern_StealthEnded_NoEnergy".Translate(), wearer, MessageTypeDefOf.NeutralEvent);
+                }
+            }
+            else
+            {
+                float regenPerDay = Mathf.Max(0f, ext.stealthEnergyRegenPerDay);
+                if (regenPerDay > 0f)
+                {
+                    float days = ticks / (float)GenDate.TicksPerDay;
+                    float delta = regenPerDay * days * StealthEnergyMax;
+                    stealthEnergy = Mathf.Min(StealthEnergyMax, stealthEnergy + delta);
+                }
+            }
+
+            stealthEnergy = Mathf.Clamp(stealthEnergy, 0f, StealthEnergyMax);
+        }
+
+        private void SetStealthActive(Pawn pawn, bool active)
+        {
+            if (Extension == null || !Extension.stealthEnabled || Extension.stealthHediff == null) return;
+            if (active && stealthEnergy <= 0f) return;
+
+            stealthActive = active;
+            if (active)
+            {
+                ApplyStealthHediff(pawn);
+            }
+            else
+            {
+                RemoveStealthHediff(pawn);
+            }
+        }
+
+        private void ApplyStealthHediff(Pawn pawn)
+        {
+            if (pawn?.health?.hediffSet == null || Extension?.stealthHediff == null) return;
+            if (pawn.health.hediffSet.GetFirstHediffOfDef(Extension.stealthHediff) != null) return;
+            pawn.health.AddHediff(Extension.stealthHediff);
+        }
+
+        private void RemoveStealthHediff(Pawn pawn)
+        {
+            if (pawn?.health?.hediffSet == null || Extension?.stealthHediff == null) return;
+            Hediff invis = pawn.health.hediffSet.GetFirstHediffOfDef(Extension.stealthHediff);
+            if (invis != null)
+            {
+                pawn.health.RemoveHediff(invis);
+            }
+        }
+
+        public void ForceDisableStealth(Pawn pawn)
+        {
+            stealthActive = false;
+            RemoveStealthHediff(pawn);
+        }
+
         private static MethodInfo cachedGlowMethod;
         private static float GetGlowAt(Map map, IntVec3 cell)
         {
@@ -314,6 +571,18 @@ namespace DrAke.LanternsFramework
                         }
                     }
                 }
+
+                if (Extension.stealthEnabled && Extension.stealthHediff != null)
+                {
+                    if (!Extension.stealthToggleGizmo)
+                    {
+                        SetStealthActive(pawn, true);
+                    }
+                    else if (stealthActive)
+                    {
+                        SetStealthActive(pawn, true);
+                    }
+                }
             }
         }
 
@@ -323,6 +592,9 @@ namespace DrAke.LanternsFramework
             // Revert transformation
             RevertTransformation(pawn);
             transformationApplied = false;
+
+            ForceDisableStealth(pawn);
+            attentionLevel = 0f;
             
             // Remove Hediff immediately
             if (Extension != null)
@@ -358,6 +630,19 @@ namespace DrAke.LanternsFramework
             // Usually yes, if the apparel is stripped/dropped. 
             // If the pawn stays as a corpse with the ring, we might need manual cleanup if they are resurrected?
             // For now, assume standard flow.
+        }
+
+        public override void Notify_WearerDied()
+        {
+            base.Notify_WearerDied();
+
+            if (Extension?.forceDropOnWearerDeath != true) return;
+
+            Apparel ring = parent as Apparel;
+            Pawn pawn = ring?.Wearer;
+            if (pawn == null || pawn.apparel == null) return;
+
+            pawn.apparel.TryDrop(ring, out _, pawn.PositionHeld, false);
         }
 
         private void DoTransformation(Pawn pawn)
@@ -675,6 +960,18 @@ namespace DrAke.LanternsFramework
                     };
                 }
 
+                if (Extension.stealthEnabled && Extension.stealthShowEnergyGizmo)
+                {
+                    yield return new Gizmo_LanternMeter
+                    {
+                        label = Extension.stealthEnergyLabel,
+                        barColor = Extension.stealthEnergyColor,
+                        labelTextColor = Extension.stealthEnergyColor,
+                        percentTextColor = Color.white,
+                        percentGetter = () => StealthEnergyPercent
+                    };
+                }
+
                 if (Extension.allowBatteryManifest)
                 {
                     string labelKey = "Lantern_Command_ManifestBattery";
@@ -716,6 +1013,26 @@ namespace DrAke.LanternsFramework
                                 }
                             }
                         }
+                    };
+                }
+
+                if (Extension.stealthEnabled && Extension.stealthHediff != null && Extension.stealthToggleGizmo)
+                {
+                    string labelKey = Extension.stealthGizmoLabelKey.NullOrEmpty() ? "Lantern_Command_ToggleStealth" : Extension.stealthGizmoLabelKey;
+                    string descKey = Extension.stealthGizmoDescKey.NullOrEmpty() ? "Lantern_Command_ToggleStealthDesc" : Extension.stealthGizmoDescKey;
+                    Texture2D icon = !Extension.stealthGizmoIconPath.NullOrEmpty()
+                        ? ContentFinder<Texture2D>.Get(Extension.stealthGizmoIconPath, true)
+                        : TexCommand.DesirePower;
+
+                    yield return new Command_Toggle
+                    {
+                        defaultLabel = labelKey.CanTranslate() ? labelKey.Translate() : labelKey,
+                        defaultDesc = descKey.CanTranslate() ? descKey.Translate() : descKey,
+                        icon = icon,
+                        isActive = () => stealthActive,
+                        toggleAction = () => SetStealthActive(Wearer, !stealthActive),
+                        Disabled = !stealthActive && stealthEnergy <= 0f,
+                        disabledReason = "Lantern_Command_ToggleStealth_Disabled".Translate()
                     };
                 }
 
@@ -874,6 +1191,22 @@ namespace DrAke.LanternsFramework
 
             lines += $"\nBalance settings:\n- Cost mult: {EffectiveCostMultiplier:0.##}\n- Regen mult: {EffectiveRegenMultiplier:0.##}\n- Drain mult: {EffectiveDrainMultiplier:0.##}\n";
 
+            if (ext.stealthEnabled)
+            {
+                lines += "\nStealth:\n";
+                lines += $"- Active: {stealthActive}\n";
+                lines += $"- Energy: {StealthEnergyPercent:P0} ({stealthEnergy:0.##} / {StealthEnergyMax:0.##})\n";
+            }
+
+            if (ext.corruptionHediff != null && Wearer?.health?.hediffSet != null)
+            {
+                Hediff corr = Wearer.health.hediffSet.GetFirstHediffOfDef(ext.corruptionHediff);
+                float sev = corr?.Severity ?? 0f;
+                lines += "\nCorruption:\n";
+                lines += $"- Severity: {sev:P0}\n";
+                lines += $"- Attention: {attentionLevel:P0}\n";
+            }
+
             lines += "\nProtection:\n";
             lines += $"- Block hediffs: {ext.blockEnvironmentalHediffs} (cost {GetEffectiveCostFraction(ext.blockEnvironmentalHediffsCost):0.###})\n";
             lines += $"- Absorb env damage: {ext.absorbEnvironmentalDamage} (cost {GetEffectiveCostFraction(ext.absorbEnvironmentalDamageCost):0.###})\n";
@@ -941,6 +1274,18 @@ namespace DrAke.LanternsFramework
             Scribe_Values.Look(ref reactiveEvadeEnabled, "reactiveEvadeEnabled", true);
             Scribe_Values.Look(ref reactiveEvadeInitialized, "reactiveEvadeInitialized", false);
             Scribe_Values.Look(ref lastReactiveEvadeTick, "lastReactiveEvadeTick", -999999);
+            Scribe_Values.Look(ref stealthEnergy, "stealthEnergy", 1.0f);
+            Scribe_Values.Look(ref stealthActive, "stealthActive", false);
+            Scribe_Values.Look(ref stealthInitialized, "stealthInitialized", false);
+            Scribe_Values.Look(ref stealthEnergyTickAccumulator, "stealthEnergyTickAccumulator", 0);
+            Scribe_Values.Look(ref corruptionTickAccumulator, "corruptionTickAccumulator", 0);
+            Scribe_Values.Look(ref attentionLevel, "attentionLevel", 0f);
+
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                stealthEnergy = Mathf.Clamp(stealthEnergy, 0f, StealthEnergyMax);
+                attentionLevel = Mathf.Clamp01(attentionLevel);
+            }
         }
 
         public bool CanCastWithLimits(AbilityDef abilityDef, int cooldownTicks, int maxCastsPerDay, out string reason)
@@ -1095,6 +1440,56 @@ namespace DrAke.LanternsFramework
             Text.Anchor = TextAnchor.UpperCenter;
             GUI.color = labelTextColor;
             Widgets.Label(labelRect, label);
+            GUI.color = Color.white;
+            Text.Anchor = TextAnchor.UpperLeft;
+
+            return new GizmoResult(GizmoState.Clear);
+        }
+    }
+
+    // Generic meter for secondary resources (stealth/veil energy, etc.).
+    [StaticConstructorOnStartup]
+    public class Gizmo_LanternMeter : Gizmo
+    {
+        public Func<float> percentGetter;
+        public string label;
+        public Color barColor;
+        public Color labelTextColor = Color.white;
+        public Color percentTextColor = Color.white;
+
+        private static readonly Texture2D EmptyBarTex = SolidColorMaterials.NewSolidColorTexture(Color.gray);
+        private Texture2D cachedFillTex;
+        private Color lastColor;
+
+        public override float GetWidth(float maxWidth) => 140f;
+
+        public override GizmoResult GizmoOnGUI(Vector2 topLeft, float maxWidth, GizmoRenderParms parms)
+        {
+            float percent = percentGetter != null ? Mathf.Clamp01(percentGetter()) : 0f;
+            Rect rect = new Rect(topLeft.x, topLeft.y, GetWidth(maxWidth), 75f);
+            Widgets.DrawWindowBackground(rect);
+
+            Rect barRect = rect.ContractedBy(10f);
+            barRect.height = 30f;
+            barRect.y += 10f;
+
+            if (barColor != lastColor || cachedFillTex == null)
+            {
+                lastColor = barColor;
+                cachedFillTex = SolidColorMaterials.NewSolidColorTexture(barColor);
+            }
+            Widgets.FillableBar(barRect, percent, cachedFillTex, EmptyBarTex, true);
+
+            Text.Font = GameFont.Small;
+            Text.Anchor = TextAnchor.MiddleCenter;
+            GUI.color = percentTextColor;
+            Widgets.Label(barRect, $"{percent:P0}");
+
+            Rect labelRect = new Rect(rect.x, rect.y + 5, rect.width, 20f);
+            Text.Font = GameFont.Tiny;
+            Text.Anchor = TextAnchor.UpperCenter;
+            GUI.color = labelTextColor;
+            Widgets.Label(labelRect, label ?? string.Empty);
             GUI.color = Color.white;
             Text.Anchor = TextAnchor.UpperLeft;
 

@@ -25,10 +25,12 @@
         <button class="tab tab--active" data-tab="mod">Mod</button>
         <button class="tab" data-tab="ring">Gear</button>
         <button class="tab" data-tab="costume">Costume</button>
+        <button class="tab" data-tab="behavior">Behavior</button>
         <button class="tab" data-tab="import">Import Defs</button>
         <button class="tab" data-tab="charge">Charge</button>
         <button class="tab" data-tab="abilities">Abilities</button>
         <button class="tab" data-tab="selection">Selection</button>
+        <button class="tab" data-tab="events">Events</button>
         <button class="tab" data-tab="export">Export</button>
       </nav>
 
@@ -425,6 +427,406 @@
         </div>
       </section>
 
+      <section class="panel" data-panel="behavior">
+        <h2>Behavior</h2>
+        <p>Optional behavior systems for sentient or cursed gear: stealth mode, corruption, ambient influence, and autonomy.</p>
+
+        <div class="grid">
+          <div class="field field--wide">
+            <h3>Stealth / Veil (optional)</h3>
+            <p class="muted">Toggleable stealth mode that applies a Hediff, drains a separate energy pool, and can block targeting.</p>
+            <div class="grid">
+              <label class="field">
+                <span>Enable stealth mode</span>
+                <select id="enableStealth">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Stealth HediffDef</span>
+                <input id="stealthHediff" type="text" placeholder="MyGear_Stealth" list="defs_HediffDef" />
+              </label>
+              <label class="field">
+                <span>Toggle gizmo</span>
+                <select id="stealthToggleGizmo">
+                  <option value="yes">Yes</option>
+                  <option value="no">No (always on)</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Default on</span>
+                <select id="stealthDefaultOn">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Break stealth on attack</span>
+                <select id="stealthBreakOnAttack">
+                  <option value="false">False</option>
+                  <option value="true">True</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Prevent targeting while stealth</span>
+                <select id="stealthPreventTargeting">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Gizmo icon path (optional)</span>
+                <input id="stealthGizmoIconPath" type="text" placeholder="MyGear/UI/Stealth" />
+              </label>
+              <label class="field">
+                <span>Gizmo label key (optional)</span>
+                <input id="stealthGizmoLabelKey" type="text" placeholder="Lantern_Command_ToggleStealth" />
+              </label>
+              <label class="field">
+                <span>Gizmo desc key (optional)</span>
+                <input id="stealthGizmoDescKey" type="text" placeholder="Lantern_Command_ToggleStealthDesc" />
+              </label>
+            </div>
+
+            <div class="grid">
+              <label class="field">
+                <span>Show stealth energy bar</span>
+                <select id="stealthShowEnergyGizmo">
+                  <option value="false">False</option>
+                  <option value="true">True</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Energy label</span>
+                <input id="stealthEnergyLabel" type="text" placeholder="Stealth" />
+              </label>
+              <label class="field">
+                <span>Energy bar color (RGBA)</span>
+                <input id="stealthEnergyColor" type="text" placeholder="(0.2, 0.6, 0.8, 1)" />
+              </label>
+              <label class="field">
+                <span>Max energy</span>
+                <input id="stealthEnergyMax" type="number" min="0.01" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Start energy (0..1)</span>
+                <input id="stealthEnergyStartPercent" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Drain per second (0..1)</span>
+                <input id="stealthEnergyDrainPerSecond" type="number" min="0" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Regen per day (0..1)</span>
+                <input id="stealthEnergyRegenPerDay" type="number" min="0" step="0.01" />
+              </label>
+            </div>
+
+            <div class="field field--wide">
+              <h4>See-through rules (optional)</h4>
+              <div class="row row--actions">
+                <label class="field">
+                  <span>PawnKindDef that can see stealth</span>
+                  <input id="stealthSeeThroughPawnKindInput" type="text" placeholder="MySeerKind" list="defs_PawnKindDef" />
+                </label>
+                <button id="btnAddStealthSeeThroughPawnKind" class="btn btn--primary">Add</button>
+                <div></div>
+              </div>
+              <div id="stealthSeeThroughPawnKindsList" class="pillList"></div>
+              <div class="row row--actions">
+                <label class="field">
+                  <span>HediffDef that can see stealth</span>
+                  <input id="stealthSeeThroughHediffInput" type="text" placeholder="MySeerHediff" list="defs_HediffDef" />
+                </label>
+                <button id="btnAddStealthSeeThroughHediff" class="btn btn--primary">Add</button>
+                <div></div>
+              </div>
+              <div id="stealthSeeThroughHediffsList" class="pillList"></div>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Corruption / Influence (optional)</h3>
+            <p class="muted">Applies a persistent Hediff that grows while worn. You can also trigger mental states from severity.</p>
+            <div class="grid">
+              <label class="field">
+                <span>Corruption HediffDef</span>
+                <input id="corruptionHediff" type="text" placeholder="MyGear_Corruption" list="defs_HediffDef" />
+              </label>
+              <label class="field">
+                <span>Initial severity</span>
+                <input id="corruptionInitialSeverity" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Gain per day (0..1)</span>
+                <input id="corruptionGainPerDay" type="number" min="0" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Tick interval (seconds)</span>
+                <input id="corruptionTickIntervalSeconds" type="number" min="1" step="1" />
+              </label>
+              <label class="field">
+                <span>Stealth multiplier</span>
+                <input id="corruptionStealthMultiplier" type="number" min="0" step="0.1" />
+              </label>
+              <label class="field">
+                <span>Attention multiplier</span>
+                <input id="attentionMultiplier" type="number" min="0" step="0.1" />
+              </label>
+            </div>
+
+            <div class="field field--wide">
+              <h4>Mental state triggers (optional)</h4>
+              <div class="grid">
+                <label class="field">
+                  <span>MentalStateDef</span>
+                  <input id="corruptionMentalStateDef" type="text" placeholder="Berserk" list="defs_MentalStateDef" />
+                </label>
+                <label class="field">
+                  <span>Min severity</span>
+                  <input id="corruptionMentalStateMinSeverity" type="number" min="0" max="1" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>Max severity</span>
+                  <input id="corruptionMentalStateMaxSeverity" type="number" min="0" max="1" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>Chance per check</span>
+                  <input id="corruptionMentalStateChance" type="number" min="0" max="1" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>Check interval (ticks)</span>
+                  <input id="corruptionMentalStateInterval" type="number" min="1" step="1" />
+                </label>
+                <label class="field">
+                  <span>Require not already in state</span>
+                  <select id="corruptionMentalStateRequireNotAlready">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </label>
+                <div class="field">
+                  <span>Action</span>
+                  <button id="btnAddCorruptionMentalState" class="btn btn--primary">Add trigger</button>
+                </div>
+              </div>
+              <div id="corruptionMentalStateList" class="cardList"></div>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Ambient influence (optional)</h3>
+            <p class="muted">Applies a Hediff to pawns near the gear while it is unworn (useful for cursed artifacts).</p>
+            <div class="grid">
+              <label class="field">
+                <span>Enable ambient influence</span>
+                <select id="ambientInfluenceEnabled">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Influence HediffDef</span>
+                <input id="ambientInfluenceHediff" type="text" placeholder="MyGear_Whispers" list="defs_HediffDef" />
+              </label>
+              <label class="field">
+                <span>Only when unworn</span>
+                <select id="ambientInfluenceOnlyWhenUnworn">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Only when buried</span>
+                <select id="ambientInfluenceOnlyWhenBuried">
+                  <option value="false">False</option>
+                  <option value="true">True</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Skip wearers</span>
+                <select id="ambientInfluenceSkipWearers">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Affects colonists only</span>
+                <select id="ambientInfluenceAffectsColonistsOnly">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Affects humanlike only</span>
+                <select id="ambientInfluenceAffectsHumanlikeOnly">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Radius (0 = map-wide)</span>
+                <input id="ambientInfluenceRadius" type="number" min="0" step="0.1" />
+              </label>
+              <label class="field">
+                <span>Interval (seconds)</span>
+                <input id="ambientInfluenceIntervalSeconds" type="number" min="1" step="1" />
+              </label>
+              <label class="field">
+                <span>Initial severity</span>
+                <input id="ambientInfluenceInitialSeverity" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Severity per tick</span>
+                <input id="ambientInfluenceSeverityPerTick" type="number" min="0" step="0.001" />
+              </label>
+              <label class="field">
+                <span>Break threshold</span>
+                <input id="ambientInfluenceBreakThreshold" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Break chance</span>
+                <input id="ambientInfluenceBreakChance" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Break MentalStateDef (optional)</span>
+                <input id="ambientInfluenceMentalState" type="text" placeholder="Berserk" list="defs_MentalStateDef" />
+              </label>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Autonomy / Temptation (optional)</h3>
+            <p class="muted">Biases pawn apparel AI so they are more likely to wear this gear.</p>
+            <div class="grid">
+              <label class="field">
+                <span>Enable auto-equip bias</span>
+                <select id="autoEquipEnabled">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Chance multiplier (0..1)</span>
+                <input id="autoEquipChance" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Base score bonus</span>
+                <input id="autoEquipScoreBonus" type="number" step="1" />
+              </label>
+              <label class="field">
+                <span>Allow drafted pawns</span>
+                <label class="check">
+                  <input id="autoEquipAllowDrafted" type="checkbox" />
+                  <span>Yes</span>
+                </label>
+              </label>
+            </div>
+
+            <div class="field field--wide">
+              <h4>Trait bonuses</h4>
+              <div class="grid">
+                <label class="field">
+                  <span>TraitDef</span>
+                  <input id="autoEquipTraitDef" type="text" placeholder="Greedy" list="defs_TraitDef" />
+                </label>
+                <label class="field">
+                  <span>Degree (0 = any)</span>
+                  <input id="autoEquipTraitDegree" type="number" step="1" />
+                </label>
+                <label class="field">
+                  <span>Score offset</span>
+                  <input id="autoEquipTraitScoreOffset" type="number" step="1" />
+                </label>
+                <div class="field">
+                  <span>Action</span>
+                  <button id="btnAddAutoEquipTrait" class="btn btn--primary">Add trait bonus</button>
+                </div>
+              </div>
+              <div id="autoEquipTraitList" class="cardList"></div>
+            </div>
+
+            <div class="field field--wide">
+              <h4>Hediff bonuses</h4>
+              <div class="grid">
+                <label class="field">
+                  <span>HediffDef</span>
+                  <input id="autoEquipHediffDef" type="text" placeholder="MyHediff" list="defs_HediffDef" />
+                </label>
+                <label class="field">
+                  <span>Min severity</span>
+                  <input id="autoEquipHediffMinSeverity" type="number" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>Max severity</span>
+                  <input id="autoEquipHediffMaxSeverity" type="number" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>Score offset</span>
+                  <input id="autoEquipHediffScoreOffset" type="number" step="1" />
+                </label>
+                <label class="field">
+                  <span>Severity multiplier</span>
+                  <input id="autoEquipHediffSeverityMultiplier" type="number" step="0.1" />
+                </label>
+                <div class="field">
+                  <span>Action</span>
+                  <button id="btnAddAutoEquipHediff" class="btn btn--primary">Add hediff bonus</button>
+                </div>
+              </div>
+              <div id="autoEquipHediffList" class="cardList"></div>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Persistence / Removal rules (optional)</h3>
+            <div class="grid">
+              <label class="field">
+                <span>Refuse removal</span>
+                <select id="refuseRemoval">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Refuse HediffDef (optional)</span>
+                <input id="refuseRemovalHediff" type="text" placeholder="MyGear_Corruption" list="defs_HediffDef" />
+              </label>
+              <label class="field">
+                <span>Min severity</span>
+                <input id="refuseRemovalMinSeverity" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Message key (optional)</span>
+                <input id="refuseRemovalMessageKey" type="text" placeholder="Lantern_RefuseRemoval" />
+              </label>
+              <label class="field">
+                <span>Force drop on wearer death</span>
+                <label class="check">
+                  <input id="forceDropOnWearerDeath" type="checkbox" />
+                  <span>Yes</span>
+                </label>
+              </label>
+              <label class="field">
+                <span>Force drop on corpse destroy</span>
+                <label class="check">
+                  <input id="forceDropOnCorpseDestroy" type="checkbox" />
+                  <span>Yes</span>
+                </label>
+              </label>
+              <label class="field">
+                <span>Force drop on grave eject</span>
+                <label class="check">
+                  <input id="forceDropOnGraveEject" type="checkbox" />
+                  <span>Yes</span>
+                </label>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="panel" data-panel="import">
         <h2>Import Defs (optional)</h2>
         <p>
@@ -753,6 +1155,201 @@
               </div>
             </div>
             <div id="conditionList" class="cardList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="events">
+        <h2>World Events (optional)</h2>
+        <p>Creates a world-map discovery site (crash, ruin, stash) that contains your gear.</p>
+        <div class="grid">
+          <label class="field">
+            <span>Enable discovery event</span>
+            <select id="enableDiscoveryEvent">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Event target</span>
+            <select id="discoveryTargetType">
+              <option value="WorldSite">World site (caravan)</option>
+              <option value="ActiveMap">Active map (local crash)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Incident defName</span>
+            <input id="discoveryIncidentDefName" type="text" placeholder="MyHeroGear_Discovery" />
+          </label>
+          <label class="field">
+            <span>Incident category</span>
+            <input id="discoveryIncidentCategory" type="text" placeholder="Misc" />
+          </label>
+          <label class="field">
+            <span>Base chance</span>
+            <input id="discoveryIncidentBaseChance" type="number" min="0" step="0.01" />
+          </label>
+          <label class="field">
+            <span>Send letter</span>
+            <select id="discoverySendLetter">
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label class="field field--wide">
+            <span>Letter label (optional)</span>
+            <input id="discoveryLetterLabel" type="text" placeholder="Discovery site" />
+          </label>
+          <label class="field field--wide">
+            <span>Letter text (optional)</span>
+            <textarea id="discoveryLetterText" rows="3" placeholder="Scouts detected a site that may contain the gear..."></textarea>
+          </label>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Site details</h3>
+          <div class="grid">
+            <label class="field">
+              <span>Site label (optional)</span>
+              <input id="discoverySiteLabel" type="text" placeholder="mysterious site" />
+            </label>
+            <label class="field field--wide">
+              <span>Site description (optional)</span>
+              <textarea id="discoverySiteDescription" rows="2" placeholder="A remote site marked by unusual readings."></textarea>
+            </label>
+            <label class="field">
+              <span>Timeout days (0 = never)</span>
+              <input id="discoverySiteTimeoutDays" type="number" min="0" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Min distance (tiles)</span>
+              <input id="discoveryMinDistanceTiles" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Max distance (tiles)</span>
+              <input id="discoveryMaxDistanceTiles" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Map drop radius (cells)</span>
+              <input id="discoveryMapDropRadius" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Drop near colony structures</span>
+              <label class="check">
+                <input id="discoveryMapDropPreferColony" type="checkbox" />
+                <span>Yes</span>
+              </label>
+            </label>
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Gear placement</h3>
+          <div class="grid">
+            <label class="field">
+              <span>Placement</span>
+              <select id="discoveryGearPlacement">
+                <option value="PawnWorn">Pawn worn</option>
+                <option value="PawnInventory">Pawn inventory</option>
+                <option value="Ground">On ground</option>
+                <option value="DropPod">Drop pod</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Receiver</span>
+              <select id="discoveryGearReceiver">
+                <option value="PreferAlive">Prefer alive</option>
+                <option value="PreferDead">Prefer dead</option>
+                <option value="AliveOnly">Alive only</option>
+                <option value="DeadOnly">Dead only</option>
+                <option value="AnyPawn">Any pawn</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Gear count</span>
+              <input id="discoveryGearCount" type="number" min="1" step="1" />
+            </label>
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Pawns (optional)</h3>
+          <div class="grid">
+            <label class="field">
+              <span>PawnKindDef</span>
+              <input id="discoveryPawnKind" type="text" placeholder="AncientSoldier" list="defs_PawnKindDef" />
+            </label>
+            <label class="field">
+              <span>FactionDef (optional)</span>
+              <input id="discoveryPawnFaction" type="text" placeholder="Ancients" />
+            </label>
+            <label class="field">
+              <span>Alive min</span>
+              <input id="discoveryAliveMin" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Alive max</span>
+              <input id="discoveryAliveMax" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Dead min</span>
+              <input id="discoveryDeadMin" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Dead max</span>
+              <input id="discoveryDeadMax" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Down alive pawns</span>
+              <select id="discoveryAliveDowned">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Scatter radius</span>
+              <input id="discoveryPawnScatterRadius" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Drop pods for pawns</span>
+              <select id="discoverySpawnPawnsInDropPods">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Drop pod open delay (sec)</span>
+              <input id="discoveryDropPodOpenDelaySeconds" type="number" min="0" step="0.1" />
+            </label>
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Crash debris (optional)</h3>
+          <div class="grid">
+            <label class="field">
+              <span>Spawn crash debris</span>
+              <select id="discoverySpawnCrashDebris">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Ship chunk ThingDef</span>
+              <input id="discoveryCrashChunkDef" type="text" placeholder="ShipChunk" list="defs_ThingDef" />
+            </label>
+            <label class="field">
+              <span>Debris ThingDef</span>
+              <input id="discoveryCrashDebrisDef" type="text" placeholder="ChunkSlagSteel" list="defs_ThingDef" />
+            </label>
+            <label class="field">
+              <span>Debris count</span>
+              <input id="discoveryCrashDebrisCount" type="number" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Debris radius</span>
+              <input id="discoveryCrashDebrisRadius" type="number" min="0" step="0.5" />
+            </label>
           </div>
         </div>
       </section>

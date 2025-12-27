@@ -157,5 +157,106 @@ namespace DrAke.LanternsFramework
         public float reactiveEvadeGasRadius = 2.4f;
         // Lower values dissipate faster; higher values last longer.
         public int reactiveEvadeGasAmount = 60;
+
+        // ================== Stealth / Veil (optional) ==================
+        // Toggleable "stealth" mode that applies a hediff and can drain its own energy pool.
+        public bool stealthEnabled = false;
+        public HediffDef stealthHediff;
+        public bool stealthToggleGizmo = true;
+        public bool stealthDefaultOn = false;
+        public string stealthGizmoLabelKey = "Lantern_Command_ToggleStealth";
+        public string stealthGizmoDescKey = "Lantern_Command_ToggleStealthDesc";
+        public string stealthGizmoIconPath;
+
+        public bool stealthShowEnergyGizmo = false;
+        public string stealthEnergyLabel = "Stealth";
+        public Color stealthEnergyColor = new Color(0.2f, 0.6f, 0.8f, 1f);
+        public float stealthEnergyMax = 1f;
+        // Fraction (0..1) of max energy drained per second while active.
+        public float stealthEnergyDrainPerSecond = 0f;
+        // Fraction (0..1) of max energy regenerated per day while inactive.
+        public float stealthEnergyRegenPerDay = 1f;
+        // Starting fraction (0..1) of max energy for newly created gear.
+        public float stealthEnergyStartPercent = 1f;
+        public bool stealthBreakOnAttack = false;
+        public bool stealthPreventTargeting = true;
+        public List<PawnKindDef> stealthSeeThroughPawnKinds = new List<PawnKindDef>();
+        public List<HediffDef> stealthSeeThroughHediffs = new List<HediffDef>();
+
+        // ================== Corruption / Influence (optional) ==================
+        // Persistent corruption hediff that grows while worn.
+        public HediffDef corruptionHediff;
+        public float corruptionInitialSeverity = 0.01f;
+        // Fraction (0..1) of severity gained per day while worn.
+        public float corruptionGainPerDay = 0.05f;
+        public int corruptionTickIntervalSeconds = 1;
+        public float corruptionStealthMultiplier = 1f;
+        public List<LanternMentalStateTrigger> corruptionMentalStates = new List<LanternMentalStateTrigger>();
+
+        // Computes a "ring attention" level from corruption severity.
+        public float attentionMultiplier = 1f;
+
+        // Optional ambient influence applied while the gear is not worn (e.g., buried whispers).
+        public bool ambientInfluenceEnabled = false;
+        public HediffDef ambientInfluenceHediff;
+        public bool ambientInfluenceOnlyWhenUnworn = true;
+        public bool ambientInfluenceOnlyWhenBuried = false;
+        public bool ambientInfluenceSkipWearers = true;
+        public bool ambientInfluenceAffectsColonistsOnly = true;
+        public bool ambientInfluenceAffectsHumanlikeOnly = true;
+        public float ambientInfluenceRadius = 0f; // 0 = whole map
+        public float ambientInfluenceIntervalSeconds = 4f;
+        public float ambientInfluenceInitialSeverity = 0.02f;
+        public float ambientInfluenceSeverityPerTick = 0.002f;
+        public float ambientInfluenceBreakThreshold = 0.8f;
+        public float ambientInfluenceBreakChance = 0.05f;
+        public MentalStateDef ambientInfluenceMentalState;
+
+        // ================== Autonomy / Temptation (optional) ==================
+        // Biases pawn apparel optimization to favor wearing this gear.
+        public bool autoEquipEnabled = false;
+        public float autoEquipChance = 1f;
+        public float autoEquipScoreBonus = 0f;
+        public bool autoEquipAllowDrafted = false;
+        public List<LanternAutoEquipTraitModifier> autoEquipTraitBonuses = new List<LanternAutoEquipTraitModifier>();
+        public List<LanternAutoEquipHediffModifier> autoEquipHediffBonuses = new List<LanternAutoEquipHediffModifier>();
+
+        // ================== Refuse Removal / Persistence (optional) ==================
+        public bool refuseRemoval = false;
+        public HediffDef refuseRemovalHediff;
+        public float refuseRemovalMinSeverity = 0.5f;
+        public string refuseRemovalMessageKey = "Lantern_RefuseRemoval";
+
+        // Force-drop the gear from corpses/graves so it cannot be lost.
+        public bool forceDropOnWearerDeath = false;
+        public bool forceDropOnCorpseDestroy = false;
+        public bool forceDropOnGraveEject = false;
+    }
+
+    // ================== Helper configs ==================
+    public class LanternMentalStateTrigger
+    {
+        public MentalStateDef mentalState;
+        public float minSeverity = 0.5f;
+        public float maxSeverity = 1f;
+        public float chancePerCheck = 0.05f;
+        public int checkIntervalTicks = 1000;
+        public bool requireNotAlreadyInState = true;
+    }
+
+    public class LanternAutoEquipTraitModifier
+    {
+        public TraitDef trait;
+        public int degree = 0;
+        public float scoreOffset = 10f;
+    }
+
+    public class LanternAutoEquipHediffModifier
+    {
+        public HediffDef hediff;
+        public float minSeverity = 0f;
+        public float maxSeverity = 9999f;
+        public float scoreOffset = 10f;
+        public float severityMultiplier = 0f;
     }
 }
