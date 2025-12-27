@@ -2412,7 +2412,7 @@ function validate(state) {
   }
 
   if ((state.corruptionGainPerDay > 0 || (state.corruptionMentalStates || []).length) && !state.corruptionHediff) {
-    issues.push("Corruption settings require a Corruption HediffDef.");
+    issues.push("Influence settings require an Influence HediffDef.");
   }
 
   if (state.ambientInfluenceEnabled) {
@@ -2441,7 +2441,7 @@ function validate(state) {
     if (!isValidDefName(defName)) issues.push(`Stealth see-through HediffDef invalid: ${defName}`);
   }
   for (const it of state.corruptionMentalStates || []) {
-    if (!it?.mentalState || !isValidDefName(it.mentalState)) issues.push("Corruption mental state: MentalStateDef is missing/invalid.");
+    if (!it?.mentalState || !isValidDefName(it.mentalState)) issues.push("Influence mental state: MentalStateDef is missing/invalid.");
   }
   for (const it of state.autoEquipTraitBonuses || []) {
     if (!it?.trait || !isValidDefName(it.trait)) issues.push("Auto-equip trait bonus: TraitDef is missing/invalid.");
@@ -4092,7 +4092,7 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
     .map((x) => x.textContent?.trim())
     .filter(Boolean);
 
-  // Corruption / influence
+  // Influence (persistent)
   out.corruptionHediff = xmlText(ext, "corruptionHediff", "");
   out.corruptionInitialSeverity = xmlNum(ext, "corruptionInitialSeverity", 0.01);
   out.corruptionGainPerDay = xmlNum(ext, "corruptionGainPerDay", 0.05);

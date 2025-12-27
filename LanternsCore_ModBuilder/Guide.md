@@ -16,7 +16,7 @@ The Builder CAN:
 - Generate common abilities (blast, heal, barrier, stun, aura, construct, summon, teleport, displace, flight).
 - Add optional targeting rules and cast limits to abilities.
 - Configure costume transformation (equip apparel while worn) including drafted-only and "skip conflicts".
-- Configure stealth mode, corruption, ambient influence, auto-equip bias, and removal rules.
+- Configure stealth mode, influence, ambient/wearer influence, auto-equip bias, and removal rules.
 - Generate new costume apparel defs (so you do not have to hand-write those defs).
 - Generate a stat-buff HediffDef and apply it while worn.
 - Optionally generate a selection def (auto-delivery) and scoring conditions.
@@ -206,17 +206,16 @@ you can temporarily force the pawn's body type while transformed so the costume 
 
 This tab exposes higher-level framework behaviors that don't require custom C#:
 
-- **Stealth / Veil**: Toggleable stealth mode with its own energy pool and optional anti-targeting.
-- **Corruption / Influence**: Persistent hediff that grows while worn and can trigger mental states.
+- **Influence**: Persistent hediff that grows while worn and can trigger mental states.
 - **Ambient influence**: Apply a hediff to pawns while the gear is unworn (e.g., "whispers").
+- **Wearer influence**: Apply a hediff to pawns near the wearer (a local aura).
 - **Autonomy / Temptation**: Biases pawn apparel AI to prefer wearing the gear.
 - **Removal rules**: Refuse removal at a severity threshold; optionally force-drop from corpses/graves.
 
-### Wearer influence (new, manual XML)
+### Wearer influence (optional)
 
-LanternsCore now supports a local aura that applies a hediff to pawns near the wearer
-(the original One Ring "envy" behavior). The Builder UI does not expose this yet.
-You can add it in the exported XML under the gear's `LanternDefExtension`:
+LanternsCore supports a local aura that applies a hediff to pawns near the wearer.
+The Builder UI exposes these fields, and you can also edit them directly in XML:
 
 ```
 <wearerInfluenceEnabled>true</wearerInfluenceEnabled>
@@ -413,6 +412,9 @@ How it works:
 - You pick which base abilities you want.
 - For each enabled ability, the Builder generates an `AbilityDef` that inherits one of LanternsCore's abstract base AbilityDefs.
 - The gear gets a list of abilities to grant while worn.
+
+Also in this tab:
+- **Stealth / Veil**: Toggleable stealth mode with its own energy pool and optional anti-targeting.
 
 Required:
 - Each ability needs an iconPath. You provide the texture file at:

@@ -531,130 +531,16 @@
 
       <section class="panel" data-panel="behavior">
         <h2>Behavior</h2>
-        <p>Optional behavior systems for sentient or cursed gear: stealth mode, corruption, ambient and wearer influence, and autonomy.</p>
+        <p>Optional behavior systems for sentient or cursed gear: influence, ambient and wearer influence, and autonomy.</p>
 
         <div class="grid">
           <div class="field field--wide">
-            <h3>Stealth / Veil (optional)</h3>
-            <p class="muted">Toggleable stealth mode that applies a Hediff, drains a separate energy pool, and can block targeting.</p>
-            <div class="grid">
-              <label class="field">
-                <span>Enable stealth mode</span>
-                <select id="enableStealth">
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Stealth HediffDef</span>
-                <input id="stealthHediff" type="text" placeholder="MyGear_Stealth" list="defs_HediffDef" />
-              </label>
-              <label class="field">
-                <span>Toggle gizmo</span>
-                <select id="stealthToggleGizmo">
-                  <option value="yes">Yes</option>
-                  <option value="no">No (always on)</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Default on</span>
-                <select id="stealthDefaultOn">
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Break stealth on attack</span>
-                <select id="stealthBreakOnAttack">
-                  <option value="false">False</option>
-                  <option value="true">True</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Prevent targeting while stealth</span>
-                <select id="stealthPreventTargeting">
-                  <option value="true">True</option>
-                  <option value="false">False</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Gizmo icon path (optional)</span>
-                <input id="stealthGizmoIconPath" type="text" placeholder="MyGear/UI/Stealth" />
-              </label>
-              <label class="field">
-                <span>Gizmo label key (optional)</span>
-                <input id="stealthGizmoLabelKey" type="text" placeholder="Lantern_Command_ToggleStealth" />
-              </label>
-              <label class="field">
-                <span>Gizmo desc key (optional)</span>
-                <input id="stealthGizmoDescKey" type="text" placeholder="Lantern_Command_ToggleStealthDesc" />
-              </label>
-            </div>
-
-            <div class="grid">
-              <label class="field">
-                <span>Show stealth energy bar</span>
-                <select id="stealthShowEnergyGizmo">
-                  <option value="false">False</option>
-                  <option value="true">True</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Energy label</span>
-                <input id="stealthEnergyLabel" type="text" placeholder="Stealth" />
-              </label>
-              <label class="field">
-                <span>Energy bar color (RGBA)</span>
-                <input id="stealthEnergyColor" type="text" placeholder="(0.2, 0.6, 0.8, 1)" />
-              </label>
-              <label class="field">
-                <span>Max energy</span>
-                <input id="stealthEnergyMax" type="number" min="0.01" step="0.01" />
-              </label>
-              <label class="field">
-                <span>Start energy (0..1)</span>
-                <input id="stealthEnergyStartPercent" type="number" min="0" max="1" step="0.01" />
-              </label>
-              <label class="field">
-                <span>Drain per second (0..1)</span>
-                <input id="stealthEnergyDrainPerSecond" type="number" min="0" step="0.01" />
-              </label>
-              <label class="field">
-                <span>Regen per day (0..1)</span>
-                <input id="stealthEnergyRegenPerDay" type="number" min="0" step="0.01" />
-              </label>
-            </div>
-
-            <div class="field field--wide">
-              <h4>See-through rules (optional)</h4>
-              <div class="row row--actions">
-                <label class="field">
-                  <span>PawnKindDef that can see stealth</span>
-                  <input id="stealthSeeThroughPawnKindInput" type="text" placeholder="MySeerKind" list="defs_PawnKindDef" />
-                </label>
-                <button id="btnAddStealthSeeThroughPawnKind" class="btn btn--primary">Add</button>
-                <div></div>
-              </div>
-              <div id="stealthSeeThroughPawnKindsList" class="pillList"></div>
-              <div class="row row--actions">
-                <label class="field">
-                  <span>HediffDef that can see stealth</span>
-                  <input id="stealthSeeThroughHediffInput" type="text" placeholder="MySeerHediff" list="defs_HediffDef" />
-                </label>
-                <button id="btnAddStealthSeeThroughHediff" class="btn btn--primary">Add</button>
-                <div></div>
-              </div>
-              <div id="stealthSeeThroughHediffsList" class="pillList"></div>
-            </div>
-          </div>
-
-          <div class="field field--wide">
-            <h3>Corruption / Influence (optional)</h3>
+            <h3>Influence (optional)</h3>
             <p class="muted">Applies a persistent Hediff that grows while worn. You can also trigger mental states from severity.</p>
             <div class="grid">
               <label class="field">
-                <span>Corruption HediffDef</span>
-                <input id="corruptionHediff" type="text" placeholder="MyGear_Corruption" list="defs_HediffDef" />
+                <span>Influence HediffDef</span>
+                <input id="corruptionHediff" type="text" placeholder="MyGear_Influence" list="defs_HediffDef" />
               </label>
               <label class="field">
                 <span>Initial severity</span>
@@ -987,7 +873,7 @@
               </label>
               <label class="field">
                 <span>Refuse HediffDef (optional)</span>
-                <input id="refuseRemovalHediff" type="text" placeholder="MyGear_Corruption" list="defs_HediffDef" />
+                <input id="refuseRemovalHediff" type="text" placeholder="MyGear_Bond" list="defs_HediffDef" />
               </label>
               <label class="field">
                 <span>Min severity</span>
@@ -1259,6 +1145,122 @@
 
           <div class="abilities__editor">
             <div id="abilityEditors" class="stack"></div>
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Stealth / Veil (optional)</h3>
+          <p class="muted">Toggleable stealth mode that applies a Hediff, drains a separate energy pool, and can block targeting.</p>
+          <div class="grid">
+            <label class="field">
+              <span>Enable stealth mode</span>
+              <select id="enableStealth">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Stealth HediffDef</span>
+              <input id="stealthHediff" type="text" placeholder="MyGear_Stealth" list="defs_HediffDef" />
+            </label>
+            <label class="field">
+              <span>Toggle gizmo</span>
+              <select id="stealthToggleGizmo">
+                <option value="yes">Yes</option>
+                <option value="no">No (always on)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Default on</span>
+              <select id="stealthDefaultOn">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Break stealth on attack</span>
+              <select id="stealthBreakOnAttack">
+                <option value="false">False</option>
+                <option value="true">True</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Prevent targeting while stealth</span>
+              <select id="stealthPreventTargeting">
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Gizmo icon path (optional)</span>
+              <input id="stealthGizmoIconPath" type="text" placeholder="MyGear/UI/Stealth" />
+            </label>
+            <label class="field">
+              <span>Gizmo label key (optional)</span>
+              <input id="stealthGizmoLabelKey" type="text" placeholder="Lantern_Command_ToggleStealth" />
+            </label>
+            <label class="field">
+              <span>Gizmo desc key (optional)</span>
+              <input id="stealthGizmoDescKey" type="text" placeholder="Lantern_Command_ToggleStealthDesc" />
+            </label>
+          </div>
+
+          <div class="grid">
+            <label class="field">
+              <span>Show stealth energy bar</span>
+              <select id="stealthShowEnergyGizmo">
+                <option value="false">False</option>
+                <option value="true">True</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Energy label</span>
+              <input id="stealthEnergyLabel" type="text" placeholder="Stealth" />
+            </label>
+            <label class="field">
+              <span>Energy bar color (RGBA)</span>
+              <input id="stealthEnergyColor" type="text" placeholder="(0.2, 0.6, 0.8, 1)" />
+            </label>
+            <label class="field">
+              <span>Max energy</span>
+              <input id="stealthEnergyMax" type="number" min="0.01" step="0.01" />
+            </label>
+            <label class="field">
+              <span>Start energy (0..1)</span>
+              <input id="stealthEnergyStartPercent" type="number" min="0" max="1" step="0.01" />
+            </label>
+            <label class="field">
+              <span>Drain per second (0..1)</span>
+              <input id="stealthEnergyDrainPerSecond" type="number" min="0" step="0.01" />
+            </label>
+            <label class="field">
+              <span>Regen per day (0..1)</span>
+              <input id="stealthEnergyRegenPerDay" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+
+          <div class="field field--wide">
+            <h4>See-through filters (optional)</h4>
+            <div class="grid">
+              <label class="field">
+                <span>PawnKindDef (sees through)</span>
+                <input id="stealthSeeThroughPawnKindInput" type="text" placeholder="MySeerKind" list="defs_PawnKindDef" />
+              </label>
+              <div class="field">
+                <span>Action</span>
+                <button id="btnAddStealthSeeThroughPawnKind" class="btn btn--primary">Add</button>
+              </div>
+              <label class="field">
+                <span>HediffDef (sees through)</span>
+                <input id="stealthSeeThroughHediffInput" type="text" placeholder="MySeerHediff" list="defs_HediffDef" />
+              </label>
+              <div class="field">
+                <span>Action</span>
+                <button id="btnAddStealthSeeThroughHediff" class="btn btn--primary">Add</button>
+              </div>
+            </div>
+            <div id="stealthSeeThroughPawnKindsList" class="pillList"></div>
+            <div id="stealthSeeThroughHediffsList" class="pillList"></div>
           </div>
         </div>
       </section>
