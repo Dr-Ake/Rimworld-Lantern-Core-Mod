@@ -530,6 +530,14 @@ namespace DrAke.LanternsFramework.HarmonyPatches
                 {
                     __instance.components.Add(new ConstructLifetimeManager(__instance));
                 }
+                if (!__instance.components.Any(c => c is GameComponent_LanternInfluence))
+                {
+                    __instance.components.Add(new GameComponent_LanternInfluence(__instance));
+                }
+                if (!__instance.components.Any(c => c is GameComponent_LanternTimedIncidents))
+                {
+                    __instance.components.Add(new GameComponent_LanternTimedIncidents(__instance));
+                }
             }
         }
     }

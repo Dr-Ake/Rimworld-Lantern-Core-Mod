@@ -212,6 +212,21 @@ namespace DrAke.LanternsFramework
         public float ambientInfluenceBreakChance = 0.05f;
         public MentalStateDef ambientInfluenceMentalState;
 
+        // Optional influence applied around the wearer while the gear is worn.
+        public bool wearerInfluenceEnabled = false;
+        public HediffDef wearerInfluenceHediff;
+        public bool wearerInfluenceAffectsColonistsOnly = false;
+        public bool wearerInfluenceAffectsHumanlikeOnly = true;
+        public bool wearerInfluenceSkipWearer = true;
+        public float wearerInfluenceRadius = 10f;
+        public float wearerInfluenceIntervalSeconds = 4f;
+        public float wearerInfluenceInitialSeverity = 0.05f;
+        public float wearerInfluenceSeverityPerTick = 0.01f;
+        public float wearerInfluenceBreakThreshold = 0.8f;
+        public float wearerInfluenceBreakChance = 0.05f;
+        public MentalStateDef wearerInfluenceMentalState;
+        public List<LanternInfluenceTraitModifier> wearerInfluenceTraitModifiers = new List<LanternInfluenceTraitModifier>();
+
         // ================== Autonomy / Temptation (optional) ==================
         // Biases pawn apparel optimization to favor wearing this gear.
         public bool autoEquipEnabled = false;
@@ -258,5 +273,13 @@ namespace DrAke.LanternsFramework
         public float maxSeverity = 9999f;
         public float scoreOffset = 10f;
         public float severityMultiplier = 0f;
+    }
+
+    public class LanternInfluenceTraitModifier
+    {
+        public TraitDef trait;
+        public int degree = 0;
+        public float severityMultiplier = 1f;
+        public float severityOffset = 0f;
     }
 }

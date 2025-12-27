@@ -26,6 +26,7 @@ The Builder CANNOT (yet):
 - Create art/PNG files for you (no placeholders).
 - Automatically detect or merge complex mod dependencies for you.
 - Expose every single LanternsCore feature in the UI (you can always edit the exported XML).
+- Expose the new **wearer influence** aura or **timed incidents** (these are framework features you can add by editing XML).
 
 ## Requirements
 
@@ -210,6 +211,42 @@ This tab exposes higher-level framework behaviors that don't require custom C#:
 - **Ambient influence**: Apply a hediff to pawns while the gear is unworn (e.g., "whispers").
 - **Autonomy / Temptation**: Biases pawn apparel AI to prefer wearing the gear.
 - **Removal rules**: Refuse removal at a severity threshold; optionally force-drop from corpses/graves.
+
+### Wearer influence (new, manual XML)
+
+LanternsCore now supports a local aura that applies a hediff to pawns near the wearer
+(the original One Ring "envy" behavior). The Builder UI does not expose this yet.
+You can add it in the exported XML under the gear's `LanternDefExtension`:
+
+```
+<wearerInfluenceEnabled>true</wearerInfluenceEnabled>
+<wearerInfluenceHediff>MyEnvyHediff</wearerInfluenceHediff>
+<wearerInfluenceRadius>15</wearerInfluenceRadius>
+<wearerInfluenceIntervalSeconds>4.0</wearerInfluenceIntervalSeconds>
+<wearerInfluenceInitialSeverity>0.05</wearerInfluenceInitialSeverity>
+<wearerInfluenceSeverityPerTick>0.01</wearerInfluenceSeverityPerTick>
+<wearerInfluenceBreakThreshold>0.8</wearerInfluenceBreakThreshold>
+<wearerInfluenceBreakChance>0.05</wearerInfluenceBreakChance>
+<wearerInfluenceMentalState>MyClaimingState</wearerInfluenceMentalState>
+```
+
+Optional trait modifiers:
+
+```
+<wearerInfluenceTraitModifiers>
+  <li>
+    <trait>Greedy</trait>
+    <severityMultiplier>2.0</severityMultiplier>
+  </li>
+</wearerInfluenceTraitModifiers>
+```
+
+Notes:
+- This influence happens only while the gear is worn.
+- You can target colonists only or all pawns via:
+  - `<wearerInfluenceAffectsColonistsOnly>`
+  - `<wearerInfluenceAffectsHumanlikeOnly>`
+  - `<wearerInfluenceSkipWearer>`
 
 Behavior:
 - When the costume applies: the pawn's body type is changed to your chosen `BodyTypeDef`.
@@ -438,6 +475,28 @@ Generated XML:
 - `Defs/Generated_Gear.xml`
   - `<IncidentDef>` with `IncidentWorker_LanternDiscovery`
   - `LanternDiscoveryIncidentExtension` block with the site settings
+
+### Timed incidents (new, manual XML)
+
+LanternsCore now supports scheduled incidents (fire after a random min/max day range).
+This is how the "crash after 1-2 days" behavior is implemented.
+The Builder UI does not expose this yet. Add a second mod extension to the same IncidentDef:
+
+```
+<li Class="DrAke.LanternsFramework.LanternTimedIncidentExtension">
+  <enabled>true</enabled>
+  <fireOnce>true</fireOnce>
+  <minDays>1.0</minDays>
+  <maxDays>2.0</maxDays>
+  <retryHours>1.0</retryHours>
+  <force>true</force>
+  <target>PlayerHomeMap</target>
+</li>
+```
+
+Tips:
+- Set `<baseChance>0</baseChance>` if you want the event to be purely timed.
+- `target` options: `PlayerHomeMap`, `CurrentMap`, `AnyPlayerMap`, `World`.
 
 ## Tab: Export
 

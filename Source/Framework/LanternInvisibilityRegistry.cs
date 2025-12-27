@@ -81,9 +81,8 @@ namespace DrAke.LanternsFramework
 
             if (seer.health?.hediffSet != null && profile.seeThroughHediffs.Count > 0)
             {
-                for (int i = 0; i < profile.seeThroughHediffs.Count; i++)
+                foreach (HediffDef def in profile.seeThroughHediffs)
                 {
-                    HediffDef def = profile.seeThroughHediffs[i];
                     if (def != null && seer.health.hediffSet.GetFirstHediffOfDef(def) != null)
                     {
                         return true;

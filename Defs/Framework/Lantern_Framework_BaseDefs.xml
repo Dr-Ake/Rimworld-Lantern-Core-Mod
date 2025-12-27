@@ -443,18 +443,6 @@
     </verbProperties>
   </AbilityDef>
 
-  <!-- Map component that applies ambient influence (buried whispers, aura while unworn, etc.). -->
-  <MapComponentDef>
-    <defName>Lantern_MapComponent_Influence</defName>
-    <componentClass>DrAke.LanternsFramework.MapComponent_LanternInfluence</componentClass>
-  </MapComponentDef>
-
-  <!-- Map component that spawns discovery-site contents on first visit. -->
-  <MapComponentDef>
-    <defName>Lantern_MapComponent_DiscoverySite</defName>
-    <componentClass>DrAke.LanternsFramework.MapComponent_LanternDiscoverySite</componentClass>
-  </MapComponentDef>
-
   <!-- World object for generic discovery/crash sites. -->
   <WorldObjectDef>
     <defName>Lantern_DiscoverySite</defName>

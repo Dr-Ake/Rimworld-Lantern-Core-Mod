@@ -54,6 +54,7 @@ namespace DrAke.LanternsFramework
         // Corruption / attention
         private int corruptionTickAccumulator = 0;
         private float attentionLevel = 0f;
+        private int wearerInfluenceTickAccumulator = 0;
 
         private Dictionary<string, AbilityCastTracker> abilityCastRecords = new Dictionary<string, AbilityCastTracker>();
 
@@ -128,6 +129,8 @@ namespace DrAke.LanternsFramework
             TickChargeModel();
 
             TickCorruptionModel();
+
+            TickWearerInfluence();
 
             TickStealthModel();
 
@@ -353,6 +356,97 @@ namespace DrAke.LanternsFramework
                     wearer.mindState.mentalStateHandler.TryStartMentalState(trigger.mentalState, null, true);
                 }
             }
+        }
+
+        private void TickWearerInfluence()
+        {
+            var ext = Extension;
+            if (ext == null || !ext.wearerInfluenceEnabled || ext.wearerInfluenceHediff == null) return;
+
+            Pawn wearer = Wearer;
+            if (wearer == null || wearer.Dead || wearer.Map == null)
+            {
+                wearerInfluenceTickAccumulator = 0;
+                return;
+            }
+
+            int intervalTicks = Mathf.Max(1, (int)(Mathf.Max(0.1f, ext.wearerInfluenceIntervalSeconds) * 60f));
+            wearerInfluenceTickAccumulator++;
+            if (wearerInfluenceTickAccumulator < intervalTicks) return;
+            wearerInfluenceTickAccumulator = 0;
+
+            IEnumerable<Pawn> pawns = ext.wearerInfluenceAffectsColonistsOnly
+                ? wearer.Map.mapPawns.FreeColonistsSpawned
+                : wearer.Map.mapPawns.AllPawnsSpawned;
+
+            float radius = Mathf.Max(0f, ext.wearerInfluenceRadius);
+            float initialSeverity = Mathf.Clamp01(Mathf.Max(0f, ext.wearerInfluenceInitialSeverity));
+            float perTick = Mathf.Max(0f, ext.wearerInfluenceSeverityPerTick);
+            float breakThreshold = Mathf.Clamp01(ext.wearerInfluenceBreakThreshold);
+            float breakChance = Mathf.Clamp01(ext.wearerInfluenceBreakChance);
+
+            foreach (Pawn pawn in pawns)
+            {
+                if (pawn == null || pawn.Dead || pawn.Downed) continue;
+                if (ext.wearerInfluenceSkipWearer && pawn == wearer) continue;
+                if (ext.wearerInfluenceAffectsHumanlikeOnly && pawn.RaceProps?.Humanlike != true) continue;
+                if (pawn.health?.hediffSet == null) continue;
+                if (radius > 0f && !pawn.Position.InHorDistOf(wearer.Position, radius)) continue;
+
+                Hediff h = pawn.health.hediffSet.GetFirstHediffOfDef(ext.wearerInfluenceHediff);
+                if (h == null)
+                {
+                    h = pawn.health.AddHediff(ext.wearerInfluenceHediff);
+                    h.Severity = initialSeverity;
+                }
+
+                float delta = perTick;
+                if (delta > 0f)
+                {
+                    delta = ApplyWearerInfluenceTraitModifiers(pawn, delta, ext.wearerInfluenceTraitModifiers);
+                    if (delta > 0f)
+                    {
+                        h.Severity = Mathf.Clamp01(h.Severity + delta);
+                    }
+                }
+
+                if (ext.wearerInfluenceMentalState != null && h.Severity > breakThreshold && breakChance > 0f)
+                {
+                    if (pawn.mindState?.mentalStateHandler?.CurStateDef != ext.wearerInfluenceMentalState)
+                    {
+                        if (Rand.Value < breakChance)
+                        {
+                            pawn.mindState.mentalStateHandler.TryStartMentalState(ext.wearerInfluenceMentalState, null, true);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static float ApplyWearerInfluenceTraitModifiers(Pawn pawn, float baseDelta, List<LanternInfluenceTraitModifier> mods)
+        {
+            if (mods.NullOrEmpty() || pawn?.story?.traits == null) return baseDelta;
+
+            float delta = baseDelta;
+            for (int i = 0; i < mods.Count; i++)
+            {
+                LanternInfluenceTraitModifier mod = mods[i];
+                if (mod?.trait == null) continue;
+                Trait t = pawn.story.traits.GetTrait(mod.trait);
+                if (t == null) continue;
+                if (mod.degree != 0 && t.Degree != mod.degree) continue;
+
+                if (mod.severityMultiplier != 1f)
+                {
+                    delta *= mod.severityMultiplier;
+                }
+                if (mod.severityOffset != 0f)
+                {
+                    delta += mod.severityOffset;
+                }
+            }
+
+            return Mathf.Max(0f, delta);
         }
 
         private void TickStealthModel()
@@ -1280,6 +1374,7 @@ namespace DrAke.LanternsFramework
             Scribe_Values.Look(ref stealthEnergyTickAccumulator, "stealthEnergyTickAccumulator", 0);
             Scribe_Values.Look(ref corruptionTickAccumulator, "corruptionTickAccumulator", 0);
             Scribe_Values.Look(ref attentionLevel, "attentionLevel", 0f);
+            Scribe_Values.Look(ref wearerInfluenceTickAccumulator, "wearerInfluenceTickAccumulator", 0);
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {

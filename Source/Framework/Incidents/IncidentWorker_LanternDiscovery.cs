@@ -45,7 +45,7 @@ namespace DrAke.LanternsFramework
                 return true;
             }
 
-            if (!TryFindTile(ext, out int tile)) return false;
+            if (!TryFindTile(ext, out PlanetTile tile)) return false;
 
             WorldObjectDef siteDef =
                 ext.siteDef ??
@@ -81,7 +81,7 @@ namespace DrAke.LanternsFramework
             return true;
         }
 
-        private static bool TryFindTile(LanternDiscoveryIncidentExtension ext, out int tile)
+        private static bool TryFindTile(LanternDiscoveryIncidentExtension ext, out PlanetTile tile)
         {
             int minDist = Mathf.Max(0, ext.minDistanceFromPlayerTiles);
             int maxDist = Mathf.Max(minDist, ext.maxDistanceFromPlayerTiles);
@@ -97,7 +97,7 @@ namespace DrAke.LanternsFramework
                 return true;
             }
 
-            tile = -1;
+            tile = PlanetTile.Invalid;
             return false;
         }
 

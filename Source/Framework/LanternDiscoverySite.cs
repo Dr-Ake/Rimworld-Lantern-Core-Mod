@@ -37,6 +37,7 @@ namespace DrAke.LanternsFramework
 
         private string siteLabel;
         private string siteDescription;
+        private bool spawnedContents;
 
         public string GearLabelCap => gearDef?.LabelCap ?? "gear";
 
@@ -91,7 +92,18 @@ namespace DrAke.LanternsFramework
 
         public override string Label => !siteLabel.NullOrEmpty() ? siteLabel : base.Label;
 
-        public override void Tick()
+        public override void PostMapGenerate()
+        {
+            base.PostMapGenerate();
+            if (spawnedContents) return;
+            spawnedContents = true;
+            if (Map != null)
+            {
+                SpawnContents(Map);
+            }
+        }
+
+        protected override void Tick()
         {
             base.Tick();
             if (timeoutTicks <= 0) return;
@@ -183,6 +195,7 @@ namespace DrAke.LanternsFramework
             Scribe_Values.Look(ref timeoutTicks, "lanternDiscovery_timeoutTicks", -1);
             Scribe_Values.Look(ref siteLabel, "lanternDiscovery_siteLabel");
             Scribe_Values.Look(ref siteDescription, "lanternDiscovery_siteDescription");
+            Scribe_Values.Look(ref spawnedContents, "lanternDiscovery_spawnedContents", false);
         }
 
         private static int ClampCount(int min, int max)

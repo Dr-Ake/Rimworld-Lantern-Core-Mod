@@ -15,6 +15,7 @@ namespace DrAke.LanternsFramework
                 ValidateRings();
                 ValidateSelectionDefs();
                 ValidateDiscoveryIncidents();
+                ValidateTimedIncidents();
             }
             catch (Exception e)
             {
@@ -62,6 +63,11 @@ namespace DrAke.LanternsFramework
                     Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has ambientInfluenceEnabled but no ambientInfluenceHediff set.", (def.defName + "_ambientHediff").GetHashCode());
                 }
 
+                if (ext.wearerInfluenceEnabled && ext.wearerInfluenceHediff == null)
+                {
+                    Log.WarningOnce($"[LanternsCore] Ring '{def.defName}' has wearerInfluenceEnabled but no wearerInfluenceHediff set.", (def.defName + "_wearerInfluenceHediff").GetHashCode());
+                }
+
                 ValidateFraction(def.defName, "batteryManifestCost", ext.batteryManifestCost);
                 ValidateFraction(def.defName, "passiveRegenPerDay", ext.passiveRegenPerDay, allowAboveOne: true);
                 ValidateFraction(def.defName, "passiveDrainPerDay", ext.passiveDrainPerDay, allowAboveOne: true);
@@ -78,6 +84,10 @@ namespace DrAke.LanternsFramework
                 ValidateFraction(def.defName, "ambientInfluenceSeverityPerTick", ext.ambientInfluenceSeverityPerTick, allowAboveOne: true);
                 ValidateFraction(def.defName, "ambientInfluenceBreakThreshold", ext.ambientInfluenceBreakThreshold);
                 ValidateFraction(def.defName, "ambientInfluenceBreakChance", ext.ambientInfluenceBreakChance);
+                ValidateFraction(def.defName, "wearerInfluenceInitialSeverity", ext.wearerInfluenceInitialSeverity);
+                ValidateFraction(def.defName, "wearerInfluenceSeverityPerTick", ext.wearerInfluenceSeverityPerTick, allowAboveOne: true);
+                ValidateFraction(def.defName, "wearerInfluenceBreakThreshold", ext.wearerInfluenceBreakThreshold);
+                ValidateFraction(def.defName, "wearerInfluenceBreakChance", ext.wearerInfluenceBreakChance);
                 ValidateFraction(def.defName, "autoEquipChance", ext.autoEquipChance);
                 ValidateFraction(def.defName, "refuseRemovalMinSeverity", ext.refuseRemovalMinSeverity);
             }
@@ -160,6 +170,29 @@ namespace DrAke.LanternsFramework
                 ValidateFraction(def.defName, "siteTimeoutDays", ext.siteTimeoutDays, allowAboveOne: true);
                 ValidateFraction(def.defName, "dropPodOpenDelaySeconds", ext.dropPodOpenDelaySeconds, allowAboveOne: true);
                 ValidateFraction(def.defName, "mapDropRadius", ext.mapDropRadius, allowAboveOne: true);
+            }
+        }
+
+        private static void ValidateTimedIncidents()
+        {
+            foreach (IncidentDef def in DefDatabase<IncidentDef>.AllDefsListForReading)
+            {
+                if (def == null) continue;
+                LanternTimedIncidentExtension ext = def.GetModExtension<LanternTimedIncidentExtension>();
+                if (ext == null) continue;
+
+                if (ext.minDays < 0f || ext.maxDays < 0f)
+                {
+                    Log.WarningOnce($"[LanternsCore] Timed incident '{def.defName}' has negative min/max days.", (def.defName + "_timedDaysNeg").GetHashCode());
+                }
+                if (ext.minDays > ext.maxDays)
+                {
+                    Log.WarningOnce($"[LanternsCore] Timed incident '{def.defName}' has minDays > maxDays.", (def.defName + "_timedDaysOrder").GetHashCode());
+                }
+                if (ext.retryHours < 0f)
+                {
+                    Log.WarningOnce($"[LanternsCore] Timed incident '{def.defName}' has retryHours < 0.", (def.defName + "_timedRetryNeg").GetHashCode());
+                }
             }
         }
 

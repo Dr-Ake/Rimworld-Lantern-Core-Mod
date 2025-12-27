@@ -135,6 +135,108 @@
             <input id="mass" type="number" min="0" step="0.01" />
           </label>
         </div>
+
+        <div class="field field--wide">
+          <h3>Apparel details (optional)</h3>
+          <p class="muted">Overrides apparel settings on the gear ThingDef.</p>
+          <div class="grid">
+            <label class="field">
+              <span>Tech level</span>
+              <select id="techLevel">
+                <option value="default">Default (inherit)</option>
+                <option value="Neolithic">Neolithic</option>
+                <option value="Medieval">Medieval</option>
+                <option value="Industrial">Industrial</option>
+                <option value="Spacer">Spacer</option>
+                <option value="Ultratech">Ultratech</option>
+                <option value="Archotech">Archotech</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Smeltable</span>
+              <select id="smeltable">
+                <option value="default">Default (inherit)</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Care if worn by corpse</span>
+              <select id="careIfWornByCorpse">
+                <option value="default">Default (inherit)</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Care if damaged</span>
+              <select id="careIfDamaged">
+                <option value="default">Default (inherit)</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Counts as clothing for nudity</span>
+              <select id="countsAsClothingForNudity">
+                <option value="default">Default (inherit)</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Flammability (0..1)</span>
+              <input id="flammability" type="number" min="0" max="1" step="0.01" />
+            </label>
+            <label class="field">
+              <span>Equip delay</span>
+              <input id="equipDelay" type="number" min="0" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Deterioration rate</span>
+              <input id="deteriorationRate" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+
+          <div class="field field--wide">
+            <h4>Body part groups (optional)</h4>
+            <div class="row row--actions">
+              <label class="field">
+                <span>BodyPartGroupDef</span>
+                <input id="gearBodyPartGroupInput" type="text" placeholder="Hands" />
+              </label>
+              <button id="btnAddGearBodyPartGroup" class="btn btn--primary">Add</button>
+              <div></div>
+            </div>
+            <div id="gearBodyPartGroupList" class="pillList"></div>
+          </div>
+
+          <div class="field field--wide">
+            <h4>Apparel layers (optional)</h4>
+            <div class="row row--actions">
+              <label class="field">
+                <span>Apparel layer</span>
+                <input id="gearLayerInput" type="text" placeholder="Belt" />
+              </label>
+              <button id="btnAddGearLayer" class="btn btn--primary">Add</button>
+              <div></div>
+            </div>
+            <div id="gearLayerList" class="pillList"></div>
+          </div>
+
+          <div class="field field--wide">
+            <h4>Apparel tags (optional)</h4>
+            <div class="row row--actions">
+              <label class="field">
+                <span>Tag</span>
+                <input id="gearTagInput" type="text" placeholder="Artifact" />
+              </label>
+              <button id="btnAddGearTag" class="btn btn--primary">Add</button>
+              <div></div>
+            </div>
+            <div id="gearTagList" class="pillList"></div>
+          </div>
+        </div>
       </section>
 
       <section class="panel" data-panel="costume">
@@ -429,7 +531,7 @@
 
       <section class="panel" data-panel="behavior">
         <h2>Behavior</h2>
-        <p>Optional behavior systems for sentient or cursed gear: stealth mode, corruption, ambient influence, and autonomy.</p>
+        <p>Optional behavior systems for sentient or cursed gear: stealth mode, corruption, ambient and wearer influence, and autonomy.</p>
 
         <div class="grid">
           <div class="field field--wide">
@@ -693,6 +795,100 @@
                 <span>Break MentalStateDef (optional)</span>
                 <input id="ambientInfluenceMentalState" type="text" placeholder="Berserk" list="defs_MentalStateDef" />
               </label>
+            </div>
+          </div>
+
+          <div class="field field--wide">
+            <h3>Wearer influence (optional)</h3>
+            <p class="muted">Applies a Hediff to nearby pawns while the gear is worn (like an aura).</p>
+            <div class="grid">
+              <label class="field">
+                <span>Enable wearer influence</span>
+                <select id="wearerInfluenceEnabled">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Influence HediffDef</span>
+                <input id="wearerInfluenceHediff" type="text" placeholder="MyGear_Influence" list="defs_HediffDef" />
+              </label>
+              <label class="field">
+                <span>Affects colonists only</span>
+                <select id="wearerInfluenceAffectsColonistsOnly">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Affects humanlike only</span>
+                <select id="wearerInfluenceAffectsHumanlikeOnly">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Skip wearer</span>
+                <select id="wearerInfluenceSkipWearer">
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Radius</span>
+                <input id="wearerInfluenceRadius" type="number" min="0" step="0.1" />
+              </label>
+              <label class="field">
+                <span>Interval (seconds)</span>
+                <input id="wearerInfluenceIntervalSeconds" type="number" min="1" step="1" />
+              </label>
+              <label class="field">
+                <span>Initial severity</span>
+                <input id="wearerInfluenceInitialSeverity" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Severity per tick</span>
+                <input id="wearerInfluenceSeverityPerTick" type="number" min="0" step="0.001" />
+              </label>
+              <label class="field">
+                <span>Break threshold</span>
+                <input id="wearerInfluenceBreakThreshold" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Break chance</span>
+                <input id="wearerInfluenceBreakChance" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Break MentalStateDef (optional)</span>
+                <input id="wearerInfluenceMentalState" type="text" placeholder="Berserk" list="defs_MentalStateDef" />
+              </label>
+            </div>
+
+            <div class="field field--wide">
+              <h4>Trait severity modifiers (optional)</h4>
+              <div class="grid">
+                <label class="field">
+                  <span>TraitDef</span>
+                  <input id="wearerInfluenceTraitDef" type="text" placeholder="Greedy" list="defs_TraitDef" />
+                </label>
+                <label class="field">
+                  <span>Degree (0 = any)</span>
+                  <input id="wearerInfluenceTraitDegree" type="number" step="1" />
+                </label>
+                <label class="field">
+                  <span>Severity multiplier</span>
+                  <input id="wearerInfluenceTraitSeverityMultiplier" type="number" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>Severity offset</span>
+                  <input id="wearerInfluenceTraitSeverityOffset" type="number" step="0.01" />
+                </label>
+                <div class="field">
+                  <span>Action</span>
+                  <button id="btnAddWearerInfluenceTrait" class="btn btn--primary">Add trait modifier</button>
+                </div>
+              </div>
+              <div id="wearerInfluenceTraitList" class="cardList"></div>
             </div>
           </div>
 
@@ -1044,6 +1240,7 @@
         <datalist id="defs_MemeDef"></datalist>
         <datalist id="defs_PreceptDef"></datalist>
         <datalist id="defs_GeneDef"></datalist>
+        <datalist id="defs_LetterDef"></datalist>
 
         <div class="abilities">
           <div class="abilities__pick">
@@ -1177,6 +1374,11 @@
               <option value="ActiveMap">Active map (local crash)</option>
             </select>
           </label>
+          <label class="field field--wide">
+            <span>Target tags override (optional, comma-separated)</span>
+            <input id="discoveryTargetTags" type="text" placeholder="Map, World" />
+            <small class="muted">Leave blank to auto-set based on Event target.</small>
+          </label>
           <label class="field">
             <span>Incident defName</span>
             <input id="discoveryIncidentDefName" type="text" placeholder="MyHeroGear_Discovery" />
@@ -1190,6 +1392,18 @@
             <input id="discoveryIncidentBaseChance" type="number" min="0" step="0.01" />
           </label>
           <label class="field">
+            <span>Min refire days (optional)</span>
+            <input id="discoveryMinRefireDays" type="number" min="0" step="0.1" />
+          </label>
+          <label class="field">
+            <span>Points scaleable</span>
+            <select id="discoveryPointsScaleable">
+              <option value="default">Default (inherit)</option>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </label>
+          <label class="field">
             <span>Send letter</span>
             <select id="discoverySendLetter">
               <option value="yes">Yes</option>
@@ -1201,8 +1415,22 @@
             <input id="discoveryLetterLabel" type="text" placeholder="Discovery site" />
           </label>
           <label class="field field--wide">
+            <span>Letter label key (optional)</span>
+            <input id="discoveryLetterLabelKey" type="text" placeholder="MyMod_Discovery_Label" />
+            <small class="muted">Used when Letter label is blank.</small>
+          </label>
+          <label class="field field--wide">
             <span>Letter text (optional)</span>
             <textarea id="discoveryLetterText" rows="3" placeholder="Scouts detected a site that may contain the gear..."></textarea>
+          </label>
+          <label class="field field--wide">
+            <span>Letter text key (optional)</span>
+            <input id="discoveryLetterTextKey" type="text" placeholder="MyMod_Discovery_Text" />
+            <small class="muted">Used when Letter text is blank.</small>
+          </label>
+          <label class="field">
+            <span>Letter def (optional)</span>
+            <input id="discoveryLetterDef" type="text" placeholder="NeutralEvent" list="defs_LetterDef" />
           </label>
         </div>
 
@@ -1349,6 +1577,55 @@
             <label class="field">
               <span>Debris radius</span>
               <input id="discoveryCrashDebrisRadius" type="number" min="0" step="0.5" />
+            </label>
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <h3>Timed incident (optional)</h3>
+          <p class="muted">Schedules the discovery incident to fire after a random delay.</p>
+          <div class="grid">
+            <label class="field">
+              <span>Enable timed incident</span>
+              <select id="enableTimedIncident">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Min days</span>
+              <input id="timedIncidentMinDays" type="number" min="0" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Max days</span>
+              <input id="timedIncidentMaxDays" type="number" min="0" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Retry hours</span>
+              <input id="timedIncidentRetryHours" type="number" min="0" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Fire once</span>
+              <select id="timedIncidentFireOnce">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Force fire (ignore normal chance)</span>
+              <select id="timedIncidentForce">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Target</span>
+              <select id="timedIncidentTarget">
+                <option value="PlayerHomeMap">Player home map</option>
+                <option value="CurrentMap">Current map</option>
+                <option value="AnyPlayerMap">Any player map</option>
+                <option value="World">World</option>
+              </select>
             </label>
           </div>
         </div>

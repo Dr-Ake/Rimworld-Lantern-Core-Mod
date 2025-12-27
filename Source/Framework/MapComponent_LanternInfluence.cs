@@ -5,49 +5,74 @@ using Verse;
 
 namespace DrAke.LanternsFramework
 {
-    public class MapComponent_LanternInfluence : MapComponent
+    public class GameComponent_LanternInfluence : GameComponent
     {
-        private Dictionary<string, int> nextTickByDef = new Dictionary<string, int>();
+        private List<LanternInfluenceMapState> mapStates = new List<LanternInfluenceMapState>();
 
-        public MapComponent_LanternInfluence(Map map) : base(map)
+        public GameComponent_LanternInfluence(Game game)
         {
         }
 
         public override void ExposeData()
         {
             base.ExposeData();
-            Scribe_Collections.Look(ref nextTickByDef, "lanternInfluenceNextTick", LookMode.Value, LookMode.Value);
-            if (Scribe.mode == LoadSaveMode.PostLoadInit && nextTickByDef == null)
+            Scribe_Collections.Look(ref mapStates, "lanternInfluenceMapStates", LookMode.Deep);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit && mapStates == null)
             {
-                nextTickByDef = new Dictionary<string, int>();
+                mapStates = new List<LanternInfluenceMapState>();
             }
         }
 
-        public override void MapComponentTick()
+        public override void GameComponentTick()
         {
-            base.MapComponentTick();
+            base.GameComponentTick();
 
-            if (map == null || LanternInfluenceRegistry.Entries.Count == 0) return;
+            if (LanternInfluenceRegistry.Entries.Count == 0) return;
+            if (Find.Maps == null || Find.Maps.Count == 0) return;
 
             int now = Find.TickManager.TicksGame;
+            for (int i = mapStates.Count - 1; i >= 0; i--)
+            {
+                LanternInfluenceMapState state = mapStates[i];
+                if (state == null || !MapExists(state.mapId))
+                {
+                    mapStates.RemoveAt(i);
+                }
+            }
+
+            List<Map> maps = Find.Maps;
+            for (int i = 0; i < maps.Count; i++)
+            {
+                Map map = maps[i];
+                if (map == null) continue;
+                LanternInfluenceMapState state = GetOrCreateState(map);
+                TryApplyInfluence(map, state, now);
+            }
+        }
+
+        private void TryApplyInfluence(Map map, LanternInfluenceMapState state, int now)
+        {
+            if (map == null || state == null) return;
+            if (state.nextTickByDef == null) state.nextTickByDef = new Dictionary<string, int>();
+
             foreach (LanternInfluenceEntry entry in LanternInfluenceRegistry.Entries)
             {
                 if (entry?.def == null || entry.ext == null) continue;
                 if (entry.intervalTicks <= 0) continue;
 
-                if (!nextTickByDef.TryGetValue(entry.def.defName, out int next) || now >= next)
+                if (!state.nextTickByDef.TryGetValue(entry.def.defName, out int next) || now >= next)
                 {
-                    TryApplyInfluence(entry.def, entry.ext);
-                    nextTickByDef[entry.def.defName] = now + entry.intervalTicks;
+                    ApplyInfluence(map, entry.def, entry.ext);
+                    state.nextTickByDef[entry.def.defName] = now + entry.intervalTicks;
                 }
             }
         }
 
-        private void TryApplyInfluence(ThingDef def, LanternDefExtension ext)
+        private void ApplyInfluence(Map map, ThingDef def, LanternDefExtension ext)
         {
-            if (def == null || ext == null || ext.ambientInfluenceHediff == null) return;
+            if (map == null || def == null || ext == null || ext.ambientInfluenceHediff == null) return;
 
-            List<IntVec3> sources = CollectInfluenceSources(def, ext);
+            List<IntVec3> sources = CollectInfluenceSources(map, def, ext);
             if (sources.Count == 0) return;
 
             IEnumerable<Pawn> pawns = ext.ambientInfluenceAffectsColonistsOnly
@@ -93,13 +118,13 @@ namespace DrAke.LanternsFramework
             }
         }
 
-        private List<IntVec3> CollectInfluenceSources(ThingDef def, LanternDefExtension ext)
+        private List<IntVec3> CollectInfluenceSources(Map map, ThingDef def, LanternDefExtension ext)
         {
             var sources = new List<IntVec3>();
 
             if (ext.ambientInfluenceOnlyWhenBuried)
             {
-                AddBuriedSources(def, sources);
+                AddBuriedSources(map, def, sources);
                 return sources;
             }
 
@@ -121,13 +146,13 @@ namespace DrAke.LanternsFramework
                 }
             }
 
-            AddBuriedSources(def, sources);
-            AddCorpseSources(def, sources);
+            AddBuriedSources(map, def, sources);
+            AddCorpseSources(map, def, sources);
 
             return sources;
         }
 
-        private void AddBuriedSources(ThingDef def, List<IntVec3> sources)
+        private void AddBuriedSources(Map map, ThingDef def, List<IntVec3> sources)
         {
             foreach (Thing t in map.listerThings.ThingsInGroup(ThingRequestGroup.Grave))
             {
@@ -140,7 +165,7 @@ namespace DrAke.LanternsFramework
             }
         }
 
-        private void AddCorpseSources(ThingDef def, List<IntVec3> sources)
+        private void AddCorpseSources(Map map, ThingDef def, List<IntVec3> sources)
         {
             foreach (Thing t in map.listerThings.ThingsInGroup(ThingRequestGroup.Corpse))
             {
@@ -191,6 +216,54 @@ namespace DrAke.LanternsFramework
                 if (pos.InHorDistOf(sources[i], radius)) return true;
             }
             return false;
+        }
+
+        private LanternInfluenceMapState GetOrCreateState(Map map)
+        {
+            for (int i = 0; i < mapStates.Count; i++)
+            {
+                LanternInfluenceMapState state = mapStates[i];
+                if (state != null && state.mapId == map.uniqueID)
+                {
+                    if (state.nextTickByDef == null)
+                    {
+                        state.nextTickByDef = new Dictionary<string, int>();
+                    }
+                    return state;
+                }
+            }
+
+            LanternInfluenceMapState created = new LanternInfluenceMapState { mapId = map.uniqueID };
+            mapStates.Add(created);
+            return created;
+        }
+
+        private static bool MapExists(int mapId)
+        {
+            List<Map> maps = Find.Maps;
+            if (maps == null) return false;
+            for (int i = 0; i < maps.Count; i++)
+            {
+                Map map = maps[i];
+                if (map != null && map.uniqueID == mapId) return true;
+            }
+            return false;
+        }
+    }
+
+    public class LanternInfluenceMapState : IExposable
+    {
+        public int mapId;
+        public Dictionary<string, int> nextTickByDef = new Dictionary<string, int>();
+
+        public void ExposeData()
+        {
+            Scribe_Values.Look(ref mapId, "mapId");
+            Scribe_Collections.Look(ref nextTickByDef, "nextTickByDef", LookMode.Value, LookMode.Value);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit && nextTickByDef == null)
+            {
+                nextTickByDef = new Dictionary<string, int>();
+            }
         }
     }
 

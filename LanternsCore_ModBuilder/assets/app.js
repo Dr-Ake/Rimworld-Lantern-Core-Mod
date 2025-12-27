@@ -48,6 +48,13 @@ function toNum(input, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function toMaybeNum(input) {
+  const raw = String(input ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 function xmlList(items, indent) {
   const pad = " ".repeat(indent);
   return items.map((x) => `${pad}<li>${escapeXml(x)}</li>`).join("\n");
@@ -529,6 +536,7 @@ function applyDefIndexToDatalists(index) {
   const memeDefs = uniqueSorted(index?.byType?.MemeDef || []);
   const preceptDefs = uniqueSorted(index?.byType?.PreceptDef || []);
   const geneDefs = uniqueSorted(index?.byType?.GeneDef || []);
+  const letterDefs = uniqueSorted(index?.byType?.LetterDef || []);
 
   hydrateDatalist("defs_ThingDef", thingDefs, 20000);
   hydrateDatalist("defs_ApparelDef", apparelDefs, 20000);
@@ -545,6 +553,7 @@ function applyDefIndexToDatalists(index) {
   hydrateDatalist("defs_MemeDef", memeDefs, 20000);
   hydrateDatalist("defs_PreceptDef", preceptDefs, 20000);
   hydrateDatalist("defs_GeneDef", geneDefs, 20000);
+  hydrateDatalist("defs_LetterDef", letterDefs, 20000);
 
   const sources = (index?.sources || []).length ? index.sources.map((s) => `- ${s}`).join("\n") : "- (none)";
 
@@ -568,6 +577,7 @@ function applyDefIndexToDatalists(index) {
     `- MemeDef: ${memeDefs.length}`,
     `- PreceptDef: ${preceptDefs.length}`,
     `- GeneDef: ${geneDefs.length}`,
+    `- LetterDef: ${letterDefs.length}`,
   ].join("\n");
 
   setImportStatus(summary);
@@ -622,6 +632,7 @@ function classifyDefTag(tagName) {
   if (tagName === "MemeDef") return "MemeDef";
   if (tagName === "PreceptDef") return "PreceptDef";
   if (tagName === "GeneDef") return "GeneDef";
+  if (tagName === "LetterDef") return "LetterDef";
   return null;
 }
 
@@ -710,6 +721,7 @@ function safePersistDefIndex(index) {
           MemeDef: (index.byType?.MemeDef || []).slice(0, 2000),
           PreceptDef: (index.byType?.PreceptDef || []).slice(0, 2000),
           GeneDef: (index.byType?.GeneDef || []).slice(0, 2000),
+          LetterDef: (index.byType?.LetterDef || []).slice(0, 2000),
         },
         truncated: true,
       };
@@ -847,6 +859,17 @@ function getState() {
     ringTexPath: byId("ringTexPath").value.trim(),
     marketValue: toNum(byId("marketValue").value, 5000),
     mass: toNum(byId("mass").value, 0.1),
+    techLevel: byId("techLevel")?.value || "default",
+    smeltable: byId("smeltable")?.value || "default",
+    careIfWornByCorpse: byId("careIfWornByCorpse")?.value || "default",
+    careIfDamaged: byId("careIfDamaged")?.value || "default",
+    countsAsClothingForNudity: byId("countsAsClothingForNudity")?.value || "default",
+    flammability: toMaybeNum(byId("flammability")?.value),
+    equipDelay: toMaybeNum(byId("equipDelay")?.value),
+    deteriorationRate: toMaybeNum(byId("deteriorationRate")?.value),
+    gearBodyPartGroups: readGearBodyPartGroups(),
+    gearLayers: readGearLayers(),
+    gearTags: readGearTags(),
 
     enableCostume: byId("enableCostume")?.value === "yes",
     associatedHediff: byId("associatedHediff")?.value.trim() || "",
@@ -926,6 +949,20 @@ function getState() {
     ambientInfluenceBreakChance: toNum(byId("ambientInfluenceBreakChance")?.value, 0.05),
     ambientInfluenceMentalState: byId("ambientInfluenceMentalState")?.value.trim() || "",
 
+    wearerInfluenceEnabled: byId("wearerInfluenceEnabled")?.value === "yes",
+    wearerInfluenceHediff: byId("wearerInfluenceHediff")?.value.trim() || "",
+    wearerInfluenceAffectsColonistsOnly: byId("wearerInfluenceAffectsColonistsOnly")?.value !== "false",
+    wearerInfluenceAffectsHumanlikeOnly: byId("wearerInfluenceAffectsHumanlikeOnly")?.value !== "false",
+    wearerInfluenceSkipWearer: byId("wearerInfluenceSkipWearer")?.value !== "false",
+    wearerInfluenceRadius: toNum(byId("wearerInfluenceRadius")?.value, 10),
+    wearerInfluenceIntervalSeconds: toNum(byId("wearerInfluenceIntervalSeconds")?.value, 4),
+    wearerInfluenceInitialSeverity: toNum(byId("wearerInfluenceInitialSeverity")?.value, 0.05),
+    wearerInfluenceSeverityPerTick: toNum(byId("wearerInfluenceSeverityPerTick")?.value, 0.01),
+    wearerInfluenceBreakThreshold: toNum(byId("wearerInfluenceBreakThreshold")?.value, 0.8),
+    wearerInfluenceBreakChance: toNum(byId("wearerInfluenceBreakChance")?.value, 0.05),
+    wearerInfluenceMentalState: byId("wearerInfluenceMentalState")?.value.trim() || "",
+    wearerInfluenceTraitModifiers: readWearerInfluenceTraitModifiers(),
+
     autoEquipEnabled: byId("autoEquipEnabled")?.value === "yes",
     autoEquipChance: toNum(byId("autoEquipChance")?.value, 1),
     autoEquipScoreBonus: toNum(byId("autoEquipScoreBonus")?.value, 0),
@@ -992,10 +1029,16 @@ function getState() {
     discoveryIncidentDefName: byId("discoveryIncidentDefName")?.value.trim() || "",
     discoveryIncidentCategory: byId("discoveryIncidentCategory")?.value.trim() || "",
     discoveryIncidentBaseChance: toNum(byId("discoveryIncidentBaseChance")?.value, 0.1),
+    discoveryMinRefireDays: toMaybeNum(byId("discoveryMinRefireDays")?.value),
+    discoveryPointsScaleable: byId("discoveryPointsScaleable")?.value || "default",
     discoverySendLetter: byId("discoverySendLetter")?.value !== "no",
     discoveryLetterLabel: byId("discoveryLetterLabel")?.value.trim() || "",
     discoveryLetterText: byId("discoveryLetterText")?.value.trim() || "",
+    discoveryLetterLabelKey: byId("discoveryLetterLabelKey")?.value.trim() || "",
+    discoveryLetterTextKey: byId("discoveryLetterTextKey")?.value.trim() || "",
+    discoveryLetterDef: byId("discoveryLetterDef")?.value.trim() || "",
     discoveryTargetType: byId("discoveryTargetType")?.value || "WorldSite",
+    discoveryTargetTags: parseCsvList(byId("discoveryTargetTags")?.value),
 
     discoverySiteLabel: byId("discoverySiteLabel")?.value.trim() || "",
     discoverySiteDescription: byId("discoverySiteDescription")?.value.trim() || "",
@@ -1025,6 +1068,14 @@ function getState() {
     discoveryCrashDebrisDef: byId("discoveryCrashDebrisDef")?.value.trim() || "",
     discoveryCrashDebrisCount: Math.max(0, Math.floor(toNum(byId("discoveryCrashDebrisCount")?.value, 6))),
     discoveryCrashDebrisRadius: toNum(byId("discoveryCrashDebrisRadius")?.value, 6),
+
+    enableTimedIncident: byId("enableTimedIncident")?.value === "yes",
+    timedIncidentMinDays: toNum(byId("timedIncidentMinDays")?.value, 1),
+    timedIncidentMaxDays: toNum(byId("timedIncidentMaxDays")?.value, 2),
+    timedIncidentRetryHours: toNum(byId("timedIncidentRetryHours")?.value, 1),
+    timedIncidentFireOnce: byId("timedIncidentFireOnce")?.value !== "no",
+    timedIncidentForce: byId("timedIncidentForce")?.value !== "no",
+    timedIncidentTarget: byId("timedIncidentTarget")?.value || "PlayerHomeMap",
 
     sel_conditions: readSelectionConditions(),
   };
@@ -1214,6 +1265,132 @@ function renderStatBuffs() {
       renderExportPanel();
     });
     el.appendChild(card);
+  });
+}
+
+function readGearBodyPartGroups() {
+  const raw = byId("gearBodyPartGroupList")?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeGearBodyPartGroups(items) {
+  const el = byId("gearBodyPartGroupList");
+  if (!el) return;
+  const uniq = Array.from(new Set(items.map((x) => x.trim()).filter(Boolean)));
+  el.dataset.items = JSON.stringify(uniq);
+  renderGearBodyPartGroups();
+}
+
+function renderGearBodyPartGroups() {
+  const el = byId("gearBodyPartGroupList");
+  if (!el) return;
+  const items = readGearBodyPartGroups();
+  el.innerHTML = "";
+  items.forEach((name) => {
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.innerHTML = `<span><code>${escapeXml(name)}</code></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = "Remove";
+    btn.textContent = "A-";
+    btn.addEventListener("click", () => {
+      writeGearBodyPartGroups(items.filter((x) => x !== name));
+      saveState();
+      renderExportPanel();
+    });
+    pill.appendChild(btn);
+    el.appendChild(pill);
+  });
+}
+
+function readGearLayers() {
+  const raw = byId("gearLayerList")?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeGearLayers(items) {
+  const el = byId("gearLayerList");
+  if (!el) return;
+  const uniq = Array.from(new Set(items.map((x) => x.trim()).filter(Boolean)));
+  el.dataset.items = JSON.stringify(uniq);
+  renderGearLayers();
+}
+
+function renderGearLayers() {
+  const el = byId("gearLayerList");
+  if (!el) return;
+  const items = readGearLayers();
+  el.innerHTML = "";
+  items.forEach((name) => {
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.innerHTML = `<span><code>${escapeXml(name)}</code></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = "Remove";
+    btn.textContent = "A-";
+    btn.addEventListener("click", () => {
+      writeGearLayers(items.filter((x) => x !== name));
+      saveState();
+      renderExportPanel();
+    });
+    pill.appendChild(btn);
+    el.appendChild(pill);
+  });
+}
+
+function readGearTags() {
+  const raw = byId("gearTagList")?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeGearTags(items) {
+  const el = byId("gearTagList");
+  if (!el) return;
+  const uniq = Array.from(new Set(items.map((x) => x.trim()).filter(Boolean)));
+  el.dataset.items = JSON.stringify(uniq);
+  renderGearTags();
+}
+
+function renderGearTags() {
+  const el = byId("gearTagList");
+  if (!el) return;
+  const items = readGearTags();
+  el.innerHTML = "";
+  items.forEach((name) => {
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.innerHTML = `<span><code>${escapeXml(name)}</code></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = "Remove";
+    btn.textContent = "A-";
+    btn.addEventListener("click", () => {
+      writeGearTags(items.filter((x) => x !== name));
+      saveState();
+      renderExportPanel();
+    });
+    pill.appendChild(btn);
+    el.appendChild(pill);
   });
 }
 
@@ -1435,6 +1612,50 @@ function renderAutoEquipHediffBonuses() {
   });
 }
 
+function readWearerInfluenceTraitModifiers() {
+  const el = document.getElementById("wearerInfluenceTraitList");
+  const raw = el?.dataset.items;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeWearerInfluenceTraitModifiers(items) {
+  const el = document.getElementById("wearerInfluenceTraitList");
+  if (!el) return;
+  el.dataset.items = JSON.stringify(items);
+  renderWearerInfluenceTraitModifiers();
+}
+
+function renderWearerInfluenceTraitModifiers() {
+  const el = document.getElementById("wearerInfluenceTraitList");
+  if (!el) return;
+  const items = readWearerInfluenceTraitModifiers();
+  el.innerHTML = "";
+
+  items.forEach((it) => {
+    const card = document.createElement("div");
+    card.className = "miniCard";
+    card.innerHTML = `
+      <div class="miniCard__main">
+        <div><strong>${escapeXml(it.trait)}</strong> <span class="muted">degree</span> <code>${escapeXml(String(it.degree))}</code></div>
+        <div><span class="muted">mult:</span> <code>${escapeXml(String(it.severityMultiplier))}</code> <span class="muted">offset:</span> <code>${escapeXml(String(it.severityOffset))}</code></div>
+      </div>
+      <div class="miniCard__actions"><button type="button">Remove</button></div>
+    `;
+    card.querySelector("button").addEventListener("click", () => {
+      writeWearerInfluenceTraitModifiers(items.filter((x) => x !== it));
+      saveState();
+      renderExportPanel();
+    });
+    el.appendChild(card);
+  });
+}
+
 function readAbilityEditors() {
   const editors = qsa("#abilityEditors .card");
   return editors.map((card) => {
@@ -1538,6 +1759,17 @@ function setDefaults() {
   byId("ringTexPath").value = "MyHeroGear/Items/MyGear";
   byId("marketValue").value = "5000";
   byId("mass").value = "0.1";
+  if (document.getElementById("techLevel")) byId("techLevel").value = "default";
+  if (document.getElementById("smeltable")) byId("smeltable").value = "default";
+  if (document.getElementById("careIfWornByCorpse")) byId("careIfWornByCorpse").value = "default";
+  if (document.getElementById("careIfDamaged")) byId("careIfDamaged").value = "default";
+  if (document.getElementById("countsAsClothingForNudity")) byId("countsAsClothingForNudity").value = "default";
+  if (document.getElementById("flammability")) byId("flammability").value = "";
+  if (document.getElementById("equipDelay")) byId("equipDelay").value = "";
+  if (document.getElementById("deteriorationRate")) byId("deteriorationRate").value = "";
+  if (document.getElementById("gearBodyPartGroupList")) writeGearBodyPartGroups([]);
+  if (document.getElementById("gearLayerList")) writeGearLayers([]);
+  if (document.getElementById("gearTagList")) writeGearTags([]);
 
   if (document.getElementById("enableCostume")) {
     byId("enableCostume").value = "no";
@@ -1624,6 +1856,22 @@ function setDefaults() {
     byId("ambientInfluenceMentalState").value = "";
   }
 
+  if (document.getElementById("wearerInfluenceEnabled")) {
+    byId("wearerInfluenceEnabled").value = "no";
+    byId("wearerInfluenceHediff").value = "";
+    byId("wearerInfluenceAffectsColonistsOnly").value = "false";
+    byId("wearerInfluenceAffectsHumanlikeOnly").value = "true";
+    byId("wearerInfluenceSkipWearer").value = "true";
+    byId("wearerInfluenceRadius").value = "10";
+    byId("wearerInfluenceIntervalSeconds").value = "4";
+    byId("wearerInfluenceInitialSeverity").value = "0.05";
+    byId("wearerInfluenceSeverityPerTick").value = "0.01";
+    byId("wearerInfluenceBreakThreshold").value = "0.8";
+    byId("wearerInfluenceBreakChance").value = "0.05";
+    byId("wearerInfluenceMentalState").value = "";
+    writeWearerInfluenceTraitModifiers([]);
+  }
+
   if (document.getElementById("autoEquipEnabled")) {
     byId("autoEquipEnabled").value = "no";
     byId("autoEquipChance").value = "1";
@@ -1692,10 +1940,16 @@ function setDefaults() {
     byId("discoveryIncidentDefName").value = "MyHeroGear_Discovery";
     byId("discoveryIncidentCategory").value = "Misc";
     byId("discoveryIncidentBaseChance").value = "0.1";
+    if (document.getElementById("discoveryMinRefireDays")) byId("discoveryMinRefireDays").value = "";
+    if (document.getElementById("discoveryPointsScaleable")) byId("discoveryPointsScaleable").value = "default";
     byId("discoverySendLetter").value = "yes";
     byId("discoveryLetterLabel").value = "";
     byId("discoveryLetterText").value = "";
+    if (document.getElementById("discoveryLetterLabelKey")) byId("discoveryLetterLabelKey").value = "";
+    if (document.getElementById("discoveryLetterTextKey")) byId("discoveryLetterTextKey").value = "";
+    if (document.getElementById("discoveryLetterDef")) byId("discoveryLetterDef").value = "";
     byId("discoveryTargetType").value = "WorldSite";
+    if (document.getElementById("discoveryTargetTags")) byId("discoveryTargetTags").value = "";
 
     byId("discoverySiteLabel").value = "";
     byId("discoverySiteDescription").value = "";
@@ -1726,6 +1980,16 @@ function setDefaults() {
     byId("discoveryCrashDebrisCount").value = "6";
     byId("discoveryCrashDebrisRadius").value = "6";
   }
+
+  if (document.getElementById("enableTimedIncident")) {
+    byId("enableTimedIncident").value = "no";
+    byId("timedIncidentMinDays").value = "1";
+    byId("timedIncidentMaxDays").value = "2";
+    byId("timedIncidentRetryHours").value = "1";
+    byId("timedIncidentFireOnce").value = "yes";
+    byId("timedIncidentForce").value = "yes";
+    byId("timedIncidentTarget").value = "PlayerHomeMap";
+  }
 }
 
 function saveState() {
@@ -1751,17 +2015,32 @@ function loadState() {
     byId("regenFromPsyfocus").checked = !!s.regenFromPsyfocus;
     byId("regenFromNearbyAllies").checked = !!s.regenFromNearbyAllies;
 
-    byId("enableSelection").value = s.enableSelection ? "yes" : "no";
-    byId("excludeIfHasAnyLanternRing").value = s.excludeIfHasAnyLanternRing ? "true" : "false";
+      byId("enableSelection").value = s.enableSelection ? "yes" : "no";
+      byId("excludeIfHasAnyLanternRing").value = s.excludeIfHasAnyLanternRing ? "true" : "false";
 
-    if (document.getElementById("enableDiscoveryEvent")) {
-      byId("enableDiscoveryEvent").value = s.enableDiscoveryEvent ? "yes" : "no";
-      byId("discoverySendLetter").value = s.discoverySendLetter === false ? "no" : "yes";
-      byId("discoveryAliveDowned").value = s.discoveryAliveDowned === false ? "false" : "true";
-      byId("discoverySpawnPawnsInDropPods").value = s.discoverySpawnPawnsInDropPods === false ? "false" : "true";
-      byId("discoverySpawnCrashDebris").value = s.discoverySpawnCrashDebris === false ? "false" : "true";
-      byId("discoveryTargetType").value = s.discoveryTargetType || "WorldSite";
-      byId("discoveryMapDropPreferColony").checked = s.discoveryMapDropPreferColony ?? true;
+      if (document.getElementById("gearBodyPartGroupList")) writeGearBodyPartGroups(s.gearBodyPartGroups ?? []);
+      if (document.getElementById("gearLayerList")) writeGearLayers(s.gearLayers ?? []);
+      if (document.getElementById("gearTagList")) writeGearTags(s.gearTags ?? []);
+
+      if (document.getElementById("enableDiscoveryEvent")) {
+        byId("enableDiscoveryEvent").value = s.enableDiscoveryEvent ? "yes" : "no";
+        byId("discoverySendLetter").value = s.discoverySendLetter === false ? "no" : "yes";
+        byId("discoveryAliveDowned").value = s.discoveryAliveDowned === false ? "false" : "true";
+        byId("discoverySpawnPawnsInDropPods").value = s.discoverySpawnPawnsInDropPods === false ? "false" : "true";
+        byId("discoverySpawnCrashDebris").value = s.discoverySpawnCrashDebris === false ? "false" : "true";
+        byId("discoveryTargetType").value = s.discoveryTargetType || "WorldSite";
+        byId("discoveryMapDropPreferColony").checked = s.discoveryMapDropPreferColony ?? true;
+        if (document.getElementById("discoveryTargetTags")) {
+          const tags = Array.isArray(s.discoveryTargetTags) ? s.discoveryTargetTags : parseCsvList(s.discoveryTargetTags || "");
+          byId("discoveryTargetTags").value = tags.join(", ");
+        }
+      }
+
+    if (document.getElementById("enableTimedIncident")) {
+      byId("enableTimedIncident").value = s.enableTimedIncident ? "yes" : "no";
+      byId("timedIncidentFireOnce").value = s.timedIncidentFireOnce === false ? "no" : "yes";
+      byId("timedIncidentForce").value = s.timedIncidentForce === false ? "no" : "yes";
+      byId("timedIncidentTarget").value = s.timedIncidentTarget || "PlayerHomeMap";
     }
 
     if (document.getElementById("sel_allowColonists")) {
@@ -1859,6 +2138,22 @@ function loadState() {
       byId("ambientInfluenceBreakThreshold").value = String(s.ambientInfluenceBreakThreshold ?? 0.8);
       byId("ambientInfluenceBreakChance").value = String(s.ambientInfluenceBreakChance ?? 0.05);
       byId("ambientInfluenceMentalState").value = s.ambientInfluenceMentalState ?? "";
+    }
+
+    if (document.getElementById("wearerInfluenceEnabled")) {
+      byId("wearerInfluenceEnabled").value = s.wearerInfluenceEnabled ? "yes" : "no";
+      byId("wearerInfluenceHediff").value = s.wearerInfluenceHediff ?? "";
+      byId("wearerInfluenceAffectsColonistsOnly").value = s.wearerInfluenceAffectsColonistsOnly ? "true" : "false";
+      byId("wearerInfluenceAffectsHumanlikeOnly").value = s.wearerInfluenceAffectsHumanlikeOnly === false ? "false" : "true";
+      byId("wearerInfluenceSkipWearer").value = s.wearerInfluenceSkipWearer === false ? "false" : "true";
+      byId("wearerInfluenceRadius").value = String(s.wearerInfluenceRadius ?? 10);
+      byId("wearerInfluenceIntervalSeconds").value = String(s.wearerInfluenceIntervalSeconds ?? 4);
+      byId("wearerInfluenceInitialSeverity").value = String(s.wearerInfluenceInitialSeverity ?? 0.05);
+      byId("wearerInfluenceSeverityPerTick").value = String(s.wearerInfluenceSeverityPerTick ?? 0.01);
+      byId("wearerInfluenceBreakThreshold").value = String(s.wearerInfluenceBreakThreshold ?? 0.8);
+      byId("wearerInfluenceBreakChance").value = String(s.wearerInfluenceBreakChance ?? 0.05);
+      byId("wearerInfluenceMentalState").value = s.wearerInfluenceMentalState ?? "";
+      writeWearerInfluenceTraitModifiers(s.wearerInfluenceTraitModifiers ?? []);
     }
 
     if (document.getElementById("autoEquipEnabled")) {
@@ -1990,10 +2285,23 @@ function validate(state) {
 
   if (!state.ringDefName) issues.push("Ring defName is required.");
   if (state.ringDefName && !isValidDefName(state.ringDefName)) issues.push("Ring defName must be a valid RimWorld defName (letters/numbers/_ and must start with a letter).");
-  if (!state.ringLabel) issues.push("Ring label is required.");
-  if (!state.ringColor) issues.push("Ring color is required (e.g. (1, 0, 0, 1)).");
-  if (!state.resourceLabel) issues.push("Resource label is required.");
-  if (!state.ringTexPath) issues.push("Ring texPath is required (no extension).");
+    if (!state.ringLabel) issues.push("Ring label is required.");
+    if (!state.ringColor) issues.push("Ring color is required (e.g. (1, 0, 0, 1)).");
+    if (!state.resourceLabel) issues.push("Resource label is required.");
+    if (!state.ringTexPath) issues.push("Ring texPath is required (no extension).");
+    if (state.flammability != null && (state.flammability < 0 || state.flammability > 1))
+      issues.push("Flammability must be between 0 and 1.");
+    if (state.equipDelay != null && state.equipDelay < 0) issues.push("Equip delay must be >= 0.");
+    if (state.deteriorationRate != null && state.deteriorationRate < 0) issues.push("Deterioration rate must be >= 0.");
+    for (const defName of state.gearBodyPartGroups || []) {
+      if (!isValidDefName(defName)) issues.push(`BodyPartGroupDef invalid: ${defName}`);
+    }
+    for (const defName of state.gearLayers || []) {
+      if (!isValidDefName(defName)) issues.push(`Apparel layer invalid: ${defName}`);
+    }
+    for (const defName of state.gearTags || []) {
+      if (!isValidDefName(defName)) issues.push(`Apparel tag invalid: ${defName}`);
+    }
 
   if (state.gearParent === "custom") {
     if (!state.gearParentCustom) issues.push("Custom ParentName is required when Gear template is Custom.");
@@ -2024,13 +2332,17 @@ function validate(state) {
     if (!state.discoveryIncidentDefName) issues.push("Discovery event: incident defName is required.");
     if (state.discoveryIncidentDefName && !isValidDefName(state.discoveryIncidentDefName))
       issues.push("Discovery event: incident defName is not valid.");
-    if (!state.discoveryIncidentCategory) issues.push("Discovery event: incident category is required.");
-    if (state.discoveryIncidentCategory && !isValidDefName(state.discoveryIncidentCategory))
-      issues.push("Discovery event: incident category is not a valid defName.");
-    if (!Number.isFinite(state.discoveryIncidentBaseChance) || state.discoveryIncidentBaseChance < 0)
-      issues.push("Discovery event: base chance must be >= 0.");
-    if (!Number.isFinite(state.discoverySiteTimeoutDays) || state.discoverySiteTimeoutDays < 0)
-      issues.push("Discovery event: timeout days must be >= 0.");
+      if (!state.discoveryIncidentCategory) issues.push("Discovery event: incident category is required.");
+      if (state.discoveryIncidentCategory && !isValidDefName(state.discoveryIncidentCategory))
+        issues.push("Discovery event: incident category is not a valid defName.");
+      if (!Number.isFinite(state.discoveryIncidentBaseChance) || state.discoveryIncidentBaseChance < 0)
+        issues.push("Discovery event: base chance must be >= 0.");
+      if (state.discoveryMinRefireDays != null && state.discoveryMinRefireDays < 0)
+        issues.push("Discovery event: min refire days must be >= 0.");
+      if (!new Set(["default", "true", "false"]).has(state.discoveryPointsScaleable || "default"))
+        issues.push("Discovery event: points scaleable must be default/true/false.");
+      if (!Number.isFinite(state.discoverySiteTimeoutDays) || state.discoverySiteTimeoutDays < 0)
+        issues.push("Discovery event: timeout days must be >= 0.");
     if (!Number.isFinite(state.discoveryMinDistanceTiles) || state.discoveryMinDistanceTiles < 0)
       issues.push("Discovery event: min distance must be >= 0.");
     if (!Number.isFinite(state.discoveryMaxDistanceTiles) || state.discoveryMaxDistanceTiles < 0)
@@ -2050,12 +2362,38 @@ function validate(state) {
       issues.push("Discovery event: dead min must be <= dead max.");
     if ((aliveMax > 0 || deadMax > 0) && !state.discoveryPawnKind)
       issues.push("Discovery event: pawnKind is required when spawning pawns.");
-    if (state.discoveryPawnKind && !isValidDefName(state.discoveryPawnKind))
-      issues.push("Discovery event: pawnKind is not a valid defName.");
-    if (state.discoveryPawnFaction && !isValidDefName(state.discoveryPawnFaction))
-      issues.push("Discovery event: pawnFaction is not a valid defName.");
-    if ((state.discoveryGearPlacement === "PawnWorn" || state.discoveryGearPlacement === "PawnInventory") && aliveMax + deadMax <= 0)
-      issues.push("Discovery event: pawn gear placement requires alive/dead pawn counts.");
+      if (state.discoveryPawnKind && !isValidDefName(state.discoveryPawnKind))
+        issues.push("Discovery event: pawnKind is not a valid defName.");
+      if (state.discoveryPawnFaction && !isValidDefName(state.discoveryPawnFaction))
+        issues.push("Discovery event: pawnFaction is not a valid defName.");
+      if (state.discoveryLetterDef && !isValidDefName(state.discoveryLetterDef))
+        issues.push("Discovery event: letterDef is not a valid defName.");
+      const targetTags = Array.isArray(state.discoveryTargetTags)
+        ? state.discoveryTargetTags
+        : parseCsvList(state.discoveryTargetTags || "");
+      for (const tag of targetTags) {
+        if (!isValidDefName(tag)) issues.push(`Discovery event: target tag is not valid: ${tag}`);
+      }
+      if ((state.discoveryGearPlacement === "PawnWorn" || state.discoveryGearPlacement === "PawnInventory") && aliveMax + deadMax <= 0)
+        issues.push("Discovery event: pawn gear placement requires alive/dead pawn counts.");
+    }
+
+  if (state.enableTimedIncident) {
+    if (!state.enableDiscoveryEvent) issues.push("Timed incident requires discovery event to be enabled.");
+    if (!Number.isFinite(state.timedIncidentMinDays) || state.timedIncidentMinDays < 0) issues.push("Timed incident: min days must be >= 0.");
+    if (!Number.isFinite(state.timedIncidentMaxDays) || state.timedIncidentMaxDays < 0) issues.push("Timed incident: max days must be >= 0.");
+    if (
+      Number.isFinite(state.timedIncidentMinDays) &&
+      Number.isFinite(state.timedIncidentMaxDays) &&
+      state.timedIncidentMinDays > state.timedIncidentMaxDays
+    ) {
+      issues.push("Timed incident: min days must be <= max days.");
+    }
+    if (!Number.isFinite(state.timedIncidentRetryHours) || state.timedIncidentRetryHours < 0) {
+      issues.push("Timed incident: retry hours must be >= 0.");
+    }
+    const allowedTargets = new Set(["PlayerHomeMap", "CurrentMap", "AnyPlayerMap", "World"]);
+    if (!allowedTargets.has(state.timedIncidentTarget)) issues.push("Timed incident: target is invalid.");
   }
 
   if (state.associatedHediff && !isValidDefName(state.associatedHediff)) issues.push("Associated hediff must be a valid defName.");
@@ -2083,6 +2421,15 @@ function validate(state) {
     }
   }
 
+  if (state.wearerInfluenceEnabled) {
+    if (!state.wearerInfluenceHediff || !isValidDefName(state.wearerInfluenceHediff)) {
+      issues.push("Wearer influence enabled: HediffDef is required.");
+    }
+  }
+  if (state.wearerInfluenceMentalState && !isValidDefName(state.wearerInfluenceMentalState)) {
+    issues.push("Wearer influence: MentalStateDef is not valid.");
+  }
+
   if (state.refuseRemoval && state.refuseRemovalHediff && !isValidDefName(state.refuseRemovalHediff)) {
     issues.push("Refuse removal: HediffDef must be a valid defName.");
   }
@@ -2098,6 +2445,9 @@ function validate(state) {
   }
   for (const it of state.autoEquipTraitBonuses || []) {
     if (!it?.trait || !isValidDefName(it.trait)) issues.push("Auto-equip trait bonus: TraitDef is missing/invalid.");
+  }
+  for (const it of state.wearerInfluenceTraitModifiers || []) {
+    if (!it?.trait || !isValidDefName(it.trait)) issues.push("Wearer influence trait modifier: TraitDef is missing/invalid.");
   }
   for (const it of state.autoEquipHediffBonuses || []) {
     if (!it?.hediff || !isValidDefName(it.hediff)) issues.push("Auto-equip hediff bonus: HediffDef is missing/invalid.");
@@ -2183,14 +2533,17 @@ function referencedDefsForDependencies(state) {
   if (state.enableStealth && state.stealthHediff) refs.push({ type: "HediffDef", defName: state.stealthHediff });
   if (state.corruptionHediff) refs.push({ type: "HediffDef", defName: state.corruptionHediff });
   if (state.ambientInfluenceHediff) refs.push({ type: "HediffDef", defName: state.ambientInfluenceHediff });
+  if (state.wearerInfluenceHediff) refs.push({ type: "HediffDef", defName: state.wearerInfluenceHediff });
   if (state.refuseRemovalHediff) refs.push({ type: "HediffDef", defName: state.refuseRemovalHediff });
   if (state.ambientInfluenceMentalState) refs.push({ type: "MentalStateDef", defName: state.ambientInfluenceMentalState });
+  if (state.wearerInfluenceMentalState) refs.push({ type: "MentalStateDef", defName: state.wearerInfluenceMentalState });
 
   if (state.enableDiscoveryEvent) {
     if (state.discoveryPawnKind) refs.push({ type: "PawnKindDef", defName: state.discoveryPawnKind });
     if (state.discoveryPawnFaction) refs.push({ type: "FactionDef", defName: state.discoveryPawnFaction });
     if (state.discoveryCrashChunkDef) refs.push({ type: "ThingDef", defName: state.discoveryCrashChunkDef });
     if (state.discoveryCrashDebrisDef) refs.push({ type: "ThingDef", defName: state.discoveryCrashDebrisDef });
+    if (state.discoveryLetterDef) refs.push({ type: "LetterDef", defName: state.discoveryLetterDef });
   }
 
   for (const a of state.abilities || []) {
@@ -2208,6 +2561,9 @@ function referencedDefsForDependencies(state) {
     if (it?.mentalState) refs.push({ type: "MentalStateDef", defName: it.mentalState });
   }
   for (const it of state.autoEquipTraitBonuses || []) {
+    if (it?.trait) refs.push({ type: "TraitDef", defName: it.trait });
+  }
+  for (const it of state.wearerInfluenceTraitModifiers || []) {
     if (it?.trait) refs.push({ type: "TraitDef", defName: it.trait });
   }
   for (const it of state.autoEquipHediffBonuses || []) {
@@ -2463,6 +2819,42 @@ function buildDefsXml(state) {
       extLines.push(`      <ambientInfluenceMentalState>${escapeXml(state.ambientInfluenceMentalState)}</ambientInfluenceMentalState>`);
   }
 
+  if (state.wearerInfluenceEnabled) {
+    extLines.push(`      <wearerInfluenceEnabled>true</wearerInfluenceEnabled>`);
+    if (state.wearerInfluenceHediff)
+      extLines.push(`      <wearerInfluenceHediff>${escapeXml(state.wearerInfluenceHediff)}</wearerInfluenceHediff>`);
+    if (state.wearerInfluenceAffectsColonistsOnly)
+      extLines.push(`      <wearerInfluenceAffectsColonistsOnly>true</wearerInfluenceAffectsColonistsOnly>`);
+    if (state.wearerInfluenceAffectsHumanlikeOnly === false)
+      extLines.push(`      <wearerInfluenceAffectsHumanlikeOnly>false</wearerInfluenceAffectsHumanlikeOnly>`);
+    if (state.wearerInfluenceSkipWearer === false) extLines.push(`      <wearerInfluenceSkipWearer>false</wearerInfluenceSkipWearer>`);
+    if (state.wearerInfluenceRadius !== 10) extLines.push(`      <wearerInfluenceRadius>${state.wearerInfluenceRadius}</wearerInfluenceRadius>`);
+    if (state.wearerInfluenceIntervalSeconds !== 4)
+      extLines.push(`      <wearerInfluenceIntervalSeconds>${state.wearerInfluenceIntervalSeconds}</wearerInfluenceIntervalSeconds>`);
+    if (state.wearerInfluenceInitialSeverity !== 0.05)
+      extLines.push(`      <wearerInfluenceInitialSeverity>${state.wearerInfluenceInitialSeverity}</wearerInfluenceInitialSeverity>`);
+    if (state.wearerInfluenceSeverityPerTick !== 0.01)
+      extLines.push(`      <wearerInfluenceSeverityPerTick>${state.wearerInfluenceSeverityPerTick}</wearerInfluenceSeverityPerTick>`);
+    if (state.wearerInfluenceBreakThreshold !== 0.8)
+      extLines.push(`      <wearerInfluenceBreakThreshold>${state.wearerInfluenceBreakThreshold}</wearerInfluenceBreakThreshold>`);
+    if (state.wearerInfluenceBreakChance !== 0.05)
+      extLines.push(`      <wearerInfluenceBreakChance>${state.wearerInfluenceBreakChance}</wearerInfluenceBreakChance>`);
+    if (state.wearerInfluenceMentalState)
+      extLines.push(`      <wearerInfluenceMentalState>${escapeXml(state.wearerInfluenceMentalState)}</wearerInfluenceMentalState>`);
+    if ((state.wearerInfluenceTraitModifiers || []).length) {
+      extLines.push(`      <wearerInfluenceTraitModifiers>`);
+      for (const it of state.wearerInfluenceTraitModifiers) {
+        extLines.push(`        <li>`);
+        extLines.push(`          <trait>${escapeXml(it.trait)}</trait>`);
+        if ((it.degree || 0) !== 0) extLines.push(`          <degree>${it.degree}</degree>`);
+        if (it.severityMultiplier != null) extLines.push(`          <severityMultiplier>${it.severityMultiplier}</severityMultiplier>`);
+        if (it.severityOffset != null) extLines.push(`          <severityOffset>${it.severityOffset}</severityOffset>`);
+        extLines.push(`        </li>`);
+      }
+      extLines.push(`      </wearerInfluenceTraitModifiers>`);
+    }
+  }
+
   if (state.autoEquipEnabled) {
     extLines.push(`      <autoEquipEnabled>true</autoEquipEnabled>`);
     if (state.autoEquipChance !== 1) extLines.push(`      <autoEquipChance>${state.autoEquipChance}</autoEquipChance>`);
@@ -2579,11 +2971,55 @@ function buildDefsXml(state) {
   const parentName = gearParent || "Lantern_RingBase";
   const gearGraphicClass = (state.gearGraphicClass || "Graphic_Single").trim() || "Graphic_Single";
 
+  const statBasesLines = [
+    `      <MarketValue>${state.marketValue}</MarketValue>`,
+    `      <Mass>${state.mass}</Mass>`,
+  ];
+  if (state.flammability != null) statBasesLines.push(`      <Flammability>${state.flammability}</Flammability>`);
+  if (state.equipDelay != null) statBasesLines.push(`      <EquipDelay>${state.equipDelay}</EquipDelay>`);
+  if (state.deteriorationRate != null)
+    statBasesLines.push(`      <DeteriorationRate>${state.deteriorationRate}</DeteriorationRate>`);
+
+  const apparelLines = [];
+  if (state.careIfWornByCorpse === "true") apparelLines.push(`      <careIfWornByCorpse>true</careIfWornByCorpse>`);
+  if (state.careIfWornByCorpse === "false") apparelLines.push(`      <careIfWornByCorpse>false</careIfWornByCorpse>`);
+  if (state.careIfDamaged === "true") apparelLines.push(`      <careIfDamaged>true</careIfDamaged>`);
+  if (state.careIfDamaged === "false") apparelLines.push(`      <careIfDamaged>false</careIfDamaged>`);
+  if (state.countsAsClothingForNudity === "true")
+    apparelLines.push(`      <countsAsClothingForNudity>true</countsAsClothingForNudity>`);
+  if (state.countsAsClothingForNudity === "false")
+    apparelLines.push(`      <countsAsClothingForNudity>false</countsAsClothingForNudity>`);
+  if ((state.gearBodyPartGroups || []).length) {
+    apparelLines.push(`      <bodyPartGroups>`);
+    for (const defName of state.gearBodyPartGroups) {
+      apparelLines.push(`        <li>${escapeXml(defName)}</li>`);
+    }
+    apparelLines.push(`      </bodyPartGroups>`);
+  }
+  if ((state.gearLayers || []).length) {
+    apparelLines.push(`      <layers>`);
+    for (const defName of state.gearLayers) {
+      apparelLines.push(`        <li>${escapeXml(defName)}</li>`);
+    }
+    apparelLines.push(`      </layers>`);
+  }
+  if ((state.gearTags || []).length) {
+    apparelLines.push(`      <tags>`);
+    for (const defName of state.gearTags) {
+      apparelLines.push(`        <li>${escapeXml(defName)}</li>`);
+    }
+    apparelLines.push(`      </tags>`);
+  }
+
+  const apparelXml = apparelLines.length ? `    <apparel>\n${apparelLines.join("\n")}\n    </apparel>\n` : "";
+
   const ringXml =
     `  <ThingDef ParentName="${escapeXml(parentName)}">\n` +
     `    <defName>${escapeXml(state.ringDefName)}</defName>\n` +
     `    <label>${escapeXml(state.ringLabel)}</label>\n` +
     `    <description>${escapeXml(state.ringDesc || "")}</description>\n` +
+    (state.techLevel && state.techLevel !== "default" ? `    <techLevel>${escapeXml(state.techLevel)}</techLevel>\n` : "") +
+    (state.smeltable && state.smeltable !== "default" ? `    <smeltable>${state.smeltable}</smeltable>\n` : "") +
     `    <graphicData>\n` +
     `      <texPath>${escapeXml(state.ringTexPath)}</texPath>\n` +
     `      <graphicClass>${escapeXml(gearGraphicClass)}</graphicClass>\n` +
@@ -2591,9 +3027,9 @@ function buildDefsXml(state) {
     `      <color>${escapeXml(state.ringColor)}</color>\n` +
     `    </graphicData>\n` +
     `    <statBases>\n` +
-    `      <MarketValue>${state.marketValue}</MarketValue>\n` +
-    `      <Mass>${state.mass}</Mass>\n` +
+    `${statBasesLines.join("\n")}\n` +
     `    </statBases>\n` +
+    apparelXml +
     `    <modExtensions>\n` +
     `      <li Class="DrAke.LanternsFramework.LanternDefExtension">\n` +
     `${extLines.map((l) => "        " + l.trimStart()).join("\n")}\n` +
@@ -2905,6 +3341,10 @@ function buildDiscoveryIncidentDefXml(state) {
   const label = state.discoverySiteLabel || state.ringLabel || "discovery site";
   const targetType = state.discoveryTargetType || "WorldSite";
   const targetTag = targetType === "ActiveMap" ? "Map" : "World";
+  const rawTargetTags = Array.isArray(state.discoveryTargetTags)
+    ? state.discoveryTargetTags
+    : parseCsvList(state.discoveryTargetTags || "");
+  const targetTags = rawTargetTags.length ? rawTargetTags : [targetTag];
 
   const extLines = [];
   extLines.push(`        <gearDef>${escapeXml(state.ringDefName)}</gearDef>`);
@@ -2922,7 +3362,12 @@ function buildDiscoveryIncidentDefXml(state) {
 
   if (state.discoverySendLetter === false) extLines.push(`        <sendLetter>false</sendLetter>`);
   if (state.discoveryLetterLabel) extLines.push(`        <letterLabel>${escapeXml(state.discoveryLetterLabel)}</letterLabel>`);
+  if (state.discoveryLetterLabelKey)
+    extLines.push(`        <letterLabelKey>${escapeXml(state.discoveryLetterLabelKey)}</letterLabelKey>`);
   if (state.discoveryLetterText) extLines.push(`        <letterText>${escapeXml(state.discoveryLetterText)}</letterText>`);
+  if (state.discoveryLetterTextKey)
+    extLines.push(`        <letterTextKey>${escapeXml(state.discoveryLetterTextKey)}</letterTextKey>`);
+  if (state.discoveryLetterDef) extLines.push(`        <letterDef>${escapeXml(state.discoveryLetterDef)}</letterDef>`);
 
   if (state.discoverySpawnCrashDebris === false) extLines.push(`        <spawnCrashDebris>false</spawnCrashDebris>`);
   if (state.discoveryCrashChunkDef) extLines.push(`        <crashChunkDef>${escapeXml(state.discoveryCrashChunkDef)}</crashChunkDef>`);
@@ -2946,20 +3391,38 @@ function buildDiscoveryIncidentDefXml(state) {
   if (state.discoveryGearReceiver && state.discoveryGearReceiver !== "PreferAlive")
     extLines.push(`        <gearReceiver>${escapeXml(state.discoveryGearReceiver)}</gearReceiver>`);
 
+  const timedExtLines = [];
+  if (state.enableTimedIncident) {
+    if (state.timedIncidentMinDays !== 1) timedExtLines.push(`        <minDays>${state.timedIncidentMinDays}</minDays>`);
+    if (state.timedIncidentMaxDays !== 2) timedExtLines.push(`        <maxDays>${state.timedIncidentMaxDays}</maxDays>`);
+    if (state.timedIncidentRetryHours !== 1) timedExtLines.push(`        <retryHours>${state.timedIncidentRetryHours}</retryHours>`);
+    if (state.timedIncidentFireOnce === false) timedExtLines.push(`        <fireOnce>false</fireOnce>`);
+    if (state.timedIncidentForce === false) timedExtLines.push(`        <force>false</force>`);
+    if (state.timedIncidentTarget && state.timedIncidentTarget !== "PlayerHomeMap")
+      timedExtLines.push(`        <target>${escapeXml(state.timedIncidentTarget)}</target>`);
+  }
+
   return (
     `\n  <IncidentDef>\n` +
     `    <defName>${escapeXml(defName)}</defName>\n` +
     `    <label>${escapeXml(label)}</label>\n` +
     `    <category>${escapeXml(category)}</category>\n` +
     `    <targetTags>\n` +
-    `      <li>${escapeXml(targetTag)}</li>\n` +
+    `${targetTags.map((tag) => `      <li>${escapeXml(tag)}</li>`).join("\n")}\n` +
     `    </targetTags>\n` +
+    (state.discoveryMinRefireDays != null ? `    <minRefireDays>${state.discoveryMinRefireDays}</minRefireDays>\n` : "") +
+    (state.discoveryPointsScaleable && state.discoveryPointsScaleable !== "default"
+      ? `    <pointsScaleable>${state.discoveryPointsScaleable}</pointsScaleable>\n`
+      : "") +
     `    <baseChance>${baseChance}</baseChance>\n` +
     `    <workerClass>DrAke.LanternsFramework.IncidentWorker_LanternDiscovery</workerClass>\n` +
     `    <modExtensions>\n` +
     `      <li Class="DrAke.LanternsFramework.LanternDiscoveryIncidentExtension">\n` +
     `${extLines.join("\n")}\n` +
     `      </li>\n` +
+    (state.enableTimedIncident
+      ? `      <li Class="DrAke.LanternsFramework.LanternTimedIncidentExtension">\n${timedExtLines.join("\n")}\n      </li>\n`
+      : "") +
     `    </modExtensions>\n` +
     `  </IncidentDef>\n`
   );
@@ -3210,9 +3673,9 @@ function wireActions() {
     });
   }
 
-  const btnAddGen = document.getElementById("btnAddGeneratedApparel");
-  if (btnAddGen) {
-    btnAddGen.addEventListener("click", () => {
+    const btnAddGen = document.getElementById("btnAddGeneratedApparel");
+    if (btnAddGen) {
+      btnAddGen.addEventListener("click", () => {
       const defName = byId("genApparelDefName").value.trim();
       const label = byId("genApparelLabel").value.trim();
       const texPath = byId("genApparelTexPath").value.trim();
@@ -3252,12 +3715,62 @@ function wireActions() {
 
       saveState();
       renderExportPanel();
-    });
-  }
+      });
+    }
 
-  const btnAddStat = document.getElementById("btnAddStatBuff");
-  if (btnAddStat) {
-    btnAddStat.addEventListener("click", () => {
+    const btnAddGearBodyPartGroup = document.getElementById("btnAddGearBodyPartGroup");
+    if (btnAddGearBodyPartGroup) {
+      btnAddGearBodyPartGroup.addEventListener("click", () => {
+        const input = byId("gearBodyPartGroupInput");
+        const val = input.value.trim();
+        if (!val) return;
+        if (!isValidDefName(val)) {
+          alert("BodyPartGroupDef is not valid.");
+          return;
+        }
+        const items = readGearBodyPartGroups();
+        writeGearBodyPartGroups([...items, val]);
+        input.value = "";
+        saveState();
+        renderExportPanel();
+      });
+    }
+
+    const btnAddGearLayer = document.getElementById("btnAddGearLayer");
+    if (btnAddGearLayer) {
+      btnAddGearLayer.addEventListener("click", () => {
+        const input = byId("gearLayerInput");
+        const val = input.value.trim();
+        if (!val) return;
+        if (!isValidDefName(val)) {
+          alert("Apparel layer is not valid.");
+          return;
+        }
+        const items = readGearLayers();
+        writeGearLayers([...items, val]);
+        input.value = "";
+        saveState();
+        renderExportPanel();
+      });
+    }
+
+    const btnAddGearTag = document.getElementById("btnAddGearTag");
+    if (btnAddGearTag) {
+      btnAddGearTag.addEventListener("click", () => {
+        const input = byId("gearTagInput");
+        const val = input.value.trim();
+        if (!val) return;
+        const items = readGearTags();
+        writeGearTags([...items, val]);
+        input.value = "";
+        saveState();
+        renderExportPanel();
+      });
+    }
+
+    const btnAddStat = document.getElementById("btnAddStatBuff");
+    if (btnAddStat) {
+      btnAddStat.addEventListener("click", () => {
       const stat = byId("statBuffStat").value.trim();
       const offset = toNum(byId("statBuffOffset").value, NaN);
       if (!stat || !isValidDefName(stat)) {
@@ -3328,6 +3841,19 @@ function xmlNum(node, selector, fallback) {
   if (!t) return fallback;
   const n = Number(t);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function xmlMaybeNum(node, selector) {
+  const t = xmlText(node, selector, "");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+function xmlTriState(node, selector) {
+  const t = xmlText(node, selector, "");
+  if (!t) return "default";
+  return t.toLowerCase() === "true" ? "true" : "false";
 }
 
 function findDefsByTagAndDefName(doc, tagName, defName) {
@@ -3471,12 +3997,31 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
     out.gearParentCustom = parentName;
   }
 
-  out.ringTexPath = xmlText(gearThing, "graphicData > texPath", "");
-  const gc = xmlText(gearThing, "graphicData > graphicClass", "Graphic_Single");
-  out.gearGraphicClass = gc === "Graphic_Multi" ? "Graphic_Multi" : "Graphic_Single";
+    out.ringTexPath = xmlText(gearThing, "graphicData > texPath", "");
+    const gc = xmlText(gearThing, "graphicData > graphicClass", "Graphic_Single");
+    out.gearGraphicClass = gc === "Graphic_Multi" ? "Graphic_Multi" : "Graphic_Single";
 
-  out.marketValue = xmlNum(gearThing, "statBases > MarketValue", 5000);
-  out.mass = xmlNum(gearThing, "statBases > Mass", 0.1);
+    out.marketValue = xmlNum(gearThing, "statBases > MarketValue", 5000);
+    out.mass = xmlNum(gearThing, "statBases > Mass", 0.1);
+    out.techLevel = xmlText(gearThing, "techLevel", "default");
+    out.smeltable = xmlTriState(gearThing, "smeltable");
+    out.flammability = xmlMaybeNum(gearThing, "statBases > Flammability");
+    out.equipDelay = xmlMaybeNum(gearThing, "statBases > EquipDelay");
+    out.deteriorationRate = xmlMaybeNum(gearThing, "statBases > DeteriorationRate");
+
+    const apparelNode = gearThing.querySelector("apparel");
+    out.careIfWornByCorpse = apparelNode ? xmlTriState(apparelNode, "careIfWornByCorpse") : "default";
+    out.careIfDamaged = apparelNode ? xmlTriState(apparelNode, "careIfDamaged") : "default";
+    out.countsAsClothingForNudity = apparelNode ? xmlTriState(apparelNode, "countsAsClothingForNudity") : "default";
+    out.gearBodyPartGroups = Array.from(gearThing.querySelectorAll("apparel > bodyPartGroups > li"))
+      .map((x) => x.textContent?.trim())
+      .filter(Boolean);
+    out.gearLayers = Array.from(gearThing.querySelectorAll("apparel > layers > li"))
+      .map((x) => x.textContent?.trim())
+      .filter(Boolean);
+    out.gearTags = Array.from(gearThing.querySelectorAll("apparel > tags > li"))
+      .map((x) => x.textContent?.trim())
+      .filter(Boolean);
 
   // Extension basics
   out.ringColor = xmlText(ext, "ringColor", "(1, 1, 1, 1)");
@@ -3578,6 +4123,26 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   out.ambientInfluenceBreakThreshold = xmlNum(ext, "ambientInfluenceBreakThreshold", 0.8);
   out.ambientInfluenceBreakChance = xmlNum(ext, "ambientInfluenceBreakChance", 0.05);
   out.ambientInfluenceMentalState = xmlText(ext, "ambientInfluenceMentalState", "");
+
+  // Wearer influence
+  out.wearerInfluenceEnabled = xmlBool(ext, "wearerInfluenceEnabled", false);
+  out.wearerInfluenceHediff = xmlText(ext, "wearerInfluenceHediff", "");
+  out.wearerInfluenceAffectsColonistsOnly = xmlBool(ext, "wearerInfluenceAffectsColonistsOnly", false);
+  out.wearerInfluenceAffectsHumanlikeOnly = xmlBool(ext, "wearerInfluenceAffectsHumanlikeOnly", true);
+  out.wearerInfluenceSkipWearer = xmlBool(ext, "wearerInfluenceSkipWearer", true);
+  out.wearerInfluenceRadius = xmlNum(ext, "wearerInfluenceRadius", 10);
+  out.wearerInfluenceIntervalSeconds = xmlNum(ext, "wearerInfluenceIntervalSeconds", 4);
+  out.wearerInfluenceInitialSeverity = xmlNum(ext, "wearerInfluenceInitialSeverity", 0.05);
+  out.wearerInfluenceSeverityPerTick = xmlNum(ext, "wearerInfluenceSeverityPerTick", 0.01);
+  out.wearerInfluenceBreakThreshold = xmlNum(ext, "wearerInfluenceBreakThreshold", 0.8);
+  out.wearerInfluenceBreakChance = xmlNum(ext, "wearerInfluenceBreakChance", 0.05);
+  out.wearerInfluenceMentalState = xmlText(ext, "wearerInfluenceMentalState", "");
+  out.wearerInfluenceTraitModifiers = Array.from(ext.querySelectorAll("wearerInfluenceTraitModifiers > li")).map((li) => ({
+    trait: xmlText(li, "trait", ""),
+    degree: xmlNum(li, "degree", 0),
+    severityMultiplier: xmlNum(li, "severityMultiplier", 1),
+    severityOffset: xmlNum(li, "severityOffset", 0),
+  })).filter((x) => x.trait);
 
   // Autonomy
   out.autoEquipEnabled = xmlBool(ext, "autoEquipEnabled", false);
@@ -3940,10 +4505,18 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
     : derivedDefName(out.ringDefName, "Discovery");
   out.discoveryIncidentCategory = discoveryIncident ? xmlText(discoveryIncident, "category", "Misc") : "Misc";
   out.discoveryIncidentBaseChance = discoveryIncident ? xmlNum(discoveryIncident, "baseChance", 0.1) : 0.1;
+  out.discoveryMinRefireDays = discoveryIncident ? xmlMaybeNum(discoveryIncident, "minRefireDays") : null;
+  out.discoveryPointsScaleable = discoveryIncident ? xmlTriState(discoveryIncident, "pointsScaleable") : "default";
 
   out.discoverySendLetter = discoveryExt ? xmlBool(discoveryExt, "sendLetter", true) : true;
   out.discoveryLetterLabel = discoveryExt ? xmlText(discoveryExt, "letterLabel", "") : "";
   out.discoveryLetterText = discoveryExt ? xmlText(discoveryExt, "letterText", "") : "";
+  out.discoveryLetterLabelKey = discoveryExt ? xmlText(discoveryExt, "letterLabelKey", "") : "";
+  out.discoveryLetterTextKey = discoveryExt ? xmlText(discoveryExt, "letterTextKey", "") : "";
+  out.discoveryLetterDef = discoveryExt ? xmlText(discoveryExt, "letterDef", "") : "";
+  if (out.discoveryLetterLabelKey === "Lantern_DiscoveryEvent_LetterLabel") out.discoveryLetterLabelKey = "";
+  if (out.discoveryLetterTextKey === "Lantern_DiscoveryEvent_LetterText") out.discoveryLetterTextKey = "";
+  if (out.discoveryLetterDef === "NeutralEvent") out.discoveryLetterDef = "";
 
   out.discoverySiteLabel = discoveryExt ? xmlText(discoveryExt, "siteLabel", "") : "";
   out.discoverySiteDescription = discoveryExt ? xmlText(discoveryExt, "siteDescription", "") : "";
@@ -3951,9 +4524,17 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   out.discoveryMinDistanceTiles = discoveryExt ? xmlNum(discoveryExt, "minDistanceFromPlayerTiles", 6) : 6;
   out.discoveryMaxDistanceTiles = discoveryExt ? xmlNum(discoveryExt, "maxDistanceFromPlayerTiles", 40) : 40;
   out.discoveryTargetType = discoveryExt ? xmlText(discoveryExt, "targetType", "WorldSite") : "WorldSite";
+  const incidentTags = discoveryIncident
+    ? Array.from(discoveryIncident.querySelectorAll("targetTags > li")).map((x) => x.textContent?.trim()).filter(Boolean)
+    : [];
   if (discoveryIncident && (!discoveryExt || !discoveryExt.querySelector("targetType"))) {
-    const tags = Array.from(discoveryIncident.querySelectorAll("targetTags > li")).map((x) => x.textContent?.trim());
-    if (tags.includes("Map")) out.discoveryTargetType = "ActiveMap";
+    if (incidentTags.includes("Map")) out.discoveryTargetType = "ActiveMap";
+  }
+  const expectedTag = out.discoveryTargetType === "ActiveMap" ? "Map" : "World";
+  if (incidentTags.length === 1 && incidentTags[0] === expectedTag) {
+    out.discoveryTargetTags = [];
+  } else {
+    out.discoveryTargetTags = incidentTags;
   }
   out.discoveryMapDropRadius = discoveryExt ? xmlNum(discoveryExt, "mapDropRadius", 10) : 10;
   out.discoveryMapDropPreferColony = discoveryExt ? xmlBool(discoveryExt, "mapDropPreferColony", true) : true;
@@ -3979,6 +4560,17 @@ function parseBuilderModFromXml(aboutDoc, defsDoc) {
   out.discoveryCrashDebrisCount = discoveryExt ? xmlNum(discoveryExt, "crashDebrisCount", 6) : 6;
   out.discoveryCrashDebrisRadius = discoveryExt ? xmlNum(discoveryExt, "crashDebrisRadius", 6) : 6;
 
+  const timedExt = discoveryIncident
+    ? discoveryIncident.querySelector('modExtensions > li[Class="DrAke.LanternsFramework.LanternTimedIncidentExtension"]')
+    : null;
+  out.enableTimedIncident = timedExt ? xmlBool(timedExt, "enabled", true) : false;
+  out.timedIncidentMinDays = timedExt ? xmlNum(timedExt, "minDays", 1) : 1;
+  out.timedIncidentMaxDays = timedExt ? xmlNum(timedExt, "maxDays", 2) : 2;
+  out.timedIncidentRetryHours = timedExt ? xmlNum(timedExt, "retryHours", 1) : 1;
+  out.timedIncidentFireOnce = timedExt ? xmlBool(timedExt, "fireOnce", true) : true;
+  out.timedIncidentForce = timedExt ? xmlBool(timedExt, "force", true) : true;
+  out.timedIncidentTarget = timedExt ? xmlText(timedExt, "target", "PlayerHomeMap") : "PlayerHomeMap";
+
   return out;
 }
 
@@ -4002,11 +4594,22 @@ function applyImportedStateToUi(s) {
   setValueIfPresent("ringColor", s.ringColor);
   setValueIfPresent("resourceLabel", s.resourceLabel);
   setValueIfPresent("showChargeGizmo", s.showChargeGizmo === false ? "false" : "true");
-  setValueIfPresent("ringTexPath", s.ringTexPath);
-  setValueIfPresent("marketValue", s.marketValue);
-  setValueIfPresent("mass", s.mass);
+    setValueIfPresent("ringTexPath", s.ringTexPath);
+    setValueIfPresent("marketValue", s.marketValue);
+    setValueIfPresent("mass", s.mass);
+    setValueIfPresent("techLevel", s.techLevel || "default");
+    setValueIfPresent("smeltable", s.smeltable || "default");
+    setValueIfPresent("careIfWornByCorpse", s.careIfWornByCorpse || "default");
+    setValueIfPresent("careIfDamaged", s.careIfDamaged || "default");
+    setValueIfPresent("countsAsClothingForNudity", s.countsAsClothingForNudity || "default");
+    setValueIfPresent("flammability", s.flammability ?? "");
+    setValueIfPresent("equipDelay", s.equipDelay ?? "");
+    setValueIfPresent("deteriorationRate", s.deteriorationRate ?? "");
+    writeGearBodyPartGroups(s.gearBodyPartGroups || []);
+    writeGearLayers(s.gearLayers || []);
+    writeGearTags(s.gearTags || []);
 
-  setSelectYesNoIfPresent("enableCostume", !!s.enableCostume);
+    setSelectYesNoIfPresent("enableCostume", !!s.enableCostume);
   setValueIfPresent("associatedHediff", s.associatedHediff || "");
 
   setCheckedIfPresent("transformationAllowMaleGender", s.transformationAllowMaleGender ?? true);
@@ -4085,6 +4688,20 @@ function applyImportedStateToUi(s) {
   setValueIfPresent("ambientInfluenceBreakChance", s.ambientInfluenceBreakChance ?? 0.05);
   setValueIfPresent("ambientInfluenceMentalState", s.ambientInfluenceMentalState || "");
 
+  setSelectYesNoIfPresent("wearerInfluenceEnabled", !!s.wearerInfluenceEnabled);
+  setValueIfPresent("wearerInfluenceHediff", s.wearerInfluenceHediff || "");
+  setValueIfPresent("wearerInfluenceAffectsColonistsOnly", s.wearerInfluenceAffectsColonistsOnly ? "true" : "false");
+  setValueIfPresent("wearerInfluenceAffectsHumanlikeOnly", s.wearerInfluenceAffectsHumanlikeOnly === false ? "false" : "true");
+  setValueIfPresent("wearerInfluenceSkipWearer", s.wearerInfluenceSkipWearer === false ? "false" : "true");
+  setValueIfPresent("wearerInfluenceRadius", s.wearerInfluenceRadius ?? 10);
+  setValueIfPresent("wearerInfluenceIntervalSeconds", s.wearerInfluenceIntervalSeconds ?? 4);
+  setValueIfPresent("wearerInfluenceInitialSeverity", s.wearerInfluenceInitialSeverity ?? 0.05);
+  setValueIfPresent("wearerInfluenceSeverityPerTick", s.wearerInfluenceSeverityPerTick ?? 0.01);
+  setValueIfPresent("wearerInfluenceBreakThreshold", s.wearerInfluenceBreakThreshold ?? 0.8);
+  setValueIfPresent("wearerInfluenceBreakChance", s.wearerInfluenceBreakChance ?? 0.05);
+  setValueIfPresent("wearerInfluenceMentalState", s.wearerInfluenceMentalState || "");
+  writeWearerInfluenceTraitModifiers(s.wearerInfluenceTraitModifiers || []);
+
   setSelectYesNoIfPresent("autoEquipEnabled", !!s.autoEquipEnabled);
   setValueIfPresent("autoEquipChance", s.autoEquipChance ?? 1);
   setValueIfPresent("autoEquipScoreBonus", s.autoEquipScoreBonus ?? 0);
@@ -4162,13 +4779,20 @@ function applyImportedStateToUi(s) {
 
   // Discovery event
   setSelectYesNoIfPresent("enableDiscoveryEvent", !!s.enableDiscoveryEvent);
-  setValueIfPresent("discoveryIncidentDefName", s.discoveryIncidentDefName || "");
-  setValueIfPresent("discoveryIncidentCategory", s.discoveryIncidentCategory || "Misc");
-  setValueIfPresent("discoveryIncidentBaseChance", s.discoveryIncidentBaseChance ?? 0.1);
-  setValueIfPresent("discoverySendLetter", s.discoverySendLetter === false ? "no" : "yes");
-  setValueIfPresent("discoveryLetterLabel", s.discoveryLetterLabel || "");
-  setValueIfPresent("discoveryLetterText", s.discoveryLetterText || "");
-  setValueIfPresent("discoveryTargetType", s.discoveryTargetType || "WorldSite");
+    setValueIfPresent("discoveryIncidentDefName", s.discoveryIncidentDefName || "");
+    setValueIfPresent("discoveryIncidentCategory", s.discoveryIncidentCategory || "Misc");
+    setValueIfPresent("discoveryIncidentBaseChance", s.discoveryIncidentBaseChance ?? 0.1);
+    setValueIfPresent("discoveryMinRefireDays", s.discoveryMinRefireDays ?? "");
+    setValueIfPresent("discoveryPointsScaleable", s.discoveryPointsScaleable || "default");
+    setValueIfPresent("discoverySendLetter", s.discoverySendLetter === false ? "no" : "yes");
+    setValueIfPresent("discoveryLetterLabel", s.discoveryLetterLabel || "");
+    setValueIfPresent("discoveryLetterText", s.discoveryLetterText || "");
+    setValueIfPresent("discoveryLetterLabelKey", s.discoveryLetterLabelKey || "");
+    setValueIfPresent("discoveryLetterTextKey", s.discoveryLetterTextKey || "");
+    setValueIfPresent("discoveryLetterDef", s.discoveryLetterDef || "");
+    setValueIfPresent("discoveryTargetType", s.discoveryTargetType || "WorldSite");
+    const targetTags = Array.isArray(s.discoveryTargetTags) ? s.discoveryTargetTags : parseCsvList(s.discoveryTargetTags || "");
+    setValueIfPresent("discoveryTargetTags", targetTags.length ? targetTags.join(", ") : "");
   setValueIfPresent("discoverySiteLabel", s.discoverySiteLabel || "");
   setValueIfPresent("discoverySiteDescription", s.discoverySiteDescription || "");
   setValueIfPresent("discoverySiteTimeoutDays", s.discoverySiteTimeoutDays ?? 15);
@@ -4194,6 +4818,14 @@ function applyImportedStateToUi(s) {
   setValueIfPresent("discoveryCrashDebrisDef", s.discoveryCrashDebrisDef || "ChunkSlagSteel");
   setValueIfPresent("discoveryCrashDebrisCount", s.discoveryCrashDebrisCount ?? 6);
   setValueIfPresent("discoveryCrashDebrisRadius", s.discoveryCrashDebrisRadius ?? 6);
+
+  setSelectYesNoIfPresent("enableTimedIncident", !!s.enableTimedIncident);
+  setValueIfPresent("timedIncidentMinDays", s.timedIncidentMinDays ?? 1);
+  setValueIfPresent("timedIncidentMaxDays", s.timedIncidentMaxDays ?? 2);
+  setValueIfPresent("timedIncidentRetryHours", s.timedIncidentRetryHours ?? 1);
+  setValueIfPresent("timedIncidentFireOnce", s.timedIncidentFireOnce === false ? "no" : "yes");
+  setValueIfPresent("timedIncidentForce", s.timedIncidentForce === false ? "no" : "yes");
+  setValueIfPresent("timedIncidentTarget", s.timedIncidentTarget || "PlayerHomeMap");
 
   // Refresh any derived UI rules/help (without re-wiring event listeners)
   document.getElementById("gearParent")?.dispatchEvent(new Event("change"));
@@ -4226,14 +4858,27 @@ function init() {
 
   // Init imported defs
   applyDefIndexToDatalists(getOrCreateIndex());
-  wireGearParentUi();
-  wireSelectHelpText();
-  wireCostumeEnableUi();
+    wireGearParentUi();
+    wireSelectHelpText();
+    wireCostumeEnableUi();
 
-  // Init costume UI lists
-  if (document.getElementById("existingApparelList")) {
-    if (!document.getElementById("existingApparelList").dataset.items) writeExistingCostumeList([]);
-    if (!document.getElementById("generatedApparelList").dataset.items) writeGeneratedCostumeList([]);
+    if (document.getElementById("gearBodyPartGroupList")) {
+      if (!document.getElementById("gearBodyPartGroupList").dataset.items) writeGearBodyPartGroups([]);
+      renderGearBodyPartGroups();
+    }
+    if (document.getElementById("gearLayerList")) {
+      if (!document.getElementById("gearLayerList").dataset.items) writeGearLayers([]);
+      renderGearLayers();
+    }
+    if (document.getElementById("gearTagList")) {
+      if (!document.getElementById("gearTagList").dataset.items) writeGearTags([]);
+      renderGearTags();
+    }
+
+    // Init costume UI lists
+    if (document.getElementById("existingApparelList")) {
+      if (!document.getElementById("existingApparelList").dataset.items) writeExistingCostumeList([]);
+      if (!document.getElementById("generatedApparelList").dataset.items) writeGeneratedCostumeList([]);
     if (document.getElementById("statBuffList") && !document.getElementById("statBuffList").dataset.items) writeStatBuffs([]);
     renderExistingCostumeList();
     renderGeneratedCostumeList();
@@ -4264,6 +4909,10 @@ function init() {
   if (document.getElementById("autoEquipHediffList")) {
     if (!document.getElementById("autoEquipHediffList").dataset.items) writeAutoEquipHediffBonuses([]);
     renderAutoEquipHediffBonuses();
+  }
+  if (document.getElementById("wearerInfluenceTraitList")) {
+    if (!document.getElementById("wearerInfluenceTraitList").dataset.items) writeWearerInfluenceTraitModifiers([]);
+    renderWearerInfluenceTraitModifiers();
   }
 
   wireConditionDefAutocomplete();
@@ -4382,6 +5031,18 @@ function refreshSelectHelpText() {
   applySelectHelp("discoveryTargetType", null, {
     WorldSite: "Creates a world-map site that caravans can visit.",
     ActiveMap: "Drops the crash directly onto a player home map.",
+  });
+
+  applySelectHelp("enableTimedIncident", null, {
+    no: "No timed incident scheduling.",
+    yes: "Schedules the discovery incident after a random delay.",
+  });
+
+  applySelectHelp("timedIncidentTarget", null, {
+    PlayerHomeMap: "Targets a random player home map.",
+    CurrentMap: "Targets the current map (when the incident fires).",
+    AnyPlayerMap: "Targets any player map (home or temporary).",
+    World: "Targets the world (for world-site incidents).",
   });
 
   applySelectHelp("condType", "condTypeDesc", {
@@ -4641,6 +5302,25 @@ function wireBehaviorActions() {
       const items = readAutoEquipTraitBonuses();
       writeAutoEquipTraitBonuses([...items, item]);
       byId("autoEquipTraitDef").value = "";
+      saveState();
+      renderExportPanel();
+    });
+  }
+
+  const btnAddWearerTrait = document.getElementById("btnAddWearerInfluenceTrait");
+  if (btnAddWearerTrait) {
+    btnAddWearerTrait.addEventListener("click", () => {
+      const trait = byId("wearerInfluenceTraitDef").value.trim();
+      if (!trait) return;
+      const item = {
+        trait,
+        degree: Math.floor(toNum(byId("wearerInfluenceTraitDegree").value, 0)),
+        severityMultiplier: toNum(byId("wearerInfluenceTraitSeverityMultiplier").value, 1),
+        severityOffset: toNum(byId("wearerInfluenceTraitSeverityOffset").value, 0),
+      };
+      const items = readWearerInfluenceTraitModifiers();
+      writeWearerInfluenceTraitModifiers([...items, item]);
+      byId("wearerInfluenceTraitDef").value = "";
       saveState();
       renderExportPanel();
     });
