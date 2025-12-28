@@ -532,6 +532,11 @@ When in doubt, cross-reference:
 - Make sure you opened the file directly (not inside a restricted viewer).
 - Some browsers block folder access if the file is opened in unusual ways. Try: right-click `index.html` and "Open with" Edge.
 
+### "Can't open this folder because it contains system files"
+
+- Chrome/Edge blocks folder access inside `Program Files` and some other system directories.
+- If RimWorld is installed there, copy the `Data` or `Mods` folder to a non-system location (like `C:\RimWorldDefs`) and pick that instead, or install RimWorld to a Steam library outside Program Files.
+
 ### My exported mod has red errors
 
 - Open the Export tab and fix all Validation issues.

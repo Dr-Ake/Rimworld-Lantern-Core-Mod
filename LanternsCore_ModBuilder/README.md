@@ -19,6 +19,7 @@ For the full, detailed instructions, read:
 
 - This runs entirely offline from a folder on disk.
 - Browsers cannot write files anywhere automatically; the app downloads a ZIP to your Downloads folder.
+- If RimWorld is installed under `Program Files`, Edge/Chrome may block folder access when importing defs. Copy the `Data`/`Mods` folder to a non-system location or install RimWorld to a Steam library outside Program Files.
 - The **Gear template** selector lets you output belts/suits/masks (not just rings) using LanternsCore's built-in templates.
 - If you use **Import Defs**, the Builder can auto-add mod dependencies to the generated `About/About.xml` when you reference defs from other mods.
 - ZIP export uses JSZip (MIT license) - see `LanternsCore_ModBuilder/vendor/JSZIP_LICENSE.txt`.
