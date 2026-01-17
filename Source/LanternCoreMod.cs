@@ -12,7 +12,7 @@ namespace DrAke.LanternsFramework
             Settings = GetSettings<LanternCoreSettings>();
         }
 
-        public override string SettingsCategory() => "Lantern Core Framework";
+        public override string SettingsCategory() => "Lantern_Settings_Category".Translate();
 
         public override void DoSettingsWindowContents(Rect inRect)
         {

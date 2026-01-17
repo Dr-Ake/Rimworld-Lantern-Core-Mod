@@ -57,6 +57,7 @@
   <Lantern_RingInfo_Desc>Shows detailed ring charge/regen/protection info.</Lantern_RingInfo_Desc>
 
   <!-- Settings UI -->
+  <Lantern_Settings_Category>Lantern Core Framework</Lantern_Settings_Category>
   <Lantern_Settings_EnableDebugLogging_Label>Enable debug logging</Lantern_Settings_EnableDebugLogging_Label>
   <Lantern_Settings_EnableDebugLogging_Desc>Logs ring selection scoring and other framework internals.</Lantern_Settings_EnableDebugLogging_Desc>
   <Lantern_Settings_EnableDebugGizmos_Label>Enable debug gizmos</Lantern_Settings_EnableDebugGizmos_Label>

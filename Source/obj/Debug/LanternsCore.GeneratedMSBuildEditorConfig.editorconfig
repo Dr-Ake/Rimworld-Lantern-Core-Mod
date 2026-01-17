@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = DrAke.LanternsFramework
-build_property.ProjectDir = D:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\
+build_property.ProjectDir = d:\SteamLibrary\steamapps\common\RimWorld\Mods\Rimworld-Lantern-Core-Mod\Source\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false

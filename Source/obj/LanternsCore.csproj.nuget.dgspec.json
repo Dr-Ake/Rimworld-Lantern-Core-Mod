@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj": {}
+    "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj": {}
   },
   "projects": {
-    "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj": {
+    "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
+        "projectUniqueName": "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
         "projectName": "LanternsCore",
-        "projectPath": "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
+        "projectPath": "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
         "packagesPath": "C:\\Users\\Drake\\.nuget\\packages\\",
-        "outputPath": "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\obj\\",
+        "outputPath": "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Drake\\AppData\\Roaming\\NuGet\\NuGet.Config"
