@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xIWSadkW9xk=",
+  "dgSpecHash": "pNT6tryIz54=",
   "success": true,
-  "projectFilePath": "d:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
+  "projectFilePath": "D:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\Rimworld-Lantern-Core-Mod\\Source\\LanternsCore.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Drake\\.nuget\\packages\\krafs.rimworld.ref\\1.6.4633\\krafs.rimworld.ref.1.6.4633.nupkg.sha512",
     "C:\\Users\\Drake\\.nuget\\packages\\lib.harmony\\2.3.3\\lib.harmony.2.3.3.nupkg.sha512"

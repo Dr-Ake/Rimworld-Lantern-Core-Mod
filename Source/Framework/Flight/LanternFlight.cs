@@ -299,6 +299,8 @@ namespace DrAke.LanternsFramework.Flight
         
         // Removed static FlightMat to allow XML to define texture via WorldObjectDef
         
+        public int DestinationTile => destinationTile;
+
         public WorldObject_LanternFlightTravel()
         {
             innerContainer = new ThingOwner<Thing>(this);
@@ -356,11 +358,8 @@ namespace DrAke.LanternsFramework.Flight
                 {
                     try
                     {
-                        Map map = null;
-                        if (specificTarget != null && mp == specificTarget && mp.MapGeneratorDef != null)
-                            map = MapGenerator.GenerateMap(Find.World.info.initialMapSize, mp, mp.MapGeneratorDef, mp.ExtraGenStepDefs, null);
-                        else
-                            map = GetOrGenerateMapUtility.GetOrGenerateMap(mp.Tile, Find.World.info.initialMapSize, mp.def);
+                        // Use robust utility for map generation (handles threat points etc)
+                        Map map = GetOrGenerateMapUtility.GetOrGenerateMap(mp.Tile, Find.World.info.initialMapSize, mp.def);
                             
                         if (map != null) StartLandingSelection(map);
                         else

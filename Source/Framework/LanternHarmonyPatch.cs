@@ -6,10 +6,153 @@ using Verse.AI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RimWorld.Planet;
+using DrAke.LanternsFramework.Flight;
 using DrAke.LanternsFramework.Abilities;
 
 namespace DrAke.LanternsFramework.HarmonyPatches
 {
+    // ... existing content ...
+
+    // ================== Flight System Fixes ==================
+    
+    // Fix: Game Over loop when solo pawn is flying
+    [HarmonyPatch(typeof(PawnsFinder), "get_AllMapsCaravansAndTravellingTransporters_Alive_OfPlayerFaction")]
+    public static class Patch_PawnsFinder_AllMapsCaravansAndTravellingTransporters_Alive_OfPlayerFaction
+    {
+        public static void Postfix(ref List<Pawn> __result)
+        {
+            try
+            {
+               LanternHarmonyPatchUtils.AddLanternFlightPawns(ref __result);
+            }
+            catch (Exception ex)
+            {
+               Log.ErrorOnce("[LanternsCore] Error in PawnsFinder patch (Alive_OfPlayerFaction): " + ex.Message, 934029);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(PawnsFinder), "get_AllMapsCaravansAndTravellingTransporters_Alive")]
+    public static class Patch_PawnsFinder_AllMapsCaravansAndTravellingTransporters_Alive
+    {
+        public static void Postfix(ref List<Pawn> __result)
+        {
+            try
+            {
+               LanternHarmonyPatchUtils.AddLanternFlightPawns(ref __result);
+            }
+            catch (Exception ex)
+            {
+               Log.ErrorOnce("[LanternsCore] Error in PawnsFinder patch (Alive): " + ex.Message, 934030);
+            }
+        }
+    }
+
+    // Fix: Settlement Destroyed immediately upon generating map for arrival
+    [HarmonyPatch(typeof(SettlementDefeatUtility), "CheckDefeated")]
+    public static class Patch_SettlementDefeatUtility_CheckDefeated
+    {
+        public static bool Prefix(Settlement factionBase)
+        {
+            if (factionBase == null || factionBase.Map == null) return true;
+
+            // Fix for Neutral settlements being destroyed instantly because friendly pawns aren't "Threats"
+            if (!factionBase.Faction.HostileTo(Faction.OfPlayer))
+            {
+                return false;
+            }
+
+            // Check if any lantern flight is targeting this tile
+            List<WorldObject> worldObjects = Find.WorldObjects.AllWorldObjects;
+            for (int i = 0; i < worldObjects.Count; i++)
+            {
+                if (worldObjects[i] is WorldObject_LanternFlightTravel flight && flight.DestinationTile == factionBase.Tile)
+                {
+                    return false; // Suppress defeat check
+                }
+            }
+
+            // Check if any lantern incoming pod is on the map
+            ThingDef incomingDef = DefDatabase<ThingDef>.GetNamedSilentFail("Lantern_Incoming");
+            if (incomingDef != null)
+            {
+                if (factionBase.Map.listerThings.ThingsOfDef(incomingDef).Count > 0)
+                {
+                    return false; // Suppress defeat check
+                }
+            }
+            
+            return true;
+        }
+    }
+
+    public static class LanternHarmonyPatchUtils
+    {
+        public static void AddLanternFlightPawns(ref List<Pawn> list)
+        {
+            if (list == null) return;
+            List<WorldObject> worldObjects = Find.WorldObjects.AllWorldObjects;
+            for (int i = 0; i < worldObjects.Count; i++)
+            {
+                if (worldObjects[i] is WorldObject_LanternFlightTravel flight)
+                {
+                    ThingOwner inner = flight.GetDirectlyHeldThings();
+                    for (int j = 0; j < inner.Count; j++)
+                    {
+                        if (inner[j] is Pawn p && !p.Dead)
+                        {
+                            if (!list.Contains(p))
+                            {
+                                list.Add(p);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Check for pawns inside LanternIncoming pods
+            ThingDef incomingDef = DefDatabase<ThingDef>.GetNamedSilentFail("Lantern_Incoming");
+            if (incomingDef != null)
+            {
+                List<Map> maps = Find.Maps;
+                for (int m = 0; m < maps.Count; m++)
+                {
+                    List<Thing> pods = maps[m].listerThings.ThingsOfDef(incomingDef);
+                    if (pods != null)
+                    {
+                        for (int i = 0; i < pods.Count; i++)
+                        {
+                            if (pods[i] is LanternIncoming pod)
+                            {
+                                ThingOwner inner = ((IThingHolder)pod).GetDirectlyHeldThings(); // Cast needed? LanternIncoming implies IThingHolder via inheritance? 
+                                // Actually LanternIncoming inherits Skyfaller, which implements IThingHolder.
+                                // However, LanternIncoming.innerContainer is protected in Skyfaller base usually? 
+                                // Checked LanternFlight.cs: LanternIncoming : Skyfaller, IThingHolder.
+                                // But Skyfaller usually has innerContainer.
+                                // I should check access.
+                                // Wait, in my previous view_file of LanternFlight.cs, LanternIncoming had its own innerContainer init but inherited from Skyfaller?
+                                // Actually Skyfaller has "public ThingOwner innerContainer" in vanilla.
+                                // Let's just cast to IThingHolder to be safe or access innerContainer if public.
+                                if (pod.innerContainer != null) // innerContainer is public in Skyfaller
+                                {
+                                     inner = pod.innerContainer;
+                                     for (int j = 0; j < inner.Count; j++)
+                                     {
+                                         if (inner[j] is Pawn p && !p.Dead)
+                                         {
+                                             if (!list.Contains(p)) list.Add(p);
+                                         }
+                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     [StaticConstructorOnStartup]
     public static class FrameworkPatches
     {
